@@ -163,6 +163,7 @@ Install OK.
 Befehle (nach source ~/.bashrc oder neuem Terminal):
   sa-sync          Neueste Learnings pullen
   sa-review        Learning reviewen / approven
+  sa-pending-push  Pending ans Team pushen (nach Anlegen)
   sa-unapprove     Learning aus approved entfernen
   sa-check         Adapter-Status prüfen
   sa-uninstall     Deinstallieren (Bestätigung: y/N)

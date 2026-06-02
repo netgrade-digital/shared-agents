@@ -36,7 +36,7 @@ sa-review-dry() {
 }
 
 sa-unapprove() {
-  # Usage: sa-unapprove [id|file] [--to-pending] [-y] [--dry-run] [--no-git]
+  # Wizard: [1] Löschen  [2] Nach pending/  |  --to-pending / --delete für Scripts
   "$(_sa_bin unapprove-learning.sh)" "$@"
 }
 
@@ -46,6 +46,11 @@ sa-unapprove-list() {
 
 sa-learning-path() {
   "$(_sa_bin learning-path.sh)" "$@"
+}
+
+sa-pending-push() {
+  # Commit + push pending learning for team review
+  "$(_sa_bin publish-pending-learning.sh)" "$@"
 }
 
 # Optional shortcuts

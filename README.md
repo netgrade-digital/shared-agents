@@ -92,11 +92,13 @@ Nach `./install.sh` und `source ~/.bashrc` (oder neuem Terminal). Alle `sa-*`-Al
 | `sa-sync` | Neueste Learnings pullen (`sync.sh pull`) |
 | `sa-check` | Adapter-Status (`install.sh --check`) |
 | `sa-review-list` | Pending-Learnings anzeigen |
+| `sa-pending-push [datei]` | Pending commit + push (Team-Review) |
 | `sa-review [datei]` | Review + approve + commit/push |
 | `sa-review-dry [datei]` | Dry-run für Review |
 | `sa-unapprove-list` | Approved-Learnings anzeigen |
-| `sa-unapprove [id\|datei]` | Aus `approved/` entfernen (+ commit/push) |
-| `sa-unapprove … --to-pending` | Statt löschen → zurück nach `pending/` |
+| `sa-unapprove [id\|datei]` | Aus `approved/` entfernen — **Wizard: löschen oder pending** |
+| `sa-unapprove … --to-pending` | Non-interactive: nach `pending/` (Scripts, `-y`) |
+| `sa-unapprove … --delete` | Non-interactive: löschen |
 | `sa-learning-path [slug]` | Canonical Pfad für pending-Datei |
 | `sa-uninstall` | Deinstallieren — **Bestätigung: y/N** |
 | `sa-uninstall --keep-repo` | Nur Adapter/Aliase, Repo behalten |
@@ -121,6 +123,7 @@ Nach `./install.sh` und `source ~/.bashrc` (oder neuem Terminal). Alle `sa-*`-Al
 |--------|--------------|
 | `scripts/sync.sh pull` | Git pull (ff-only, ignoriert globales rebase) |
 | `scripts/sync.sh status` | Kurzer Git-Status |
+| `scripts/publish-pending-learning.sh` | Pending commit + push (`sa-pending-push`) |
 | `scripts/review-learning.sh` | Wie `sa-review` |
 | `scripts/unapprove-learning.sh` | Wie `sa-unapprove` |
 | `scripts/promote-learning.sh` | Approve ohne Preview (`-y`) |
@@ -432,7 +435,7 @@ Der Agent **muss** nach nicht-trivialen Tasks fragen:
 
 | Deine Antwort | Was passiert |
 |---------------|--------------|
-| **Ja** | Agent schreibt Datei in `pending/` |
+| **Ja** | Agent schreibt `pending/` + **`sa-pending-push`** (commit/push für Team-Review) |
 | **Nein** | Nichts |
 
 In **Cursor** zusätzlich: `stop`-Hook erinnert den Agenten am Session-Ende.  
@@ -489,10 +492,10 @@ Danach ist das Learning im Remote — Team sync pull.
 ```bash
 sa-unapprove-list
 sa-unapprove fantasy-2026-06-dragon-cache-invalidation
-sa-unapprove shared-agents-2026-06-test-sa-review-workflow --to-pending
+# Wizard: [1] Löschen  [2] Nach pending/  [q] Abbrechen
 ```
 
-Entfernt Eintrag aus `index.yaml`, löscht Datei (oder `--to-pending`), commit + push wie bei `sa-review`.
+Entfernt Eintrag aus `index.yaml`, dann Wizard (löschen vs. pending), commit + push wie bei `sa-review`.
 
 ### Deinstallieren
 

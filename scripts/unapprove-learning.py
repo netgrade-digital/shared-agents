@@ -155,9 +155,27 @@ def confirm(prompt: str) -> bool:
         answer = input(f"{prompt} [y/N]: ").strip().lower()
         if answer in {"", "n", "no"}:
             return False
-        if answer in {"y", "yes"}:
+        if answer in {"y", "yes", "j", "ja"}:
             return True
         print("Please answer y or n.")
+
+
+def ask_disposition() -> str | None:
+    """Interactive wizard: delete vs move to pending."""
+    print("")
+    print("Was soll mit der Datei passieren?")
+    print("  [1] Löschen")
+    print("  [2] Nach pending/ verschieben (Entwurf)")
+    print("  [q] Abbrechen")
+    while True:
+        choice = input("> ").strip().lower()
+        if choice in {"1", "delete", "löschen", "l", "d"}:
+            return "delete"
+        if choice in {"2", "pending", "p", "pending/"}:
+            return "pending"
+        if choice in {"q", "quit", "a", "abbrechen", ""}:
+            return None
+        print("Bitte 1, 2 oder q.")
 
 
 def run_git(
@@ -291,7 +309,12 @@ def main() -> int:
     parser.add_argument(
         "--to-pending",
         action="store_true",
-        help="Move file to learnings/pending/ instead of deleting",
+        help="Move to pending/ (non-interactive; skips wizard)",
+    )
+    parser.add_argument(
+        "--delete",
+        action="store_true",
+        help="Delete file (non-interactive; skips wizard)",
     )
     parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
     parser.add_argument("--dry-run", action="store_true", help="Show actions only")
@@ -325,24 +348,41 @@ def main() -> int:
     print("")
     print(f"Unapprove: {entry_id}")
     print(f"File:      {approved_file.relative_to(home)}")
-    if args.to_pending:
-        print(f"Target:    learnings/pending/{approved_file.name}")
-    else:
-        print("Target:    delete file")
     print("-" * 72)
     print(approved_file.read_text().rstrip())
     print("-" * 72)
 
-    if not args.yes and not args.dry_run:
-        if not confirm("Remove from approved?"):
-            print("Cancelled.")
+    to_pending: bool | None = None
+    if args.to_pending and args.delete:
+        print("Cannot use --to-pending and --delete together.", file=sys.stderr)
+        return 1
+    if args.to_pending:
+        to_pending = True
+    elif args.delete:
+        to_pending = False
+    elif args.dry_run:
+        to_pending = False
+        print("")
+        print("[dry-run] Wizard würde fragen: [1] Löschen  [2] Nach pending/")
+    elif args.yes:
+        to_pending = False
+    else:
+        disposition = ask_disposition()
+        if disposition is None:
+            print("Abgebrochen.")
             return 0
+        to_pending = disposition == "pending"
+
+    if to_pending:
+        print(f"→ learnings/pending/{approved_file.name}")
+    else:
+        print("→ Datei löschen")
 
     pending_dest = unapprove(
         home,
         entry_id,
         approved_file,
-        to_pending=args.to_pending,
+        to_pending=to_pending,
         dry_run=args.dry_run,
     )
 
