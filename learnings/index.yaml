@@ -7,3 +7,10 @@ learnings:
     tags: [skills, learnings, sync, git]
     confidence: high
     created: 2026-05-28
+  - id: shared-agents-2026-06-shared-mcps-manifest
+    file: approved/by-domain/infra/2026-06-02-shared-mcps-manifest-installer.md
+    project: shared-agents
+    domain: [infra, ai-tooling, seo]
+    tags: [mcp, cursor, manifest, installer, screaming-frog, team-setup]
+    confidence: high
+    created: 2026-06-02
