@@ -39,7 +39,7 @@ _sa_home_missing() {
 _sa_require_home() {
   if _sa_home_missing; then
     echo "shared-agents not found at: $SHARED_AGENTS_HOME" >&2
-    echo "Run: sa install --wizard   (or: shared-agents install --wizard)" >&2
+    echo "Run: sa install   (or: shared-agents install)" >&2
     exit 1
   fi
 }
@@ -73,7 +73,8 @@ Aufruf: sa | shared-agents | sharedagents  <command> [args…]
 Usage: sa <command> [args…]
 
 Setup
-  install [opts]       Install / update (Erst-Setup: --wizard)
+  install [opts]       Setup-Wizard (TTY: TUI ↑↓ Space · Cursor: Text)
+  install --non-interactive   Ohne Wizard — alle erkannten Tools
   check                Tool-Status prüfen
   uninstall [opts]     Deinstallieren (Bestätigung: y/N)
   sync                 Neueste Learnings pullen (Bitbucket)
@@ -92,8 +93,9 @@ Info
   version              Version anzeigen
 
 Beispiele
-  shared-agents install --wizard    Erst-Setup / Update
-  sa install --check                Adapter-Status
+  sa install                        Setup-Wizard (alles konfigurieren)
+  sa install --non-interactive        Schnell, ohne Prompts
+  sa install --check                  Adapter-Status
   sa sync
   sa review list
   sa pending push 2026-06-02-my-slug.md
@@ -126,8 +128,12 @@ sa_version() {
 }
 
 dispatch() {
-  local cmd="${1:-help}"
-  shift || true
+  local cmd="${1:-}"
+  if [[ -z "$cmd" ]]; then
+    echo "Usage: sa <command>  — try: sa help" >&2
+    exit 1
+  fi
+  shift
 
   case "$cmd" in
     help|-h|--help)

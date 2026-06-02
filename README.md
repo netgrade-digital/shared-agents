@@ -63,11 +63,10 @@ Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Ma
 git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
 cd ~/.shared-agents
 
-# 2. Setup — TUI-Wizard (Pfeiltasten, Space, Enter)
-./sa install --wizard
-# nach erstem Setup auch: sa install · shared-agents install
+# 2. Setup — Wizard (Pfeiltasten, Space, Enter in foot/alacritty)
+./sa install
 
-# 3. Shell (Wizard konfiguriert ~/.bashrc)
+# 3. Shell
 source ~/.bashrc
 sa help
 ```
@@ -104,7 +103,8 @@ CLI: [`scripts/sa`](scripts/sa) · Aufruf: **`sa`** · **`shared-agents`** · **
 | `sa help` | Alle Befehle mit Erklärung |
 | `sa sync` | Neueste Learnings pullen |
 | `sa check` | Adapter-Status |
-| `sa install [--wizard]` | Install / Update |
+| `sa install` | Setup-Wizard (TTY) — Pfad, Tools, Shell, Summary |
+| `sa install --non-interactive` | Ohne Wizard — alle erkannten Tools |
 | `sa uninstall` | Deinstallieren (y/N) |
 | `sa review list` | Pending-Learnings |
 | `sa pending push [datei]` | Pending commit + push (Team-Review) |
@@ -156,8 +156,8 @@ Der Installer ist **manifest-driven** ([`adapters/manifest.json`](adapters/manif
 In einem Terminal startet `install.sh` automatisch den **TUI-Wizard** (Pfeiltasten, Space, Enter):
 
 ```bash
-sa install --wizard
-# oder:
+sa install              # Setup-Wizard (Standard im Terminal)
+sa install --non-interactive   # Schnell, ohne Prompts
 cd ~/.shared-agents && ./install.sh
 ```
 
@@ -172,7 +172,7 @@ Default bei Tools: alle **erkannten** Agenten sind vorausgewählt.
 
 Fallback ohne TTY oder `SA_WIZARD_PLAIN=1`: klassische Text-Eingabe (Nummern, `all`/`detected`).
 
-**Bootstrap:** `./sa install` aus dem Clone funktioniert auch ohne vorheriges `~/.shared-agents` (klont bei Bedarf). Die Shell-Befehle `sa` / `shared-agents` stehen erst nach Wizard + `source ~/.bashrc` global zur Verfügung.
+**Bootstrap:** Wizard läuft **vor** dem Clone — bei Abbruch wird `~/.shared-agents` **nicht** angelegt.
 
 Nicht-interaktiv (CI, Scripts):
 

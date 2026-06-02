@@ -110,6 +110,17 @@ def _draw_frame(stdscr: curses.window, title: str, step: str, footer: str) -> tu
     return 5, inner_w
 
 
+def _confirm_cancel(stdscr: curses.window, y: int) -> None:
+    _safe_addstr(stdscr, y, 4, "Setup abbrechen?  [y/N]  (Enter = nein)", _attr(stdscr, 3, bold=True))
+    stdscr.refresh()
+    while True:
+        key = stdscr.getch()
+        if key in (ord("y"), ord("Y")):
+            raise WizardCancelled
+        if key in (ord("n"), ord("N"), 10, 13, curses.KEY_ENTER, 27):
+            return
+
+
 def _wait_enter(
     stdscr: curses.window,
     y: int,
@@ -122,7 +133,8 @@ def _wait_enter(
         if key in (10, 13, curses.KEY_ENTER, ord(" "), ord("j"), ord("J"), ord("y"), ord("Y")):
             return
         if key in (27, ord("q"), ord("Q")):
-            raise WizardCancelled
+            _confirm_cancel(stdscr, y + 1)
+            return
 
 
 def _screen_welcome(stdscr: curses.window) -> None:

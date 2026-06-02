@@ -820,21 +820,56 @@ def run_wizard_plain(
     return home, selected, add_shell, True
 
 
-def run_wizard(
+@dataclass
+class SavedWizardChoices:
+    home: str
+    selected_tools: list[str]
+    add_shell: bool
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "home": self.home,
+                "selected_tools": sorted(self.selected_tools),
+                "add_shell": self.add_shell,
+            },
+            indent=2,
+        )
+
+    @classmethod
+    def from_json(cls, text: str) -> SavedWizardChoices:
+        data = json.loads(text)
+        return cls(
+            home=data["home"],
+            selected_tools=list(data.get("selected_tools", [])),
+            add_shell=bool(data.get("add_shell", True)),
+        )
+
+
+def resolve_manifest_repo(repo_home: Path, home: str) -> Path:
+    if (repo_home / "adapters" / "manifest.json").is_file():
+        return repo_home
+    alt = expand(home)
+    if (alt / "adapters" / "manifest.json").is_file():
+        return alt
+    raise FileNotFoundError("manifest.json not found in repo_home or SHARED_AGENTS_HOME")
+
+
+def gather_wizard_choices(
     repo_home: Path,
     home: str,
     *,
-    dry_run: bool = False,
-    shell_rc: Path | None = None,
-) -> int:
+    shell_rc: Path | None,
+) -> SavedWizardChoices | None:
     repo_ok, repo_msg = check_repo(str(repo_home))
     if not repo_ok:
         repo_ok, repo_msg = check_repo(home)
     if not repo_ok:
         print(f"Repo error: {repo_msg}", file=sys.stderr)
-        return 1
+        return None
 
-    manifest = load_manifest(repo_home if (repo_home / "adapters" / "manifest.json").is_file() else expand(home))
+    manifest_repo = resolve_manifest_repo(repo_home, home)
+    manifest = load_manifest(manifest_repo)
     reports = [
         (tool, check_tool(tool, home))
         for tool in installable_tools(manifest)
@@ -842,8 +877,6 @@ def run_wizard(
 
     shell_rc_path = shell_rc or expand("~/.bashrc")
     shell_rc_str = str(shell_rc_path)
-
-    choices: tuple[str, set[str], bool, bool] | None = None
 
     try:
         from wizard_tui import (
@@ -869,7 +902,6 @@ def run_wizard(
             for tool, report in reports
         ]
         shell_state = detect_shell_rc_state(shell_rc_str)
-        tui_failed = False
         try:
             result = run_wizard_tui(
                 default_home=home,
@@ -879,46 +911,57 @@ def run_wizard(
             )
         except WizardTuiFailed as exc:
             print(f"  → {exc} — using text prompts.", file=sys.stderr)
-            tui_failed = True
             result = None
-
-        if result is not None:
-            if not result.run_setup:
-                print("Cancelled.")
-                return 1
-            choices = (result.home, result.selected_tools, result.add_shell, True)
-        elif tui_failed:
-            choices = run_wizard_plain(
+            plain = run_wizard_plain(
                 repo_home,
                 home,
                 reports,
-                dry_run=dry_run,
+                dry_run=False,
                 shell_rc=shell_rc_path,
             )
-            if choices is None:
-                print("Cancelled.")
-                return 1
-        else:
+            if plain is None:
+                return None
+            ph, selected, add_shell, _ = plain
+            return SavedWizardChoices(ph, sorted(selected), add_shell)
+
+        if result is None or not result.run_setup:
             print("Cancelled.")
-            return 1
-    else:
-        choices = run_wizard_plain(
-            repo_home,
-            home,
-            reports,
-            dry_run=dry_run,
-            shell_rc=shell_rc_path,
+            return None
+        return SavedWizardChoices(
+            result.home,
+            sorted(result.selected_tools),
+            result.add_shell,
         )
-        if choices is None:
-            print("Cancelled.")
-            return 1
 
-    home, selected, add_shell, _run = choices
+    plain = run_wizard_plain(
+        repo_home,
+        home,
+        reports,
+        dry_run=False,
+        shell_rc=shell_rc_path,
+    )
+    if plain is None:
+        print("Cancelled.")
+        return None
+    ph, selected, add_shell, _ = plain
+    return SavedWizardChoices(ph, sorted(selected), add_shell)
+
+
+def apply_wizard_choices(
+    repo_home: Path,
+    choices: SavedWizardChoices,
+    *,
+    dry_run: bool,
+    shell_rc: Path | None,
+) -> int:
+    home = os.path.expanduser(os.path.expandvars(choices.home))
     os.environ["SHARED_AGENTS_HOME"] = home
+    shell_rc_path = shell_rc or expand("~/.bashrc")
+    selected = set(choices.selected_tools)
 
-    if add_shell:
+    if choices.add_shell:
         if not configure_shell_rc(shell_rc_path, home, dry_run, repo_home=repo_home):
-            print("Warning: shell CLI was not configured — run: sa install --wizard", file=sys.stderr)
+            print("Warning: shell CLI was not configured.", file=sys.stderr)
             return 1
 
     print()
@@ -930,6 +973,53 @@ def run_wizard(
         print(f"Shell CLI:  source {shell_rc_path}")
         print("            (or open a new terminal)")
     return 0
+
+
+def run_wizard(
+    repo_home: Path,
+    home: str,
+    *,
+    dry_run: bool = False,
+    shell_rc: Path | None = None,
+    collect_only: bool = False,
+    apply_only: bool = False,
+    choices_file: Path | None = None,
+) -> int:
+    if collect_only and apply_only:
+        print("Use either --collect-only or --apply-only, not both.", file=sys.stderr)
+        return 1
+
+    if collect_only:
+        if choices_file is None:
+            print("--choices-file required with --collect-only", file=sys.stderr)
+            return 1
+        choices = gather_wizard_choices(repo_home, home, shell_rc=shell_rc)
+        if choices is None:
+            return 1
+        choices_file.write_text(choices.to_json() + "\n")
+        return 0
+
+    if apply_only:
+        if choices_file is None or not choices_file.is_file():
+            print("--choices-file required with --apply-only", file=sys.stderr)
+            return 1
+        choices = SavedWizardChoices.from_json(choices_file.read_text())
+        return apply_wizard_choices(
+            repo_home,
+            choices,
+            dry_run=dry_run,
+            shell_rc=shell_rc,
+        )
+
+    choices = gather_wizard_choices(repo_home, home, shell_rc=shell_rc)
+    if choices is None:
+        return 1
+    return apply_wizard_choices(
+        repo_home,
+        choices,
+        dry_run=dry_run,
+        shell_rc=shell_rc,
+    )
 
 
 def main() -> int:
@@ -953,6 +1043,22 @@ def main() -> int:
         help="Shell rc file for SHARED_AGENTS_HOME export",
     )
     p_wizard.add_argument("--dry-run", action="store_true", help="Show actions without writing")
+    p_wizard.add_argument(
+        "--collect-only",
+        action="store_true",
+        help="Wizard UI only — write choices JSON (no clone/install)",
+    )
+    p_wizard.add_argument(
+        "--apply-only",
+        action="store_true",
+        help="Apply choices JSON after clone",
+    )
+    p_wizard.add_argument(
+        "--choices-file",
+        type=Path,
+        default=None,
+        help="JSON file for --collect-only / --apply-only",
+    )
 
     p_install = sub.add_parser("install", help="Configure AI tools")
     p_install.add_argument("repo_home", type=Path, help="Path to shared-agents repo")
@@ -983,7 +1089,15 @@ def main() -> int:
     if args.command == "wizard":
         home = args.home or default_home
         shell_rc = expand(args.shell_rc) if args.shell_rc else None
-        return run_wizard(repo_home, home, dry_run=args.dry_run, shell_rc=shell_rc)
+        return run_wizard(
+            repo_home,
+            home,
+            dry_run=args.dry_run,
+            shell_rc=shell_rc,
+            collect_only=args.collect_only,
+            apply_only=args.apply_only,
+            choices_file=args.choices_file,
+        )
 
     home = default_home
     tool_ids = parse_tool_ids(args.tools)

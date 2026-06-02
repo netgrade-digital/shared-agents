@@ -19,9 +19,9 @@ usage() {
 shared-agents install.sh v${VERSION}
 
 Usage:
-  install.sh [options]              Install / update repo + configure tools
-  install.sh --wizard               Interactive TUI (↑↓ Space Enter)
-  install.sh --non-interactive      Configure all detected tools (CI/scripts)
+  install.sh [options]              Install / update (TTY → Setup-Wizard)
+  install.sh --wizard               Wizard explizit (wie Default in Terminal)
+  install.sh --non-interactive      Ohne Wizard — alle erkannten Tools
   --check         Check which AI tools are installed vs configured
   --check --json  Same as check, JSON output (for CI/scripts)
   --dry-run       Show what install would do (no writes)
@@ -122,10 +122,10 @@ if [[ "$MODE" == "check" ]]; then
 fi
 
 use_wizard=0
-if [[ $FORCE_WIZARD -eq 1 ]]; then
-  use_wizard=1
-elif [[ $NON_INTERACTIVE -eq 0 && -t 0 && -t 1 && ! -d "$SHARED_AGENTS_HOME/.git" ]]; then
-  # Erst-Install (kein ~/.shared-agents yet): Wizard. Updates: --wizard oder --non-interactive.
+if [[ $NON_INTERACTIVE -eq 1 ]]; then
+  use_wizard=0
+elif [[ $FORCE_WIZARD -eq 1 ]] || [[ -t 0 && -t 1 ]]; then
+  # Interaktiver Wizard (TUI in foot/alacritty, Text in Cursor-Terminal)
   use_wizard=1
 fi
 
@@ -141,8 +141,40 @@ fi
 
 FRESH_INSTALL=0
 DID_CLONE=0
-if [[ ! -d "$SHARED_AGENTS_HOME/.git" && ! -e "$SHARED_AGENTS_HOME" ]]; then
+WIZARD_CHOICES=""
+WIZARD_PY="$(adapters_py)"
+
+needs_bootstrap=0
+if [[ "$REPO_SOURCE" != "$SHARED_AGENTS_HOME" && ! -d "$SHARED_AGENTS_HOME/.git" ]]; then
+  needs_bootstrap=1
   FRESH_INSTALL=1
+fi
+
+# Erst-Install + Wizard: UI zuerst — bei Abbruch wird nichts geklont.
+if [[ $use_wizard -eq 1 && $needs_bootstrap -eq 1 && $DRY_RUN -eq 0 ]]; then
+  WIZARD_CHOICES="$(mktemp /tmp/shared-agents-wizard.XXXXXX)"
+  cleanup_wizard_choices() { rm -f "$WIZARD_CHOICES"; }
+  trap cleanup_wizard_choices EXIT INT
+
+  echo ""
+  echo "Setup-Wizard — $SHARED_AGENTS_HOME wird erst nach deiner Bestätigung angelegt."
+  echo ""
+  if ! python3 "$WIZARD_PY" wizard "$REPO_SOURCE" \
+      --home "$SHARED_AGENTS_HOME" \
+      --shell-rc "$SHELL_RC" \
+      --collect-only \
+      --choices-file "$WIZARD_CHOICES"; then
+    echo ""
+    echo "Abgebrochen — nichts installiert."
+    exit 1
+  fi
+  SHARED_AGENTS_HOME="$(python3 -c "import json; print(json.load(open('$WIZARD_CHOICES'))['home'])")"
+  export SHARED_AGENTS_HOME
+  if [[ "$REPO_SOURCE" != "$SHARED_AGENTS_HOME" && ! -d "$SHARED_AGENTS_HOME/.git" ]]; then
+    needs_bootstrap=1
+  else
+    needs_bootstrap=0
+  fi
 fi
 
 # --- install path ---
@@ -190,19 +222,29 @@ if [[ $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME/.git" ]]; then
 fi
 
 if [[ $use_wizard -eq 1 ]]; then
-  WIZARD_ARGS=(wizard "$SHARED_AGENTS_HOME" --home "$SHARED_AGENTS_HOME" --shell-rc "$SHELL_RC")
-  [[ $DRY_RUN -eq 1 ]] && WIZARD_ARGS+=(--dry-run)
-  WIZARD_PY="$(adapters_py)"
-  if ! python3 "$WIZARD_PY" "${WIZARD_ARGS[@]}"; then
-    echo ""
-    echo "Install abgebrochen oder fehlgeschlagen — kein vollständiges Setup."
-    if [[ $DID_CLONE -eq 1 && $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME" ]]; then
+  if [[ -n "$WIZARD_CHOICES" && -f "$WIZARD_CHOICES" ]]; then
+    if ! python3 "$WIZARD_PY" wizard "$SHARED_AGENTS_HOME" \
+        --shell-rc "$SHELL_RC" \
+        --apply-only \
+        --choices-file "$WIZARD_CHOICES"; then
       echo ""
-      echo "  $SHARED_AGENTS_HOME wurde angelegt, Adapter/Shell sind nicht konfiguriert."
-      echo "  Erneut:  cd $SHARED_AGENTS_HOME && ./sa install --wizard"
-      echo "  Entfernen: rm -rf $SHARED_AGENTS_HOME"
+      echo "Setup fehlgeschlagen."
+      if [[ $DID_CLONE -eq 1 && -d "$SHARED_AGENTS_HOME" ]]; then
+        echo "Entferne unvollständiges $SHARED_AGENTS_HOME …"
+        rm -rf "$SHARED_AGENTS_HOME"
+      fi
+      exit 1
     fi
-    exit 1
+    rm -f "$WIZARD_CHOICES"
+    trap - EXIT INT
+  else
+    WIZARD_ARGS=(wizard "$SHARED_AGENTS_HOME" --home "$SHARED_AGENTS_HOME" --shell-rc "$SHELL_RC")
+    [[ $DRY_RUN -eq 1 ]] && WIZARD_ARGS+=(--dry-run)
+    if ! python3 "$WIZARD_PY" "${WIZARD_ARGS[@]}"; then
+      echo ""
+      echo "Install abgebrochen — kein vollständiges Setup."
+      exit 1
+    fi
   fi
 else
   if [[ $DRY_RUN -eq 0 ]]; then
@@ -255,6 +297,7 @@ Befehle danach:
 
 Docs:     $SHARED_AGENTS_HOME/README.md
 Check:    sa check
-Wizard:   sa install --wizard
+Wizard:   sa install
+Schnell:  sa install --non-interactive
 Remove:   sa uninstall
 EOF
