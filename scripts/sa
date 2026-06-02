@@ -128,12 +128,8 @@ sa_version() {
 }
 
 dispatch() {
-  local cmd="${1:-}"
-  if [[ -z "$cmd" ]]; then
-    echo "Usage: sa <command>  — try: sa help" >&2
-    exit 1
-  fi
-  shift
+  local cmd="${1:-help}"
+  shift || true
 
   case "$cmd" in
     help|-h|--help)
