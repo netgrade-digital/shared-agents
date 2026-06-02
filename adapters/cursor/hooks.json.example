@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "./hooks/shared-agents-sync.sh",
+        "timeout": 30
+      }
+    ],
+    "stop": [
+      {
+        "type": "prompt",
+        "prompt": "The agent session is ending. If this session completed a non-trivial task (feature, bugfix, refactor, multi-file change, non-obvious fix), you MUST ask the user in German: 'Soll ich ein Team-Learning in shared-agents anlegen?' If they agree, use capture-learning and write to learnings/pending/ only. If they decline or the task was trivial, do nothing.",
+        "loop_limit": 1
+      }
+    ]
+  }
+}

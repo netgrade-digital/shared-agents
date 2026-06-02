@@ -1,0 +1,9 @@
+version: 1
+learnings:
+  - id: example-2026-05-shared-knowledge-setup
+    file: approved/by-domain/infra/example-shared-knowledge-setup.md
+    project: shared-agents
+    domain: [infra, ai-tooling]
+    tags: [skills, learnings, sync, git]
+    confidence: high
+    created: 2026-05-28

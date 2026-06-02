@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "schema_version": "1.0",
+  "shared": {
+    "marker_begin": "<!-- shared-agents:begin -->",
+    "marker_end": "<!-- shared-agents:end -->",
+    "skill_dirs": [
+      { "path": "~/.agents/skills", "note": "Cursor, Zed, skills MCP" },
+      { "path": "~/.claude/skills", "note": "Claude Code" },
+      { "path": "~/.codex/skills", "note": "Codex CLI" },
+      { "path": "~/.config/opencode/skills", "note": "OpenCode" },
+      { "path": "~/.gemini/skills", "note": "Gemini CLI" }
+    ]
+  },
+  "tools": [
+    {
+      "id": "cursor",
+      "name": "Cursor IDE",
+      "detect": "~/.cursor",
+      "detect_bins": ["cursor"],
+      "docs": "adapters/cursor/README.md",
+      "sync": {
+        "hook": "sessionStart",
+        "script_dest": "~/.cursor/hooks/shared-agents-sync.sh",
+        "script_src": "adapters/cursor/shared-agents-sync.sh",
+        "hooks_json": "~/.cursor/hooks.json",
+        "hook_command": "./hooks/shared-agents-sync.sh"
+      },
+      "rules": {
+        "copy": [
+          {
+            "src": "rules/shared-agents-knowledge.mdc",
+            "dest": "~/.cursor/rules/shared-agents-knowledge.mdc"
+          }
+        ]
+      }
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "detect": "~/.claude",
+      "detect_bins": ["claude"],
+      "docs": "adapters/claude-code/README.md",
+      "sync": {
+        "hook": "SessionStart",
+        "settings_json": "~/.claude/settings.json",
+        "hook_command": "bash \"$SHARED_AGENTS_HOME/adapters/claude-code/session-sync.sh\""
+      }
+    },
+    {
+      "id": "zed",
+      "name": "Zed",
+      "detect": "~/.config/zed",
+      "detect_bins": ["zed"],
+      "docs": "adapters/zed/README.md",
+      "agents_md": "~/.config/zed/AGENTS.md",
+      "note": "No session hook. Agent runs sync as first shell command."
+    },
+    {
+      "id": "codex",
+      "name": "OpenAI Codex CLI",
+      "detect": "~/.codex",
+      "detect_bins": ["codex"],
+      "docs": "adapters/codex/README.md",
+      "agents_md": "~/.codex/AGENTS.md",
+      "env_home": "CODEX_HOME",
+      "note": "Uses $CODEX_HOME/AGENTS.md when CODEX_HOME is set."
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "detect": "~/.config/opencode",
+      "detect_bins": ["opencode"],
+      "docs": "adapters/opencode/README.md",
+      "agents_md": "~/.config/opencode/AGENTS.md"
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini CLI",
+      "detect": "~/.gemini",
+      "detect_bins": ["gemini"],
+      "docs": "adapters/gemini/README.md",
+      "agents_md": "~/.gemini/GEMINI.md",
+      "alt_agents_md": "~/.gemini/AGENTS.md"
+    },
+    {
+      "id": "windsurf",
+      "name": "Windsurf",
+      "detect": "~/.codeium/windsurf",
+      "detect_bins": ["windsurf"],
+      "docs": "adapters/windsurf/README.md",
+      "agents_md": "~/.codeium/windsurf/AGENTS.md",
+      "alt_rules": ["~/.codeium/windsurf/memories/global_rules.md"]
+    },
+    {
+      "id": "continue",
+      "name": "Continue.dev",
+      "detect": "~/.continue",
+      "detect_bins": ["continue"],
+      "docs": "adapters/continue/README.md",
+      "agents_md": "~/.continue/AGENTS.md"
+    },
+    {
+      "id": "copilot",
+      "name": "GitHub Copilot",
+      "detect": "~/.copilot",
+      "detect_bins": ["copilot"],
+      "docs": "adapters/copilot/README.md",
+      "agents_md": "~/.config/github-copilot/AGENTS.md",
+      "alt_agents_md": "~/.copilot/AGENTS.md"
+    },
+    {
+      "id": "aider",
+      "name": "Aider",
+      "detect": "~/.aider",
+      "detect_bins": ["aider"],
+      "docs": "adapters/aider/README.md",
+      "agents_md": "~/.aider/AGENTS.md"
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw / headless agents",
+      "detect": null,
+      "docs": "adapters/openclaw/README.md",
+      "entrypoint": "scripts/agent-entrypoint.sh"
+    },
+    {
+      "id": "generic",
+      "name": "Any AGENTS.md / CLAUDE.md CLI",
+      "detect": null,
+      "docs": "adapters/generic/README.md"
+    }
+  ]
+}

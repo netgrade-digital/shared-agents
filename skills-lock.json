@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "shared-agents-knowledge": {
+      "source": "YOUR_ORG/shared-agents",
+      "sourceType": "github",
+      "skillPath": "skills/shared-agents-knowledge/SKILL.md"
+    },
+    "capture-learning": {
+      "source": "YOUR_ORG/shared-agents",
+      "sourceType": "github",
+      "skillPath": "skills/capture-learning/SKILL.md"
+    }
+  }
+}
