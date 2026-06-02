@@ -13,3 +13,7 @@
 /logs/
 /info/
 /hooks/
+
+# Local MCP overrides (machine-specific; see mcps/mcps.local.yaml.example)
+mcps.local.yaml
+**/mcps.local.yaml

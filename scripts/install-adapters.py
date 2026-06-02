@@ -112,7 +112,7 @@ MANDATORY — first action every new session/thread, without asking:
 
 Before non-trivial work: search {home}/learnings/approved/ and index.yaml.
 Use skill `shared-agents-knowledge` for the full workflow.
-After reusable insights: write to learnings/pending/ (skill `capture-learning`).
+After reusable insights: write to {home}/learnings/pending/ only (skill `capture-learning`) — absolute path under SHARED_AGENTS_HOME, never the Cursor workspace. See {home}/docs/canonical-paths.md.
 No secrets, tokens, or customer data in learnings.
 
 After non-trivial tasks: ALWAYS ask "Soll ich ein Team-Learning anlegen?" — write pending/ only if user says yes.{extra}

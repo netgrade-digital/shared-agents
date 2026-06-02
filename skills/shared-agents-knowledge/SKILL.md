@@ -48,7 +48,7 @@ Also capture when user explicitly asks anytime.
 When writing:
 
 1. Activate skill `capture-learning`.
-2. Write to `learnings/pending/YYYY-MM-DD-short-slug.md`.
+2. Resolve path: `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/learnings/pending/YYYY-MM-DD-short-slug.md"` (see [docs/canonical-paths.md](../../docs/canonical-paths.md) — **never** workspace-relative).
 3. Never write directly to `approved/`.
 4. Remind user: PR review → `approved/` → then all agents can use it.
 ## Headless agents (OpenClaw)

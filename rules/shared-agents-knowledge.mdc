@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Team Knowledge (shared-agents)
 
-Repo path: `~/.shared-agents` (or `$SHARED_AGENTS_HOME`).
+Repo path: `~/.shared-agents` (or `$SHARED_AGENTS_HOME`). Canonical paths: `docs/canonical-paths.md` in that repo.
 
 ## Automatic sync (mandatory — never ask the user)
 
@@ -19,7 +19,7 @@ Cursor also runs `sessionStart` hook — still run sync once at session start if
 
 ## Before tasks
 
-After sync, search `learnings/approved/` and `learnings/index.yaml` for matching project/domain. Use skill `shared-agents-knowledge`.
+After sync, search `$SHARED_AGENTS_HOME/learnings/approved/` and `$SHARED_AGENTS_HOME/learnings/index.yaml` for matching project/domain. Use skill `shared-agents-knowledge`.
 
 ## After tasks (mandatory for non-trivial work)
 
@@ -27,13 +27,13 @@ After a **non-trivial** task (feature, bugfix, refactor, multi-file change, non-
 
 1. **Always ask the user:** „Soll ich ein Team-Learning in shared-agents anlegen?"
 2. Wait for explicit yes/no.
-3. **If yes:** use skill `capture-learning` → write to `learnings/pending/` only.
+3. **If yes:** use skill `capture-learning` → write **only** to `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/learnings/pending/"` (absolute path — **not** the Cursor workspace unless it equals `$SHARED_AGENTS_HOME`).
 4. **If no:** stop — do not write anything.
 5. Tell user: pending needs PR review before it becomes team knowledge (`approved/`).
 
 Skip the question only for trivial work (typos, formatting, pure Q&A, no reusable insight).
 
-Team-relevant insight → skill `capture-learning` → `learnings/pending/`. No secrets.
+Team-relevant insight → skill `capture-learning` → `$SHARED_AGENTS_HOME/learnings/pending/`. No secrets. Never `approved/` from the agent.
 
 ## Team skills
 

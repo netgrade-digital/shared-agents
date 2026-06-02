@@ -1,0 +1,28 @@
+# Lokale MCP-Variablen — nach ~/.shared-agents/mcps.local.yaml kopieren.
+# Diese Datei NIEMALS ins Git committen (enthält ggf. Hostnamen / Zugangsdaten).
+#
+# cp mcps/mcps.local.yaml.example ~/.shared-agents/mcps.local.yaml
+#
+# Siehe docs/shared-mcps.md
+
+# Aktives Profil (optional). Keys aus profiles.<name> überschreiben Top-Level.
+# profile: default
+
+# --- Screaming Frog Spider-Pool (optional, tier: optional) ---
+# Nur setzen wenn SSH + Docker-Container auf Infra-Host verfügbar.
+ssh_host: alte-infra
+docker_user: abc
+spider_count: 6
+
+# --- Profile (optional) ---
+# profiles:
+#   default:
+#     ssh_host: alte-infra
+#     spider_count: 15
+#   laptop:
+#     ssh_host: null
+#     spider_count: 0
+
+# --- Secrets (falls ein MCP env braucht — Werte hier, nicht im Manifest) ---
+# env:
+#   SOME_API_KEY: "…"

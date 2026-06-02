@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "schema_version": "0.1-draft",
+  "note": "Referenz-Entwurf — noch nicht von install.sh ausgewertet. Siehe docs/shared-mcps.md",
+  "shared": {
+    "managed_prefix": "sa-",
+    "local_config": "~/.shared-agents/mcps.local.yaml",
+    "marker_begin": "<!-- shared-agents-mcp:begin -->",
+    "marker_end": "<!-- shared-agents-mcp:end -->"
+  },
+  "hosts": {
+    "cursor": {
+      "config_path": "~/.cursor/mcp.json",
+      "format": "cursor_mcp_servers",
+      "servers_key": "mcpServers"
+    },
+    "claude-code": {
+      "config_path": "~/.claude/settings.json",
+      "format": "claude_mcp",
+      "note": "Pfad/Format je nach Claude-Version prüfen — v2+"
+    }
+  },
+  "servers": [
+    {
+      "id": "browser-tools-mcp",
+      "name": "Browser Tools (audit, screenshot, network)",
+      "tier": "team",
+      "domain": ["frontend", "seo", "qa"],
+      "detect": {
+        "type": "command",
+        "bin": "npx"
+      },
+      "output_key": "sa-browser-tools-mcp",
+      "template": {
+        "command": "npx",
+        "args": ["-y", "@agentdeskai/browser-tools-mcp@{{version}}"]
+      },
+      "vars": {
+        "version": {
+          "default": "1.2.1",
+          "description": "Pinned npm package version — bump via PR"
+        }
+      }
+    },
+    {
+      "id": "screaming-frog-spider",
+      "name": "Screaming Frog SEO Spider (remote Docker pool)",
+      "tier": "optional",
+      "domain": ["seo"],
+      "requires_local": ["ssh_host", "docker_user", "spider_count"],
+      "detect": {
+        "type": "ssh_exec",
+        "host_var": "ssh_host",
+        "command": "docker ps --format '{{.Names}}' | grep -q '^seo-spider-1$'"
+      },
+      "generator": {
+        "type": "repeat",
+        "id_pattern": "sa-screaming-frog-spider{{n}}",
+        "count_var": "spider_count",
+        "template": {
+          "command": "ssh",
+          "args": [
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "{{ssh_host}}",
+            "docker",
+            "exec",
+            "-i",
+            "-u",
+            "{{docker_user}}",
+            "-e",
+            "HOME=/config",
+            "-e",
+            "SF_CLI_PATH=/usr/bin/screamingfrogseospider",
+            "seo-spider-{{n}}",
+            "/opt/sf-mcp-venv/bin/screaming-frog-mcp"
+          ]
+        }
+      },
+      "aliases": {
+        "screaming-frog-spider1": "sa-screaming-frog-spider1",
+        "screaming-frog-spider2": "sa-screaming-frog-spider2",
+        "screaming-frog-spider3": "sa-screaming-frog-spider3",
+        "screaming-frog-spider4": "sa-screaming-frog-spider4",
+        "screaming-frog-spider5": "sa-screaming-frog-spider5",
+        "screaming-frog-spider6": "sa-screaming-frog-spider6"
+      }
+    }
+  ]
+}

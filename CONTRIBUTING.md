@@ -38,6 +38,28 @@ Installed = config dir exists **or** any `detect_bins` binary found.
 
 Configured = shared-agents marker or hook present in expected paths.
 
+## Canonical paths (mandatory for agents)
+
+All team files live under `$SHARED_AGENTS_HOME` (default `~/.shared-agents`), **not** in the Cursor workspace or customer project unless that path equals `$SHARED_AGENTS_HOME`.
+
+| Action | Path |
+|--------|------|
+| Write learning draft | `$SHARED_AGENTS_HOME/learnings/pending/YYYY-MM-DD-slug.md` |
+| Read team knowledge | `$SHARED_AGENTS_HOME/learnings/approved/` + `index.yaml` |
+| Resolve path | `scripts/learning-path.sh <slug>` |
+
+Full spec: [docs/canonical-paths.md](docs/canonical-paths.md). Update `capture-learning` and `rules/shared-agents-knowledge.mdc` when changing this contract.
+
+## Shared MCPs (planned)
+
+MCP server wiring is documented in [docs/shared-mcps.md](docs/shared-mcps.md). When implementing `install-mcps.py`:
+
+- Follow the same patterns as `install-adapters.py` (stdlib, idempotent, `--check`, `--dry-run`)
+- Never commit `mcps.local.yaml` or secrets in the manifest
+- Use managed prefix `sa-` for team servers; leave user keys untouched
+
+Reference: [mcps/manifest.example.json](mcps/manifest.example.json)
+
 ## Code style
 
 - Installer: Python 3 stdlib only (no pip deps)

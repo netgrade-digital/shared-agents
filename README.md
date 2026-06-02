@@ -18,7 +18,9 @@ Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Ma
 - [Täglicher Ablauf](#täglicher-ablauf)
 - [Repo-Struktur](#repo-struktur)
 - [Learnings](#learnings)
+- [Canonical Paths](#canonical-paths)
 - [Skills](#skills)
+- [Shared MCPs (geplant)](#shared-mcps-geplant)
 - [Headless / CI](#headless--ci)
 - [Neues Tool hinzufügen](#neues-tool-hinzufügen)
 - [Troubleshooting](#troubleshooting)
@@ -268,6 +270,7 @@ shared-agents/
 │   ├── shared-agents-knowledge/   # Sync, Retrieve, Workflow
 │   └── capture-learning/          # Learning-Vorschläge
 ├── learnings/
+│   ├── README.md                  # pending vs approved + Schreibort
 │   ├── approved/                  # Freigegeben
 │   ├── pending/                   # KI-Entwürfe → PR
 │   └── index.yaml                 # Suchindex
@@ -276,12 +279,20 @@ shared-agents/
 ├── scripts/
 │   ├── install.sh                 # Entrypoint: install | check | dry-run
 │   ├── install-adapters.py        # Detect, install, verify (stdlib only)
+│   ├── learning-path.sh           # Canonical pending path ausgeben
 │   ├── promote-learning.sh        # Kurzform: sofort promoten (-y)
 │   ├── review-learning.sh         # Interaktiv: review + promote + index
 │   ├── review-learning.py
 │   ├── sync.sh
 │   ├── session-sync.sh
 │   └── agent-entrypoint.sh
+├── docs/
+│   ├── team-ki-setup.md           # Rollout / Abteilung
+│   ├── shared-mcps.md             # MCP-Design (Entwurf)
+│   └── canonical-paths.md         # Pflicht-Pfade für Agenten
+├── mcps/
+│   ├── manifest.example.json      # MCP-Manifest-Referenz
+│   └── mcps.local.yaml.example    # Lokale Werte (nicht committen)
 ├── adapters/
 │   ├── manifest.json              # Tool-Registry (detect, detect_bins, paths)
 │   ├── cursor/ … generic/          # Pro-Tool Docs + Hook-Scripts
@@ -368,6 +379,13 @@ In **Zed/ andere CLIs**: steht in globaler `AGENTS.md` (via `install.sh`).
 
 Der Agent schreibt **nie direkt** nach `approved/`.
 
+**Pflicht-Pfad für Agenten:** Learnings-Entwürfe immer unter `$SHARED_AGENTS_HOME/learnings/pending/` — nicht im Cursor-Workspace oder Kunden-Projekt (siehe [Canonical Paths](#canonical-paths)).
+
+```bash
+"$SHARED_AGENTS_HOME/scripts/learning-path.sh" 2026-06-02-my-slug
+# → …/learnings/pending/2026-06-02-my-slug.md
+```
+
 ### Review (Mensch, ~30 Sek)
 
 ```bash
@@ -410,6 +428,35 @@ Team-Skills in `skills/`. `install.sh` symlinkt nach:
 
 Skills liegen im Repo unter `skills/` — `install.sh` symlinkt sie nach `~/.agents/skills/` usw.  
 ([skills.sh](https://skills.sh) ist GitHub-zentriert; für Bitbucket reicht Clone + `install.sh`.)
+
+---
+
+## Shared MCPs (geplant)
+
+Team-weite **MCP-Server** (Cursor `mcp.json`, später weitere IDEs) im gleichen Stil wie Adapter: **Manifest + lokale Overrides + Installer** — nicht als kopiertes JSON mit SSH/Docker-Details im Git.
+
+| Dokument | Inhalt |
+|----------|--------|
+| [docs/shared-mcps.md](docs/shared-mcps.md) | Design, Ebenen, Merge-Strategie, Migration, Sicherheit |
+| [mcps/README.md](mcps/README.md) | Kurzreferenz + Status |
+| [mcps/manifest.example.json](mcps/manifest.example.json) | Schema-Referenz (Browser Tools, SF-Spider-Generator) |
+| [mcps/mcps.local.yaml.example](mcps/mcps.local.yaml.example) | Vorlage für `~/.shared-agents/mcps.local.yaml` (gitignored) |
+
+**Status:** Entwurf — `install-mcps.py` noch nicht implementiert. Team-Server sollen Prefix `sa-` nutzen; private MCP-Einträge bleiben beim Re-Install erhalten.
+
+---
+
+## Canonical Paths
+
+**Pflicht für Agenten:** Dateien an feste Pfade unter `$SHARED_AGENTS_HOME` — nicht an den geöffneten Workspace.
+
+| Dokument | Inhalt |
+|----------|--------|
+| [docs/canonical-paths.md](docs/canonical-paths.md) | Learnings, Skills, Sync — absolut vs. Workspace |
+| [learnings/README.md](learnings/README.md) | Kurzregel pending/approved |
+| `scripts/learning-path.sh` | Gibt Pfad für pending-Learning aus |
+
+Learnings schreiben: `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/learnings/pending/…"` — Details in [docs/canonical-paths.md](docs/canonical-paths.md).
 
 ---
 

@@ -30,9 +30,26 @@ Skip when trivial, already documented, or user said no.
 
 ## Where to write (pending only)
 
+**Canonical path only** — see [docs/canonical-paths.md](../../docs/canonical-paths.md).
+
+```bash
+# Resolve before write (never use workspace-relative paths):
+PENDING="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/learnings/pending/YYYY-MM-DD-short-slug.md
+# Or:
+"$SHARED_AGENTS_HOME/scripts/learning-path.sh" YYYY-MM-DD-short-slug
 ```
-$SHARED_AGENTS_HOME/learnings/pending/YYYY-MM-DD-short-slug.md
-```
+
+### Mandatory
+
+1. Write **only** under `$SHARED_AGENTS_HOME/learnings/pending/` (default: `~/.shared-agents/learnings/pending/`).
+2. Use the **absolute** path in the Write/edit tool — not `learnings/pending/…` from the open project.
+3. **Do not** write to the Cursor workspace or dev checkout unless it is the same directory as `$SHARED_AGENTS_HOME` (verify with `realpath` or `learning-path.sh`).
+
+### Forbidden
+
+- `Development/Work/shared-agents/learnings/pending/` when `$SHARED_AGENTS_HOME` is `~/.shared-agents`
+- Customer project repos (`.cursor/`, project `docs/`, etc.)
+- `learnings/approved/` (human/PR only)
 
 **Never write to `approved/`** — that is human/PR territory.
 
