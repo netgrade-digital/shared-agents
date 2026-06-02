@@ -3,6 +3,7 @@
 Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Markdown + Git), automatischer Sync, manifest-basierte Adapter für gängige IDEs und CLIs.
 
 > **Ein Repo · Ein Pfad · Ein Format**  
+> Remote: [bitbucket.org/netgrade/shared-agents](https://bitbucket.org/netgrade/shared-agents/src/main/)  
 > Standardpfad: `~/.shared-agents` · Env: `$SHARED_AGENTS_HOME`
 
 ---
@@ -34,8 +35,8 @@ Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Ma
 
 ```
                     ┌─────────────────────────┐
-                    │  GitHub / Git (Remote)  │
-                    │  shared-agents repo     │
+                    │  Bitbucket (Remote)     │
+                    │  netgrade/shared-agents │
                     └───────────┬─────────────┘
                                 │ git pull / push (PR)
           ┌─────────────────────┼─────────────────────┐
@@ -55,8 +56,10 @@ Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Ma
 ## Quick Start
 
 ```bash
-# 1. Klonen (URL anpassen)
-git clone git@github.com:YOUR_ORG/shared-agents.git ~/.shared-agents
+# 1. Klonen
+git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
+# oder HTTPS:
+# git clone https://bitbucket.org/netgrade/shared-agents.git ~/.shared-agents
 
 # 2. Setup — Wizard: Agenten auswählen, Adapter setzen, Check am Ende
 ~/.shared-agents/scripts/install.sh
@@ -405,11 +408,8 @@ Team-Skills in `skills/`. `install.sh` symlinkt nach:
 | `~/.config/opencode/skills/` | OpenCode |
 | `~/.gemini/skills/` | Gemini CLI |
 
-Optional via [skills.sh](https://skills.sh):
-
-```bash
-npx skills add YOUR_ORG/shared-agents --skill shared-agents-knowledge
-```
+Skills liegen im Repo unter `skills/` — `install.sh` symlinkt sie nach `~/.agents/skills/` usw.  
+([skills.sh](https://skills.sh) ist GitHub-zentriert; für Bitbucket reicht Clone + `install.sh`.)
 
 ---
 
@@ -491,4 +491,4 @@ Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
 - **Design:** Manifest-driven, Python-Stdlib-only Installer, idempotent, keine Netzwerk-Calls
 - **Version:** Installer `v0.1.0` (siehe `install.sh` / `install-adapters.py --version`)
 
-`YOUR_ORG` in Clone-URL und `skills-lock.json` vor Publish ersetzen.
+Repo: `https://bitbucket.org/netgrade/shared-agents` (Branch `main`).

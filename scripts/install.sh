@@ -109,7 +109,7 @@ else
   if [[ $DRY_RUN -eq 0 ]] && ! grep -q 'SHARED_AGENTS_HOME=' "$SHELL_RC" 2>/dev/null; then
     cat >> "$SHELL_RC" <<EOF
 
-# shared-agents team knowledge (https://github.com/YOUR_ORG/shared-agents)
+# shared-agents team knowledge (https://bitbucket.org/netgrade/shared-agents)
 export SHARED_AGENTS_HOME="$SHARED_AGENTS_HOME"
 EOF
     echo "Added SHARED_AGENTS_HOME to $SHELL_RC"
