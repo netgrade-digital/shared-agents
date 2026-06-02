@@ -56,6 +56,17 @@ done
 
 export SHARED_AGENTS_HOME
 
+fix_git_remote() {
+  local home="$1"
+  local script="$home/scripts/ensure-git-remote.sh"
+  if [[ ! -f "$script" ]]; then
+    script="$REPO_SOURCE/scripts/ensure-git-remote.sh"
+  fi
+  if [[ -f "$script" ]]; then
+    bash "$script" "$home"
+  fi
+}
+
 run_check() {
   local repo="${SHARED_AGENTS_HOME}"
   if [[ ! -d "$repo" ]]; then
@@ -92,6 +103,9 @@ elif [[ -e "$SHARED_AGENTS_HOME" && ! -d "$SHARED_AGENTS_HOME/.git" ]]; then
 elif [[ -d "$REPO_SOURCE/.git" ]]; then
   echo "Cloning $REPO_SOURCE -> $SHARED_AGENTS_HOME"
   git clone "$REPO_SOURCE" "$SHARED_AGENTS_HOME"
+  if [[ $DRY_RUN -eq 0 ]]; then
+    fix_git_remote "$SHARED_AGENTS_HOME"
+  fi
 else
   echo "Copying $REPO_SOURCE -> $SHARED_AGENTS_HOME"
   mkdir -p "$SHARED_AGENTS_HOME"
@@ -100,6 +114,10 @@ fi
 
 chmod +x "$SHARED_AGENTS_HOME/scripts/"*.sh 2>/dev/null || true
 chmod +x "$SHARED_AGENTS_HOME/scripts/install-adapters.py" 2>/dev/null || true
+
+if [[ $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME/.git" ]]; then
+  fix_git_remote "$SHARED_AGENTS_HOME"
+fi
 
 if [[ $use_wizard -eq 1 ]]; then
   WIZARD_ARGS=(wizard "$SHARED_AGENTS_HOME" --home "$SHARED_AGENTS_HOME" --shell-rc "$SHELL_RC")
@@ -125,6 +143,10 @@ else
     echo ""
     run_check
   fi
+fi
+
+if [[ $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME/.git" ]]; then
+  fix_git_remote "$SHARED_AGENTS_HOME"
 fi
 
 cat <<EOF

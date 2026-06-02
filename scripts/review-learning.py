@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+DEFAULT_GIT_REMOTE = "git@bitbucket.org:netgrade/shared-agents.git"
 
 FM_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 LIST_RE = re.compile(r"^\[(.*)\]$")
@@ -217,6 +220,29 @@ def run_git(
     return result
 
 
+def ensure_git_remote(home: Path) -> str | None:
+    """Point origin at Bitbucket when it is a local dev checkout path."""
+    current = run_git(home, ["remote", "get-url", "origin"], check=False)
+    if current.returncode != 0:
+        return None
+    url = current.stdout.strip()
+    if url.startswith(("git@", "https://", "ssh://")):
+        return None
+
+    canonical = os.environ.get("SHARED_AGENTS_GIT_REMOTE", DEFAULT_GIT_REMOTE)
+    local_path = url.removeprefix("file://")
+    local_repo = Path(local_path)
+    if local_repo.is_dir() and (local_repo / ".git").is_dir():
+        upstream = run_git(local_repo, ["remote", "get-url", "origin"], check=False)
+        if upstream.returncode == 0:
+            up = upstream.stdout.strip()
+            if up.startswith(("git@", "https://", "ssh://")):
+                canonical = up
+
+    run_git(home, ["remote", "set-url", "origin", canonical], check=True)
+    return f"Fixed git origin: {url} -> {canonical}"
+
+
 def git_publish(
     home: Path,
     dest: Path,
@@ -241,11 +267,26 @@ def git_publish(
     if dry_run:
         print("")
         print("[dry-run] Would run:")
+        print("  ensure git remote -> Bitbucket (not local dev checkout)")
         print(f"  git -C {home} add learnings/index.yaml {rel_dest}")
         print(f"  git -C {home} add -u learnings/pending/")
         print(f'  git -C {home} commit -m "{commit_msg}"')
         print(f"  git -C {home} push")
         return 0
+
+    fixed = ensure_git_remote(home)
+    if fixed:
+        print(fixed)
+
+    ensure_remote = home / "scripts" / "ensure-git-remote.sh"
+    if ensure_remote.is_file():
+        fix = subprocess.run(
+            ["bash", str(ensure_remote), str(home)],
+            capture_output=True,
+            text=True,
+        )
+        if fix.stdout.strip():
+            print(fix.stdout.strip())
 
     run_git(home, ["add", "learnings/index.yaml", str(rel_dest)], check=True)
     run_git(home, ["add", "-u", "learnings/pending/"], check=False)
@@ -268,7 +309,15 @@ def git_publish(
 
     err = (push.stderr or push.stdout or "push failed").strip()
     print(f"Commit OK, but push failed: {err}", file=sys.stderr)
-    print(f"Retry: cd {home} && git push", file=sys.stderr)
+    if "denyCurrentBranch" in err or "checked out branch" in err:
+        print(
+            "Hint: origin points at a local dev checkout. Run:\n"
+            f"  bash {home}/scripts/ensure-git-remote.sh\n"
+            f"  cd {home} && git push",
+            file=sys.stderr,
+        )
+    else:
+        print(f"Retry: cd {home} && git push", file=sys.stderr)
     return 1
 
 

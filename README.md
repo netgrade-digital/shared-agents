@@ -405,7 +405,9 @@ sa-review-dry 2026-05-28-sidebar-radix.md
 sa-review 2026-05-28-sidebar-radix.md --domain vue
 ```
 
-Aliase werden bei `install.sh` in `~/.bashrc` eingetragen (`scripts/shell-aliases.sh`). Nach Install: `source ~/.bashrc` oder neues Terminal.
+Git-Commit und Push nach `sa-review` erfolgen automatisch (nur `learnings/`). Override: `--no-git`.
+
+**Remote:** `$SHARED_AGENTS_HOME` muss nach **Bitbucket** pushen — nicht in ein lokales Dev-Checkout. Bei `denyCurrentBranch`-Fehler: `bash scripts/ensure-git-remote.sh && git push`.
 
 Low-level (ohne Alias):
 
