@@ -178,7 +178,7 @@ def publish(
         out = (push.stdout or push.stderr or "").strip()
         if out:
             print(out)
-        print("Pushed — teammates can sa-sync and sa-review.")
+        print("Pushed — teammates can sa sync and sa review.")
         return 0
 
     err = (push.stderr or push.stdout or "push failed").strip()

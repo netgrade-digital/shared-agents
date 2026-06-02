@@ -63,59 +63,70 @@ Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Ma
 git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
 cd ~/.shared-agents
 
-# 2. Setup — Wizard: Agenten auswählen, Adapter setzen, Check am Ende
-./install.sh
+# 2. Setup — TUI-Wizard (Pfeiltasten, Space, Enter)
+./sa install --wizard
+# nach erstem Setup auch: sa install · shared-agents install
 
-# 3. Shell (Wizard fragt danach nach ~/.bashrc)
-export SHARED_AGENTS_HOME="$HOME/.shared-agents"
+# 3. Shell (Wizard konfiguriert ~/.bashrc)
+source ~/.bashrc
+sa help
 ```
 
 **Dev-Install** (lokaler Ordner, ohne Git-Remote):
 
 ```bash
 cd /path/to/shared-agents
-./install.sh --home "$HOME/.shared-agents"
+sa install --home "$HOME/.shared-agents"
+# oder: ./install.sh --home "$HOME/.shared-agents"
 ```
 
-**Neues KI-Tool installiert?** → `install.sh` erneut ausführen.
+**Neues KI-Tool installiert?** → `sa install` erneut ausführen.
 
 ---
 
 ## Befehlsübersicht
 
-Nach `./install.sh` und `source ~/.bashrc` (oder neuem Terminal). Alle `sa-*`-Aliase liegen in [`scripts/shell-aliases.sh`](scripts/shell-aliases.sh).
+Nach `./install.sh` und `source ~/.bashrc` (oder neuem Terminal):
 
-### Shell-Aliase (täglich)
+```bash
+sa help              # alle Befehle
+shared-agents sync   # gleich wie sa sync
+sa review list
+sa review
+```
+
+CLI: [`scripts/sa`](scripts/sa) · Aufruf: **`sa`** · **`shared-agents`** · **`sharedagents`**
+
+### `sa` CLI
 
 | Befehl | Beschreibung |
 |--------|--------------|
-| `sa-sync` | Neueste Learnings pullen (`sync.sh pull`) |
-| `sa-check` | Adapter-Status (`install.sh --check`) |
-| `sa-review-list` | Pending-Learnings anzeigen |
-| `sa-pending-push [datei]` | Pending commit + push (Team-Review) |
-| `sa-review [datei]` | Review + approve + commit/push |
-| `sa-review-dry [datei]` | Dry-run für Review |
-| `sa-unapprove-list` | Approved-Learnings anzeigen |
-| `sa-unapprove [id\|datei]` | Aus `approved/` entfernen — **Wizard: löschen oder pending** |
-| `sa-unapprove … --to-pending` | Non-interactive: nach `pending/` (Scripts, `-y`) |
-| `sa-unapprove … --delete` | Non-interactive: löschen |
-| `sa-learning-path [slug]` | Canonical Pfad für pending-Datei |
-| `sa-uninstall` | Deinstallieren — **Bestätigung: y/N** |
-| `sa-uninstall --keep-repo` | Nur Adapter/Aliase, Repo behalten |
-| `sa-uninstall --dry-run` | Vorschau |
+| `sa help` | Alle Befehle mit Erklärung |
+| `sa sync` | Neueste Learnings pullen |
+| `sa check` | Adapter-Status |
+| `sa install [--wizard]` | Install / Update |
+| `sa uninstall` | Deinstallieren (y/N) |
+| `sa review list` | Pending-Learnings |
+| `sa pending push [datei]` | Pending commit + push (Team-Review) |
+| `sa review [datei]` | Review + approve + commit/push |
+| `sa review dry [datei]` | Dry-run |
+| `sa unapprove list` | Approved-Learnings |
+| `sa unapprove [id\|datei]` | Entfernen (Wizard: löschen/pending) |
+| `sa pending path [slug]` | Canonical pending-Pfad |
+| `sa version` | CLI-Version |
 
-**Häufige Flags** (Review/Unapprove): `--no-git` · `-y` / `--yes` (ohne Nachfrage) · `--dry-run`
+**Flags:** `--no-git` · `-y` / `--yes` · `--dry-run` · `sa unapprove --to-pending` / `--delete`
 
 ### Repo-Root (nach Clone)
 
 | Befehl | Beschreibung |
 |--------|--------------|
-| `./install.sh` | Install / Update + Wizard |
+| `./install.sh` | Install / Update + Wizard (wie `sa install`) |
 | `./install.sh --check` | Status aller Tools |
-| `./install.sh --wizard` | Interaktiver Setup |
+| `./install.sh --wizard` | TUI-Wizard (wie `sa install --wizard`) |
 | `./install.sh --non-interactive` | Alle erkannten Tools |
 | `./install.sh --dry-run` | Vorschau |
-| `./uninstall.sh` | Deinstallieren (wie `sa-uninstall`) |
+| `./uninstall.sh` | Deinstallieren (wie `sa uninstall`) |
 
 ### Scripts (Low-level)
 
@@ -123,9 +134,9 @@ Nach `./install.sh` und `source ~/.bashrc` (oder neuem Terminal). Alle `sa-*`-Al
 |--------|--------------|
 | `scripts/sync.sh pull` | Git pull (ff-only, ignoriert globales rebase) |
 | `scripts/sync.sh status` | Kurzer Git-Status |
-| `scripts/publish-pending-learning.sh` | Pending commit + push (`sa-pending-push`) |
-| `scripts/review-learning.sh` | Wie `sa-review` |
-| `scripts/unapprove-learning.sh` | Wie `sa-unapprove` |
+| `scripts/publish-pending-learning.sh` | Pending commit + push (`sa pending push`) |
+| `scripts/review-learning.sh` | Wie `sa review` |
+| `scripts/unapprove-learning.sh` | Wie `sa unapprove` |
 | `scripts/promote-learning.sh` | Approve ohne Preview (`-y`) |
 | `scripts/learning-path.sh` | Pending-Pfad ausgeben |
 | `scripts/ensure-git-remote.sh` | `origin` → Bitbucket fixen |
@@ -142,23 +153,26 @@ Der Installer ist **manifest-driven** ([`adapters/manifest.json`](adapters/manif
 
 ### Setup-Wizard (empfohlen)
 
-In einem Terminal startet `install.sh` automatisch den **interaktiven Wizard** (OpenClaw-Style):
+In einem Terminal startet `install.sh` automatisch den **TUI-Wizard** (Pfeiltasten, Space, Enter):
 
 ```bash
-~/.shared-agents/install.sh
-# oder explizit:
-cd ~/.shared-agents && ./install.sh --wizard
+sa install --wizard
+# oder:
+cd ~/.shared-agents && ./install.sh
 ```
 
-Ablauf:
+| Schritt | Steuerung |
+|---------|-----------|
+| **1 — Install-Pfad** | Pfad tippen · Enter bestätigen |
+| **2 — Agenten wählen** | `↑↓` navigieren · **Space** an/aus · `a` alle · `d` erkannte · Enter weiter |
+| **3 — Shell-CLI** | `←→` / `↑↓` Ja/Nein · Enter |
+| **4 — Summary** | `↑↓` Run/Cancel · Enter |
 
-1. **Install-Pfad** — `SHARED_AGENTS_HOME` bestätigen (Default: `~/.shared-agents`)
-2. **Agenten wählen** — Checkbox-Liste aller Tools aus dem Manifest
-   - Nummer → an/aus
-   - `all` / `detected` / `none`
-   - Enter → weiter (Default: alle erkannten Tools)
-3. **Shell** — `SHARED_AGENTS_HOME` in `~/.bashrc` exportieren?
-4. **Summary + Bestätigung** — dann Setup + Check
+Default bei Tools: alle **erkannten** Agenten sind vorausgewählt.
+
+Fallback ohne TTY oder `SA_WIZARD_PLAIN=1`: klassische Text-Eingabe (Nummern, `all`/`detected`).
+
+**Bootstrap:** `./sa install` aus dem Clone funktioniert auch ohne vorheriges `~/.shared-agents` (klont bei Bedarf). Die Shell-Befehle `sa` / `shared-agents` stehen erst nach Wizard + `source ~/.bashrc` global zur Verfügung.
 
 Nicht-interaktiv (CI, Scripts):
 
@@ -173,7 +187,7 @@ install.sh --dry-run --wizard             # Wizard-Vorschau
 | Befehl | Beschreibung |
 |--------|--------------|
 | `install.sh` | Repo aktualisieren + **Wizard** (TTY) oder alle erkannten Tools |
-| `install.sh --wizard` | Interaktiver Setup-Wizard |
+| `install.sh --wizard` | TUI-Wizard (Pfeiltasten, Space, Enter) |
 | `install.sh --non-interactive` | Alle erkannten Tools ohne Prompts |
 | `install.sh --tools cursor,claude-code` | Nur bestimmte Adapter |
 | `install.sh --check` | Status: welche Tools installiert / konfiguriert? |
@@ -236,7 +250,7 @@ zed            yes        no           not_configured
 ```bash
 #!/bin/bash
 export SHARED_AGENTS_HOME="$HOME/.shared-agents"
-"$SHARED_AGENTS_HOME/scripts/install.sh" --check --json | jq '.tools[] | select(.status != "ok" and .status != "missing_tool")'
+sa check --json 2>/dev/null || "$SHARED_AGENTS_HOME/scripts/install.sh" --check --json | jq '.tools[] | select(.status != "ok" and .status != "missing_tool")'
 ```
 
 ---
@@ -310,7 +324,7 @@ Session / Thread start
 | Session Start | Hook / Agent | Neueste Learnings pullen |
 | Vor Tasks | Agent | `learnings/approved/` + `index.yaml` durchsuchen |
 | Nach großen Tasks | Agent → **du** | Frage: „Learning anlegen?" → bei **Ja**: `pending/` |
-| Review | **Mensch** | PR → `approved/` + `index.yaml` → alle auto-sync |
+| Review | **Mensch** | `sa review` → `approved/` + `index.yaml` (auto commit/push) |
 
 ---
 
@@ -318,7 +332,8 @@ Session / Thread start
 
 ```
 shared-agents/
-├── install.sh                     # ./install.sh — Entrypoint (nach Clone)
+├── sa                             # ./sa help — CLI Entrypoint
+├── install.sh                     # ./install.sh — Install
 ├── uninstall.sh                   # ./uninstall.sh — Deinstallieren
 ├── README.md
 ├── LICENSE
@@ -335,10 +350,14 @@ shared-agents/
 │   └── shared-agents-knowledge.mdc
 ├── scripts/
 │   ├── install.sh                 # Entrypoint: install | check | dry-run
-│   ├── install-adapters.py        # Detect, install, verify (stdlib only)
+│   ├── install-adapters.py        # Detect, install, verify, TUI wizard
+│   ├── wizard_tui.py              # TUI-Wizard (curses, Pfeiltasten/Space)
 │   ├── learning-path.sh           # Canonical pending path ausgeben
-│   ├── shell-aliases.sh           # sa-review, sa-sync, … (sourced from bashrc)
+│   ├── sa                           # sa help | sa sync | sa review …
+│   ├── shell-aliases.sh           # sa | shared-agents | sharedagents
 │   ├── configure-shell-rc.sh      # Idempotent bashrc block
+│   ├── publish-pending-learning.sh # Pending commit + push
+│   ├── publish-pending-learning.py
 │   ├── promote-learning.sh        # Kurzform: sofort promoten (-y)
 │   ├── review-learning.sh         # Interaktiv: review + promote + index
 │   ├── review-learning.py
@@ -347,6 +366,7 @@ shared-agents/
 │   ├── uninstall.sh               # Restlos deinstallieren
 │   ├── uninstall-adapters.py
 │   ├── remove-shell-rc.sh
+│   ├── ensure-git-remote.sh       # origin → Bitbucket fixen
 │   ├── sync.sh
 │   ├── session-sync.sh
 │   └── agent-entrypoint.sh
@@ -402,21 +422,21 @@ Learnings haben **zwei Stufen**. Das ist der wichtigste Punkt:
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ 1. AGENT (nach großem Task + dein „Ja")                        │
-│    schreibt Entwurf →  learnings/pending/2026-05-28-foo.md      │
-│    Status: Entwurf — andere sehen es noch NICHT als Wissen      │
+│    schreibt Entwurf →  learnings/pending/… + sa pending push     │
+│    Status: Entwurf — Team kann reviewen, Agents nutzen es noch nicht │
 └───────────────────────────────┬─────────────────────────────────┘
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ 2. MENSCH (Review)                                              │
 │    • Inhalt prüfen (keine Secrets, stimmt es?)                  │
-│    • review-learning.sh …  (verschiebt + index.yaml automatisch) │
-│    • git commit + PR → merge                                   │
+│    • sa review [datei]  (verschiebt + index.yaml automatisch)   │
+│    • auto commit + push (nur learnings/)                        │
 └───────────────────────────────┬─────────────────────────────────┘
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ 3. TEAM (automatisch)                                           │
-│    sync pull → Learning liegt in learnings/approved/            │
-│    Agent *soll* es bei passenden Tasks finden und nutzen        │
+│    sa sync → Learning in learnings/approved/                    │
+│    Agents nutzen es bei passenden Tasks                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -435,7 +455,7 @@ Der Agent **muss** nach nicht-trivialen Tasks fragen:
 
 | Deine Antwort | Was passiert |
 |---------------|--------------|
-| **Ja** | Agent schreibt `pending/` + **`sa-pending-push`** (commit/push für Team-Review) |
+| **Ja** | Agent schreibt `pending/` + **`sa pending push`** (commit/push für Team-Review) |
 | **Nein** | Nichts |
 
 In **Cursor** zusätzlich: `stop`-Hook erinnert den Agenten am Session-Ende.  
@@ -454,24 +474,24 @@ Der Agent schreibt **nie direkt** nach `approved/`.
 
 ```bash
 # Interaktiv: pending anzeigen, bestätigen, verschieben + index.yaml
-sa-review
+sa review
 
 # Bestimmte Datei (Slug reicht — Pfad wird unter $SHARED_AGENTS_HOME aufgelöst)
-sa-review 2026-05-28-sidebar-radix.md
+sa review 2026-05-28-sidebar-radix.md
 
 # Nur anzeigen
-sa-review-list
-sa-review-dry 2026-05-28-sidebar-radix.md
+sa review list
+sa review dry 2026-05-28-sidebar-radix.md
 
 # Domain überschreiben (Default: erstes Feld aus frontmatter domain)
-sa-review 2026-05-28-sidebar-radix.md --domain vue
+sa review 2026-05-28-sidebar-radix.md --domain vue
 ```
 
-Git-Commit und Push nach `sa-review` erfolgen automatisch (nur `learnings/`). Override: `--no-git`.
+Git-Commit und Push nach `sa review` erfolgen automatisch (nur `learnings/`). Override: `--no-git`.
 
 **Remote:** `$SHARED_AGENTS_HOME` muss nach **Bitbucket** pushen — nicht in ein lokales Dev-Checkout. Bei `denyCurrentBranch`-Fehler: `bash scripts/ensure-git-remote.sh && git push`.
 
-Low-level (ohne Alias):
+Low-level (direkt):
 
 ```bash
 ~/.shared-agents/scripts/review-learning.sh --list
@@ -490,18 +510,19 @@ Danach ist das Learning im Remote — Team sync pull.
 ### Unapprove (aus approved entfernen)
 
 ```bash
-sa-unapprove-list
-sa-unapprove fantasy-2026-06-dragon-cache-invalidation
+sa unapprove list
+sa unapprove fantasy-2026-06-dragon-cache-invalidation
 # Wizard: [1] Löschen  [2] Nach pending/  [q] Abbrechen
 ```
 
-Entfernt Eintrag aus `index.yaml`, dann Wizard (löschen vs. pending), commit + push wie bei `sa-review`.
+Entfernt Eintrag aus `index.yaml`, dann Wizard (löschen vs. pending), commit + push wie bei `sa review`.
 
 ### Deinstallieren
 
 ```bash
-sa-uninstall              # Bestätigung: y/N (überall im Terminal)
-sa-uninstall --keep-repo  # nur Adapter, Repo behalten
+sa uninstall              # Bestätigung: y/N (überall im Terminal)
+shared-agents uninstall   # gleich
+sa uninstall --keep-repo  # nur Adapter, Repo behalten
 ./uninstall.sh            # alternativ im Repo-Root
 ```
 
@@ -578,9 +599,10 @@ Details: [`adapters/openclaw/README.md`](adapters/openclaw/README.md)
 3. Testen:
 
 ```bash
-./install.sh --dry-run
-./install.sh
-./install.sh --check
+sa install --dry-run
+sa install
+sa check
+# oder: ./install.sh …
 ```
 
 Siehe [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -605,12 +627,14 @@ Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
 
 | Problem | Lösung |
 |---------|--------|
-| Tool in Check = `missing_tool` | CLI installieren oder einmal starten (Config-Ordner), dann `install.sh` |
-| Tool = `not_configured` | `install.sh` ausführen |
+| Tool in Check = `missing_tool` | CLI installieren, dann `sa install` |
+| Tool = `not_configured` | `sa install` ausführen |
 | Sync blockiert (Zed etc.) | `agent.tool_permissions.default: "allow"` oder einmal freigeben |
-| Veraltete Learnings | `install.sh --check` → Hook/AGENTS.md prüfen; `sync.sh pull` testen |
-| Learning fehlt beim Team | PR in `approved/`? `index.yaml` aktualisiert? |
-| `install.sh --check --json` | Für exakte Pfade / Status pro Tool |
+| Veraltete Learnings | `sa check` → Hook/AGENTS.md prüfen; `sa sync` testen |
+| Learning fehlt beim Team | In `approved/`? `index.yaml`? Kollege hat `sa sync`? |
+| `sa check --json` / `install.sh --check --json` | Exakte Pfade / Status pro Tool |
+| `sa` unbekannt nach Install | `source ~/.bashrc` oder neues Terminal |
+| Deinstall | `sa uninstall` — danach neues Terminal (`exec $SHELL`) |
 
 ---
 
@@ -619,8 +643,10 @@ Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
 | Variable | Default | Beschreibung |
 |----------|---------|--------------|
 | `SHARED_AGENTS_HOME` | `~/.shared-agents` | Lokaler Repo-Pfad |
+| `SHARED_AGENTS_GIT_REMOTE` | Bitbucket `netgrade/shared-agents` | Bootstrap-Clone für `sa install` |
+| `SA_WIZARD_PLAIN` | — | `1` = Text-Wizard statt TUI |
 | `CODEX_HOME` | — | Optional: Codex liest auch `$CODEX_HOME/AGENTS.md` |
-| `SHELL_RC` | `~/.bashrc` | Nur bei `install.sh` für Env-Eintrag |
+| `SHELL_RC` | `~/.bashrc` | Shell-RC für Wizard / `install.sh` |
 
 ---
 
@@ -629,6 +655,6 @@ Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
 - **Lizenz:** [MIT](LICENSE)
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Design:** Manifest-driven, Python-Stdlib-only Installer, idempotent, keine Netzwerk-Calls
-- **Version:** Installer `v0.1.0` (siehe `install.sh` / `install-adapters.py --version`)
+- **Version:** CLI `sa` v0.3.0 · Installer `v0.1.0` (`install.sh` / `install-adapters.py --version`)
 
 Repo: `https://bitbucket.org/netgrade/shared-agents` (Branch `main`).

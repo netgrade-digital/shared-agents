@@ -15,7 +15,7 @@ block() {
 ${MARKER_BEGIN} (managed by install.sh)
 export SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME}"
 if [[ -f "\$SHARED_AGENTS_HOME/scripts/shell-aliases.sh" ]]; then
-  # sa-sync, sa-review, sa-uninstall, …
+  # sa | shared-agents | sharedagents — CLI (sa help)
   source "\$SHARED_AGENTS_HOME/scripts/shell-aliases.sh"
 fi
 ${MARKER_END}
@@ -58,4 +58,4 @@ fi
 
 mkdir -p "$(dirname "$SHELL_RC")"
 block >> "$SHELL_RC"
-echo "  ✓ Added SHARED_AGENTS_HOME + aliases to $SHELL_RC"
+echo "  ✓ Added SHARED_AGENTS_HOME + CLI (sa) to $SHELL_RC"

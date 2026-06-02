@@ -20,7 +20,7 @@ shared-agents install.sh v${VERSION}
 
 Usage:
   install.sh [options]              Install / update repo + configure tools
-  install.sh --wizard               Interactive setup (default in a terminal)
+  install.sh --wizard               Interactive TUI (↑↓ Space Enter)
   install.sh --non-interactive      Configure all detected tools (CI/scripts)
   --check         Check which AI tools are installed vs configured
   --check --json  Same as check, JSON output (for CI/scripts)
@@ -116,6 +116,8 @@ else
 fi
 
 chmod +x "$SHARED_AGENTS_HOME/scripts/"*.sh 2>/dev/null || true
+chmod +x "$SHARED_AGENTS_HOME/scripts/sa" 2>/dev/null || true
+chmod +x "$SHARED_AGENTS_HOME/sa" 2>/dev/null || true
 chmod +x "$SHARED_AGENTS_HOME/scripts/install-adapters.py" 2>/dev/null || true
 
 if [[ $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME/.git" ]]; then
@@ -160,16 +162,18 @@ cat <<EOF
 
 Install OK.
 
+CLI:  sa help   (auch: shared-agents help · sharedagents help)
+
 Befehle (nach source ~/.bashrc oder neuem Terminal):
-  sa-sync          Neueste Learnings pullen
-  sa-review        Learning reviewen / approven
-  sa-pending-push  Pending ans Team pushen (nach Anlegen)
-  sa-unapprove     Learning aus approved entfernen
-  sa-check         Adapter-Status prüfen
-  sa-uninstall     Deinstallieren (Bestätigung: y/N)
+  sa sync              Neueste Learnings pullen
+  sa review            Learning reviewen / approven
+  sa pending push      Pending ans Team pushen
+  sa unapprove         Learning aus approved entfernen
+  sa check             Adapter-Status
+  sa uninstall         Deinstallieren (y/N)
 
 Docs:     $SHARED_AGENTS_HOME/README.md
-Check:    sa-check  — oder: $SHARED_AGENTS_HOME/install.sh --check
-Wizard:   $SHARED_AGENTS_HOME/install.sh --wizard
-Remove:   sa-uninstall  — oder: $SHARED_AGENTS_HOME/uninstall.sh
+Check:    sa check
+Wizard:   sa install --wizard
+Remove:   sa uninstall
 EOF

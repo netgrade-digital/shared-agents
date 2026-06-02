@@ -64,7 +64,7 @@ Hilfsskript:
 # → /home/you/.shared-agents/learnings/pending/2026-06-02-my-slug.md
 ```
 
-Shell-Aliase (nach `install.sh` in `~/.bashrc`): `sa-review`, `sa-review-list`, `sa-review-dry`, `sa-learning-path`, `sa-sync`, `sa-check` — siehe `scripts/shell-aliases.sh`.
+Shell-CLI (nach `install.sh` in `~/.bashrc`): `sa` · `shared-agents` · `sharedagents` — siehe `scripts/shell-aliases.sh` und `sa help`.
 
 ---
 

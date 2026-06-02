@@ -88,21 +88,21 @@ After creating the file, **always** push pending for team review:
 "$SHARED_AGENTS_HOME/scripts/publish-pending-learning.sh" YYYY-MM-DD-short-slug.md
 ```
 
-Or: `sa-pending-push YYYY-MM-DD-short-slug.md`
+Or: `sa pending push <datei>`
 
-This commits + pushes **only** `learnings/pending/` — teammates run `sa-sync` and `sa-review`.
+This commits + pushes **only** `learnings/pending/` — teammates run `sa sync` and `sa review`.
 
 ## After writing — tell the user
 
 1. File is in **`pending/`** — **not** team knowledge for agents yet (not in `approved/`).
-2. After publish: teammates can **`sa-sync`** → **`sa-review`**.
+2. After publish: teammates can **`sa sync`** → **`sa review`**.
 3. Only **`approved/`** after review becomes team truth.
 
 ## pending vs approved
 
 | | pending/ | approved/ |
 |---|----------|-----------|
-| Who writes | Agent (after user says yes) | Human via `sa-review` |
-| Git | Auto commit+push via `sa-pending-push` | Auto commit+push via `sa-review` |
+| Who writes | Agent (after user says yes) | Human via `sa review` |
+| Git | Auto commit+push via `sa pending push` | Auto commit+push via `sa review` |
 | Used by agents | **No** | **Yes** |
 | Purpose | Draft for team review | Team truth |

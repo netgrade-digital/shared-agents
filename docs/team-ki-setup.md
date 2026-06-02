@@ -270,14 +270,14 @@ Bitbucket shared-agents
 ```bash
 # Install / Update
 ~/.shared-agents/install.sh
-sa-sync
+sa sync
 
-# Learnings reviewen (Aliase aus ~/.bashrc nach install.sh)
-sa-review-list
-sa-review
+# Learnings reviewen (CLI aus ~/.bashrc nach install.sh)
+sa review list
+sa review
 
 # Status aller Tools
-sa-check
+sa check
 ```
 
 Siehe auch [README.md](../README.md), [shared-mcps.md](shared-mcps.md) und [CONTRIBUTING.md](../CONTRIBUTING.md).

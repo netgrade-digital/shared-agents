@@ -750,24 +750,24 @@ def wizard_select_tools(reports: list[tuple[dict, ToolReport]]) -> set[str]:
     return selected
 
 
-def run_wizard(
+def tool_status_plain(report: ToolReport) -> str:
+    if report.status == Status.OK:
+        return "configured"
+    if report.installed:
+        return "needs setup"
+    return "not installed"
+
+
+def run_wizard_plain(
     repo_home: Path,
     home: str,
+    reports: list[tuple[dict, ToolReport]],
     *,
-    dry_run: bool = False,
-    shell_rc: Path | None = None,
-) -> int:
+    dry_run: bool,
+    shell_rc: Path | None,
+) -> tuple[str, set[str], bool, bool] | None:
+    """Returns (home, selected, add_shell, run_setup) or None if cancelled."""
     print_banner()
-    repo_ok, repo_msg = check_repo(home)
-    if not repo_ok:
-        print(f"Repo error: {repo_msg}", file=sys.stderr)
-        return 1
-
-    manifest = load_manifest(repo_home)
-    reports = [
-        (tool, check_tool(tool, home))
-        for tool in installable_tools(manifest)
-    ]
 
     print(bold("Step 1/4 — Install location"))
     print(f"  Repo:  {repo_home}")
@@ -777,7 +777,6 @@ def run_wizard(
         home = os.path.expanduser(os.path.expandvars(home_input))
     else:
         home = default_home
-    os.environ["SHARED_AGENTS_HOME"] = home
     print()
 
     selected = wizard_select_tools(reports)
@@ -788,23 +787,21 @@ def run_wizard(
 
     print(bold("Step 3/4 — Shell environment"))
     add_shell = True
-    if shell_rc is not None:
-        rc_text = shell_rc.read_text() if shell_rc.is_file() else ""
-        has_home = "SHARED_AGENTS_HOME=" in rc_text
-        has_aliases = "shell-aliases.sh" in rc_text
-        if has_home and has_aliases:
-            print(f"  ✓ {shell_rc} already configured (SHARED_AGENTS_HOME + aliases)")
-            add_shell = False
-        elif has_home and not has_aliases:
-            print(f"  → {shell_rc} has SHARED_AGENTS_HOME — will add review aliases")
-            add_shell = True
-        elif is_tty():
-            add_shell = confirm(
-                f"  Add SHARED_AGENTS_HOME + sa-review aliases to {shell_rc}?",
-                True,
-            )
-        if add_shell:
-            configure_shell_rc(shell_rc, home, dry_run, repo_home=repo_home)
+    shell_rc_path = shell_rc or expand("~/.bashrc")
+    rc_text = shell_rc_path.read_text() if shell_rc_path.is_file() else ""
+    has_home = "SHARED_AGENTS_HOME=" in rc_text
+    has_cli = "shell-aliases.sh" in rc_text
+    if has_home and has_cli:
+        print(f"  ✓ {shell_rc_path} already configured (SHARED_AGENTS_HOME + CLI)")
+        add_shell = False
+    elif has_home and not has_cli:
+        print(f"  → {shell_rc_path} has SHARED_AGENTS_HOME — will add CLI (sa)")
+        add_shell = True
+    elif is_tty():
+        add_shell = confirm(
+            f"  Add SHARED_AGENTS_HOME + sa CLI to {shell_rc_path}?",
+            True,
+        )
     print()
 
     print(bold("Step 4/4 — Summary"))
@@ -819,10 +816,108 @@ def run_wizard(
         print("  Configure:    (none)")
     print()
     if is_tty() and not confirm("Run setup now?", True):
-        print("Cancelled.")
-        return 0
-    print()
+        return None
+    return home, selected, add_shell, True
 
+
+def run_wizard(
+    repo_home: Path,
+    home: str,
+    *,
+    dry_run: bool = False,
+    shell_rc: Path | None = None,
+) -> int:
+    repo_ok, repo_msg = check_repo(home)
+    if not repo_ok:
+        print(f"Repo error: {repo_msg}", file=sys.stderr)
+        return 1
+
+    manifest = load_manifest(repo_home)
+    reports = [
+        (tool, check_tool(tool, home))
+        for tool in installable_tools(manifest)
+    ]
+
+    shell_rc_path = shell_rc or expand("~/.bashrc")
+    shell_rc_str = str(shell_rc_path)
+
+    choices: tuple[str, set[str], bool, bool] | None = None
+
+    try:
+        from wizard_tui import (
+            ToolRow,
+            WizardTuiFailed,
+            detect_shell_rc_state,
+            run_wizard_tui,
+            tui_available,
+        )
+    except ImportError:
+        tui_available = lambda: False  # type: ignore[misc, assignment]
+        run_wizard_tui = None  # type: ignore[assignment]
+        WizardTuiFailed = Exception  # type: ignore[misc, assignment]
+
+    if tui_available() and run_wizard_tui is not None:
+        tool_rows = [
+            ToolRow(
+                tool_id=tool["id"],
+                name=tool["name"],
+                status=tool_status_plain(report),
+                installed=report.installed,
+            )
+            for tool, report in reports
+        ]
+        shell_state = detect_shell_rc_state(shell_rc_str)
+        tui_failed = False
+        try:
+            result = run_wizard_tui(
+                default_home=home,
+                rows=tool_rows,
+                shell_rc=shell_rc_str,
+                shell_state=shell_state,
+            )
+        except WizardTuiFailed as exc:
+            print(f"  → {exc} — using text prompts.", file=sys.stderr)
+            tui_failed = True
+            result = None
+
+        if result is not None:
+            if not result.run_setup:
+                print("Cancelled.")
+                return 0
+            choices = (result.home, result.selected_tools, result.add_shell, True)
+        elif tui_failed:
+            choices = run_wizard_plain(
+                repo_home,
+                home,
+                reports,
+                dry_run=dry_run,
+                shell_rc=shell_rc_path,
+            )
+            if choices is None:
+                print("Cancelled.")
+                return 0
+        else:
+            print("Cancelled.")
+            return 0
+    else:
+        choices = run_wizard_plain(
+            repo_home,
+            home,
+            reports,
+            dry_run=dry_run,
+            shell_rc=shell_rc_path,
+        )
+        if choices is None:
+            print("Cancelled.")
+            return 0
+
+    home, selected, add_shell, _run = choices
+    os.environ["SHARED_AGENTS_HOME"] = home
+
+    if add_shell:
+        configure_shell_rc(shell_rc_path, home, dry_run, repo_home=repo_home)
+
+    print()
     run_install(repo_home, home, dry_run, tool_ids=selected)
     if not dry_run:
         print()

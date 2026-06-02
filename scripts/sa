@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+# shared-agents CLI — Usage: sa help
+set -euo pipefail
+
+SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
+SA_VERSION="0.3.0"
+SA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SA_REPO_ROOT="$(cd "$SA_DIR/.." && pwd)"
+DEFAULT_GIT_REMOTE="${SHARED_AGENTS_GIT_REMOTE:-git@bitbucket.org:netgrade/shared-agents.git}"
+
+_sa_bin() {
+  echo "$SHARED_AGENTS_HOME/scripts/$1"
+}
+
+_sa_resolve_install_sh() {
+  if [[ -f "$SHARED_AGENTS_HOME/install.sh" ]]; then
+    echo "$SHARED_AGENTS_HOME/install.sh"
+  elif [[ -f "$SA_REPO_ROOT/install.sh" ]]; then
+    echo "$SA_REPO_ROOT/install.sh"
+  elif [[ -f "$(_sa_bin install.sh)" ]]; then
+    echo "$(_sa_bin install.sh)"
+  fi
+}
+
+_sa_resolve_uninstall_sh() {
+  if [[ -f "$SHARED_AGENTS_HOME/uninstall.sh" ]]; then
+    echo "$SHARED_AGENTS_HOME/uninstall.sh"
+  elif [[ -f "$SA_REPO_ROOT/uninstall.sh" ]]; then
+    echo "$SA_REPO_ROOT/uninstall.sh"
+  elif [[ -f "$(_sa_bin uninstall.sh)" ]]; then
+    echo "$(_sa_bin uninstall.sh)"
+  fi
+}
+
+_sa_home_missing() {
+  [[ ! -d "$SHARED_AGENTS_HOME" ]]
+}
+
+_sa_require_home() {
+  if _sa_home_missing; then
+    echo "shared-agents not found at: $SHARED_AGENTS_HOME" >&2
+    echo "Run: sa install --wizard   (or: shared-agents install --wizard)" >&2
+    exit 1
+  fi
+}
+
+_sa_run_install() {
+  local install_sh
+  install_sh="$(_sa_resolve_install_sh)"
+  if [[ -n "$install_sh" ]]; then
+    exec "$install_sh" "$@"
+  fi
+
+  if _sa_home_missing; then
+    echo "Bootstrapping $SHARED_AGENTS_HOME from $DEFAULT_GIT_REMOTE"
+    mkdir -p "$(dirname "$SHARED_AGENTS_HOME")"
+    git clone "$DEFAULT_GIT_REMOTE" "$SHARED_AGENTS_HOME"
+    if [[ -f "$SHARED_AGENTS_HOME/scripts/ensure-git-remote.sh" ]]; then
+      bash "$SHARED_AGENTS_HOME/scripts/ensure-git-remote.sh" "$SHARED_AGENTS_HOME"
+    fi
+  fi
+
+  exec "$SHARED_AGENTS_HOME/install.sh" "$@"
+}
+
+sa_help() {
+  cat <<EOF
+shared-agents CLI (sa) v${SA_VERSION}
+Repo: \$SHARED_AGENTS_HOME (${SHARED_AGENTS_HOME})
+
+Aufruf: sa | shared-agents | sharedagents  <command> [args…]
+
+Usage: sa <command> [args…]
+
+Setup
+  install [opts]       Install / update (TUI: sa install --wizard)
+  check                Tool-Status prüfen
+  uninstall [opts]     Deinstallieren (Bestätigung: y/N)
+  sync                 Neueste Learnings pullen (Bitbucket)
+
+Learnings
+  review [file]        Pending reviewen → approved (+ commit/push)
+  review list          Pending-Liste
+  review dry [file]    Dry-run für Review
+  pending push [file]    Pending commit + push (Team-Review)
+  pending path [slug]    Pfad für pending-Datei anzeigen
+  unapprove [id|file]  Aus approved entfernen (Wizard: löschen/pending)
+  unapprove list       Approved-Liste
+
+Info
+  help                 Diese Hilfe
+  version              Version anzeigen
+
+Beispiele
+  shared-agents install --wizard    Erst-Setup / Update
+  sa install --check                Adapter-Status
+  sa sync
+  sa review list
+  sa pending push 2026-06-02-my-slug.md
+  sa review 2026-06-02-my-slug.md
+
+Häufige Flags (install / review / unapprove / pending)
+  --wizard             Interaktiver Setup-Wizard (install)
+  --non-interactive    Alle erkannten Tools (install)
+  --dry-run            Vorschau
+  -y, --yes            Ohne Nachfrage
+  --no-git             Kein commit/push
+  --domain DOMAIN      Ziel-Domain (review)
+
+Erst-Install ohne ~/.shared-agents: sa install --wizard (klont von Bitbucket)
+Repo-Root: ./install.sh · ./sa install · sa help
+Doku: \$SHARED_AGENTS_HOME/README.md#befehlsübersicht
+EOF
+}
+
+sa_version() {
+  echo "shared-agents sa v${SA_VERSION}"
+  echo "SHARED_AGENTS_HOME=${SHARED_AGENTS_HOME}"
+  local install_sh
+  install_sh="$(_sa_resolve_install_sh)"
+  if [[ -n "$install_sh" ]]; then
+    echo "install.sh=${install_sh}"
+  elif _sa_home_missing; then
+    echo "install.sh=(bootstrap via sa install)"
+  fi
+}
+
+dispatch() {
+  local cmd="${1:-help}"
+  shift || true
+
+  case "$cmd" in
+    help|-h|--help)
+      sa_help
+      ;;
+    version|-V|--version)
+      sa_version
+      ;;
+    install|setup)
+      _sa_run_install "$@"
+      ;;
+    check)
+      local install_sh
+      install_sh="$(_sa_resolve_install_sh)"
+      if [[ -n "$install_sh" ]]; then
+        exec "$install_sh" --check "$@"
+      fi
+      _sa_require_home
+      exec "$(_sa_bin install.sh)" --check "$@"
+      ;;
+    sync)
+      _sa_require_home
+      exec "$(_sa_bin sync.sh)" pull "$@"
+      ;;
+    uninstall)
+      local uninstall_sh
+      uninstall_sh="$(_sa_resolve_uninstall_sh)"
+      if [[ -z "$uninstall_sh" ]]; then
+        echo "Nothing to uninstall — $SHARED_AGENTS_HOME not configured." >&2
+        exit 0
+      fi
+      exec "$uninstall_sh" "$@"
+      ;;
+    path)
+      _sa_require_home
+      exec "$(_sa_bin learning-path.sh)" "$@"
+      ;;
+    review)
+      _sa_require_home
+      if [[ $# -eq 0 ]]; then
+        exec "$(_sa_bin review-learning.sh)"
+      fi
+      case "$1" in
+        list|ls)
+          shift
+          exec "$(_sa_bin review-learning.sh)" --list "$@"
+          ;;
+        dry)
+          shift
+          exec "$(_sa_bin review-learning.sh)" --dry-run "$@"
+          ;;
+        *)
+          exec "$(_sa_bin review-learning.sh)" "$@"
+          ;;
+      esac
+      ;;
+    pending)
+      _sa_require_home
+      local sub="${1:-push}"
+      shift || true
+      case "$sub" in
+        push|publish)
+          exec "$(_sa_bin publish-pending-learning.sh)" "$@"
+          ;;
+        path)
+          exec "$(_sa_bin learning-path.sh)" "$@"
+          ;;
+        *)
+          echo "Unknown: sa pending $sub" >&2
+          echo "Try: sa pending push [file] | sa pending path [slug]" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    unapprove|rm)
+      _sa_require_home
+      if [[ $# -eq 0 ]]; then
+        exec "$(_sa_bin unapprove-learning.sh)"
+      fi
+      case "$1" in
+        list|ls)
+          shift
+          exec "$(_sa_bin unapprove-learning.sh)" --list "$@"
+          ;;
+        *)
+          exec "$(_sa_bin unapprove-learning.sh)" "$@"
+          ;;
+      esac
+      ;;
+    *)
+      echo "Unknown command: sa $cmd" >&2
+      echo "Run: sa help" >&2
+      exit 1
+      ;;
+  esac
+}
+
+dispatch "$@"

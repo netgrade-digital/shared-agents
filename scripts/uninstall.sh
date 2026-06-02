@@ -16,7 +16,7 @@ shared-agents uninstall.sh v${VERSION}
 Usage:
   uninstall.sh [options]
 
-Removes IDE/CLI adapters, shell aliases, and optionally deletes the local repo.
+Removes IDE/CLI adapters, shell CLI (sa), and optionally deletes the local repo.
 
 Options:
   --home DIR       SHARED_AGENTS_HOME (default: ~/.shared-agents)
@@ -26,7 +26,8 @@ Options:
   -y, --yes        Bestätigung überspringen (non-interactive)
   -h, --help       Show this help
 
-Nach Install (überall im Terminal):  sa-uninstall
+Nach Install (überall im Terminal):  sa uninstall
+                                      shared-agents uninstall
 Oder im Repo:                         ./uninstall.sh
 
 After uninstall, re-install with: ./install.sh --wizard
@@ -63,7 +64,7 @@ fi
 echo ""
 
 if [[ $YES -eq 0 && $DRY_RUN -eq 0 ]]; then
-  echo "Entfernt Cursor/Claude-Hooks, Skill-Symlinks, Shell-Aliase"
+  echo "Entfernt Cursor/Claude-Hooks, Skill-Symlinks, Shell-CLI (sa, shared-agents)"
   if [[ $KEEP_REPO -eq 0 ]]; then
     echo "und löscht $SHARED_AGENTS_HOME vollständig."
   else
@@ -123,5 +124,6 @@ if [[ $DRY_RUN -eq 1 ]]; then
   echo "Dry run complete — no changes made."
 else
   echo "Uninstall complete."
-  echo "Re-install: git clone … ~/.shared-agents && cd ~/.shared-agents && ./install.sh --wizard"
+  echo "Neues Terminal öffnen (oder: exec \$SHELL) — sa / shared-agents sind dann weg."
+  echo "Re-install: sa install --wizard"
 fi
