@@ -41,7 +41,7 @@ class WizardTuiFailed(Exception):
 
 
 def tui_available() -> bool:
-    if os.environ.get("SA_WIZARD_PLAIN", "").strip() in {"1", "true", "yes"}:
+    if os.environ.get("SA_WIZARD_PLAIN", "").strip().lower() in {"1", "true", "yes"}:
         return False
     if not (sys.stdin.isatty() and sys.stdout.isatty()):
         return False
@@ -49,6 +49,22 @@ def tui_available() -> bool:
     if not term or term == "dumb":
         return False
     if not sys.platform.startswith(("linux", "darwin", "freebsd", "openbsd")):
+        return False
+    # Curses in IDE terminals often hangs or renders blank — use text wizard.
+    term_program = os.environ.get("TERM_PROGRAM", "")
+    if term_program in {"Cursor", "vscode", "Code"}:
+        return False
+    if os.environ.get("VSCODE_INJECTION") or os.environ.get("CURSOR_TRACE_ID"):
+        return False
+    if not _curses_probe():
+        return False
+    return True
+
+
+def _curses_probe() -> bool:
+    try:
+        curses.setupterm()
+    except curses.error:
         return False
     return True
 
@@ -94,29 +110,34 @@ def _draw_frame(stdscr: curses.window, title: str, step: str, footer: str) -> tu
     return 5, inner_w
 
 
-def _wait_enter(stdscr: curses.window, y: int, message: str = "Enter continue · Esc cancel") -> None:
-    _safe_addstr(stdscr, y, 4, message, _attr(stdscr, 5))
+def _wait_enter(
+    stdscr: curses.window,
+    y: int,
+    message: str = ">>> Enter oder Space = weiter · Esc = abbrechen <<<",
+) -> None:
+    _safe_addstr(stdscr, y, 4, message, _attr(stdscr, 2, bold=True))
+    stdscr.refresh()
     while True:
         key = stdscr.getch()
-        if key in (10, 13, curses.KEY_ENTER):
+        if key in (10, 13, curses.KEY_ENTER, ord(" "), ord("j"), ord("J"), ord("y"), ord("Y")):
             return
-        if key in (27, ord("q")):
+        if key in (27, ord("q"), ord("Q")):
             raise WizardCancelled
 
 
 def _screen_welcome(stdscr: curses.window) -> None:
-    while True:
-        stdscr.clear()
-        _draw_frame(
-            stdscr,
-            "shared-agents Setup Wizard",
-            "Welcome",
-            "Enter continue · Esc cancel",
-        )
-        _safe_addstr(stdscr, 6, 4, "Team skills + learnings for your AI tools", _attr(stdscr, 2))
-        _safe_addstr(stdscr, 8, 4, "This wizard configures adapters, shell CLI (sa),", 0)
-        _safe_addstr(stdscr, 9, 4, "and symlinks team skills to your machine.", 0)
-        _wait_enter(stdscr, 12)
+    stdscr.clear()
+    _draw_frame(
+        stdscr,
+        "shared-agents Setup Wizard",
+        "Welcome",
+        "Enter/Space = weiter · Esc = abbrechen",
+    )
+    _safe_addstr(stdscr, 6, 4, "Team skills + learnings for your AI tools", _attr(stdscr, 2))
+    _safe_addstr(stdscr, 8, 4, "This wizard configures adapters, shell CLI (sa),", 0)
+    _safe_addstr(stdscr, 9, 4, "and symlinks team skills to your machine.", 0)
+    _wait_enter(stdscr, 12)
+    stdscr.refresh()
 
 
 def _screen_path(stdscr: curses.window, default_home: str) -> str:

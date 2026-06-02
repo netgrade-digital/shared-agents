@@ -73,7 +73,7 @@ Aufruf: sa | shared-agents | sharedagents  <command> [args…]
 Usage: sa <command> [args…]
 
 Setup
-  install [opts]       Install / update (TUI: sa install --wizard)
+  install [opts]       Install / update (Erst-Setup: --wizard)
   check                Tool-Status prüfen
   uninstall [opts]     Deinstallieren (Bestätigung: y/N)
   sync                 Neueste Learnings pullen (Bitbucket)

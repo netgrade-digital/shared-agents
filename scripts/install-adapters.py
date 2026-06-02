@@ -815,7 +815,7 @@ def run_wizard_plain(
     else:
         print("  Configure:    (none)")
     print()
-    if is_tty() and not confirm("Run setup now?", True):
+    if not confirm("Run setup now?", False):
         return None
     return home, selected, add_shell, True
 
@@ -827,12 +827,14 @@ def run_wizard(
     dry_run: bool = False,
     shell_rc: Path | None = None,
 ) -> int:
-    repo_ok, repo_msg = check_repo(home)
+    repo_ok, repo_msg = check_repo(str(repo_home))
+    if not repo_ok:
+        repo_ok, repo_msg = check_repo(home)
     if not repo_ok:
         print(f"Repo error: {repo_msg}", file=sys.stderr)
         return 1
 
-    manifest = load_manifest(repo_home)
+    manifest = load_manifest(repo_home if (repo_home / "adapters" / "manifest.json").is_file() else expand(home))
     reports = [
         (tool, check_tool(tool, home))
         for tool in installable_tools(manifest)
@@ -883,7 +885,7 @@ def run_wizard(
         if result is not None:
             if not result.run_setup:
                 print("Cancelled.")
-                return 0
+                return 1
             choices = (result.home, result.selected_tools, result.add_shell, True)
         elif tui_failed:
             choices = run_wizard_plain(
@@ -895,10 +897,10 @@ def run_wizard(
             )
             if choices is None:
                 print("Cancelled.")
-                return 0
+                return 1
         else:
             print("Cancelled.")
-            return 0
+            return 1
     else:
         choices = run_wizard_plain(
             repo_home,
@@ -909,19 +911,24 @@ def run_wizard(
         )
         if choices is None:
             print("Cancelled.")
-            return 0
+            return 1
 
     home, selected, add_shell, _run = choices
     os.environ["SHARED_AGENTS_HOME"] = home
 
     if add_shell:
-        configure_shell_rc(shell_rc_path, home, dry_run, repo_home=repo_home)
+        if not configure_shell_rc(shell_rc_path, home, dry_run, repo_home=repo_home):
+            print("Warning: shell CLI was not configured — run: sa install --wizard", file=sys.stderr)
+            return 1
 
     print()
     run_install(repo_home, home, dry_run, tool_ids=selected)
     if not dry_run:
         print()
         run_check(repo_home, home, as_json=False)
+        print()
+        print(f"Shell CLI:  source {shell_rc_path}")
+        print("            (or open a new terminal)")
     return 0
 
 

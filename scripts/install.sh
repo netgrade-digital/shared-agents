@@ -56,6 +56,13 @@ done
 
 export SHARED_AGENTS_HOME
 
+on_interrupt() {
+  echo ""
+  echo "Abgebrochen (Ctrl+C)."
+  exit 130
+}
+trap on_interrupt INT
+
 fix_git_remote() {
   local home="$1"
   local script="$home/scripts/ensure-git-remote.sh"
@@ -67,14 +74,46 @@ fix_git_remote() {
   fi
 }
 
+adapters_py() {
+  if [[ -f "$REPO_SOURCE/scripts/install-adapters.py" && "$REPO_SOURCE" != "$SHARED_AGENTS_HOME" ]]; then
+    echo "$REPO_SOURCE/scripts/install-adapters.py"
+  else
+    echo "$SHARED_AGENTS_HOME/scripts/install-adapters.py"
+  fi
+}
+
+sync_installer_from_source() {
+  if [[ "$REPO_SOURCE" == "$SHARED_AGENTS_HOME" || $DRY_RUN -eq 1 ]]; then
+    return 0
+  fi
+  if [[ ! -d "$REPO_SOURCE/scripts" ]]; then
+    return 0
+  fi
+  echo "Sync installer scripts from source checkout → $SHARED_AGENTS_HOME"
+  cp -a "$REPO_SOURCE/scripts/." "$SHARED_AGENTS_HOME/scripts/"
+  [[ -f "$REPO_SOURCE/install.sh" ]] && cp -f "$REPO_SOURCE/install.sh" "$SHARED_AGENTS_HOME/install.sh"
+  [[ -f "$REPO_SOURCE/sa" ]] && cp -f "$REPO_SOURCE/sa" "$SHARED_AGENTS_HOME/sa"
+  [[ -f "$REPO_SOURCE/uninstall.sh" ]] && cp -f "$REPO_SOURCE/uninstall.sh" "$SHARED_AGENTS_HOME/uninstall.sh"
+  chmod +x "$SHARED_AGENTS_HOME/scripts/"*.sh 2>/dev/null || true
+  chmod +x "$SHARED_AGENTS_HOME/scripts/sa" 2>/dev/null || true
+  chmod +x "$SHARED_AGENTS_HOME/sa" 2>/dev/null || true
+  chmod +x "$SHARED_AGENTS_HOME/install.sh" 2>/dev/null || true
+}
+
 run_check() {
   local repo="${SHARED_AGENTS_HOME}"
   if [[ ! -d "$repo" ]]; then
     repo="$REPO_SOURCE"
   fi
+  local py
+  if [[ -f "$repo/scripts/install-adapters.py" ]]; then
+    py="$repo/scripts/install-adapters.py"
+  else
+    py="$(adapters_py)"
+  fi
   local args=(check "$repo")
   [[ $CHECK_JSON -eq 1 ]] && args+=(--json)
-  python3 "$repo/scripts/install-adapters.py" "${args[@]}"
+  python3 "$py" "${args[@]}"
 }
 
 if [[ "$MODE" == "check" ]]; then
@@ -83,8 +122,27 @@ if [[ "$MODE" == "check" ]]; then
 fi
 
 use_wizard=0
-if [[ $NON_INTERACTIVE -eq 0 && ( $FORCE_WIZARD -eq 1 || ( -t 0 && -t 1 ) ) ]]; then
+if [[ $FORCE_WIZARD -eq 1 ]]; then
   use_wizard=1
+elif [[ $NON_INTERACTIVE -eq 0 && -t 0 && -t 1 && ! -d "$SHARED_AGENTS_HOME/.git" ]]; then
+  # Erst-Install (kein ~/.shared-agents yet): Wizard. Updates: --wizard oder --non-interactive.
+  use_wizard=1
+fi
+
+# Curses-TUI hängt oft in Cursor/VS-Code-Terminals — Text-Wizard ist stabiler.
+if [[ $use_wizard -eq 1 && -z "${SA_WIZARD_PLAIN:-}" ]]; then
+  case "${TERM_PROGRAM:-}" in
+    Cursor|vscode|Code)
+      export SA_WIZARD_PLAIN=1
+      echo "Hinweis: Text-Wizard (IDE-Terminal). Für TUI: foot/alacritty + unset SA_WIZARD_PLAIN"
+      ;;
+  esac
+fi
+
+FRESH_INSTALL=0
+DID_CLONE=0
+if [[ ! -d "$SHARED_AGENTS_HOME/.git" && ! -e "$SHARED_AGENTS_HOME" ]]; then
+  FRESH_INSTALL=1
 fi
 
 # --- install path ---
@@ -106,6 +164,8 @@ elif [[ -e "$SHARED_AGENTS_HOME" && ! -d "$SHARED_AGENTS_HOME/.git" ]]; then
 elif [[ -d "$REPO_SOURCE/.git" ]]; then
   echo "Cloning $REPO_SOURCE -> $SHARED_AGENTS_HOME"
   git clone "$REPO_SOURCE" "$SHARED_AGENTS_HOME"
+  DID_CLONE=1
+  FRESH_INSTALL=1
   if [[ $DRY_RUN -eq 0 ]]; then
     fix_git_remote "$SHARED_AGENTS_HOME"
   fi
@@ -113,7 +173,10 @@ else
   echo "Copying $REPO_SOURCE -> $SHARED_AGENTS_HOME"
   mkdir -p "$SHARED_AGENTS_HOME"
   cp -a "$REPO_SOURCE/." "$SHARED_AGENTS_HOME/"
+  FRESH_INSTALL=1
 fi
+
+sync_installer_from_source
 
 chmod +x "$SHARED_AGENTS_HOME/scripts/"*.sh 2>/dev/null || true
 chmod +x "$SHARED_AGENTS_HOME/scripts/sa" 2>/dev/null || true
@@ -129,7 +192,18 @@ fi
 if [[ $use_wizard -eq 1 ]]; then
   WIZARD_ARGS=(wizard "$SHARED_AGENTS_HOME" --home "$SHARED_AGENTS_HOME" --shell-rc "$SHELL_RC")
   [[ $DRY_RUN -eq 1 ]] && WIZARD_ARGS+=(--dry-run)
-  python3 "$SHARED_AGENTS_HOME/scripts/install-adapters.py" "${WIZARD_ARGS[@]}"
+  WIZARD_PY="$(adapters_py)"
+  if ! python3 "$WIZARD_PY" "${WIZARD_ARGS[@]}"; then
+    echo ""
+    echo "Install abgebrochen oder fehlgeschlagen — kein vollständiges Setup."
+    if [[ $DID_CLONE -eq 1 && $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME" ]]; then
+      echo ""
+      echo "  $SHARED_AGENTS_HOME wurde angelegt, Adapter/Shell sind nicht konfiguriert."
+      echo "  Erneut:  cd $SHARED_AGENTS_HOME && ./sa install --wizard"
+      echo "  Entfernen: rm -rf $SHARED_AGENTS_HOME"
+    fi
+    exit 1
+  fi
 else
   if [[ $DRY_RUN -eq 0 ]]; then
     DRY_RUN="$DRY_RUN" bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
@@ -144,11 +218,15 @@ else
   [[ -n "$TOOLS" ]] && INSTALL_ARGS+=(--tools "$TOOLS")
   INSTALL_ARGS+=(--non-interactive)
 
-  python3 "$SHARED_AGENTS_HOME/scripts/install-adapters.py" "${INSTALL_ARGS[@]}"
+  python3 "$(adapters_py)" "${INSTALL_ARGS[@]}"
 
   if [[ $DRY_RUN -eq 0 ]]; then
     echo ""
     run_check
+    if ! grep -qF "shared-agents:shell-end" "$SHELL_RC" 2>/dev/null; then
+      DRY_RUN=0 bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
+        "$SHARED_AGENTS_HOME" "$SHELL_RC" || true
+    fi
   fi
 fi
 
@@ -164,7 +242,10 @@ Install OK.
 
 CLI:  sa help   (auch: shared-agents help · sharedagents help)
 
-Befehle (nach source ~/.bashrc oder neuem Terminal):
+Wichtig — Shell neu laden:
+  source $SHELL_RC
+
+Befehle danach:
   sa sync              Neueste Learnings pullen
   sa review            Learning reviewen / approven
   sa pending push      Pending ans Team pushen

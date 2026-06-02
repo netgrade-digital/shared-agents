@@ -9,6 +9,12 @@ done
 unset _sa_legacy
 
 _sa_cli() {
+  if [[ ! -f "$SHARED_AGENTS_HOME/scripts/sa" ]]; then
+    echo "shared-agents not installed at: $SHARED_AGENTS_HOME" >&2
+    echo "Fix: cd ~/.shared-agents && ./sa install --wizard" >&2
+    echo "Or:  git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents && cd ~/.shared-agents && ./sa install --wizard" >&2
+    return 127
+  fi
   "$SHARED_AGENTS_HOME/scripts/sa" "$@"
 }
 

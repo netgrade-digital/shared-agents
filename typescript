@@ -1,0 +1,134 @@
+Script started on 2026-06-02 18:00:39+02:00 [COMMAND="./install.sh --wizard" <not executed on terminal>]
+
+
+
+n
+Cloning /home/quentin/Development/Work/shared-agents -> /home/quentin/.shared-agents
+Cloning into '/home/quentin/.shared-agents'...
+done.
+Fixed git origin: /home/quentin/Development/Work/shared-agents -> git@bitbucket.org:netgrade/shared-agents.git
+Sync installer scripts from source checkout → /home/quentin/.shared-agents
+
+[36m╔══════════════════════════════════════════════════════════╗[0m
+[36m║[0m[1m  shared-agents Setup Wizard                              [0m[36m║[0m
+[36m╚══════════════════════════════════════════════════════════╝[0m
+[2m  Team skills + learnings for your AI tools[0m
+
+[1mStep 1/4 — Install location[0m
+  Repo:  /home/quentin/.shared-agents
+  SHARED_AGENTS_HOME [/home/quentin/.shared-agents]: 
+[1mStep 2/4 — Select AI tools[0m
+[2m  Toggle with number · all · detected · none · Enter to continue[0m
+
+  [1] [x] Cursor IDE               [32mconfigured[0m
+  [2] [x] Claude Code              [32mconfigured[0m
+  [3] [x] Zed                      [32mconfigured[0m
+  [4] [x] OpenAI Codex CLI         [32mconfigured[0m
+  [5] [x] OpenCode                 [32mconfigured[0m
+  [6] [x] Gemini CLI               [32mconfigured[0m
+  [7] [ ] Windsurf                 [2mnot installed[0m
+  [8] [ ] Continue.dev             [2mnot installed[0m
+  [9] [x] GitHub Copilot           [32mconfigured[0m
+  [10] [ ] Aider                    [2mnot installed[0m
+
+> 
+
+[1mStep 3/4 — Shell environment[0m
+  ✓ /home/quentin/.bashrc already configured (SHARED_AGENTS_HOME + CLI)
+
+[1mStep 4/4 — Summary[0m
+  Install path: /home/quentin/.shared-agents
+  Skills:       link all team skills
+  Configure:
+    • Cursor IDE ([32mconfigured[0m)
+    • Claude Code ([32mconfigured[0m)
+    • Zed ([32mconfigured[0m)
+    • OpenAI Codex CLI ([32mconfigured[0m)
+    • OpenCode ([32mconfigured[0m)
+    • Gemini CLI ([32mconfigured[0m)
+    • GitHub Copilot ([32mconfigured[0m)
+
+Run setup now? [Y/n]: 
+Installing adapters v0.1.0 (SHARED_AGENTS_HOME=/home/quentin/.shared-agents)
+Actions:
+  ✓ Skills → /home/quentin/.agents/skills (Cursor, Zed, skills MCP)
+  ✓ Skills → /home/quentin/.claude/skills (Claude Code)
+  ✓ Skills → /home/quentin/.codex/skills (Codex CLI)
+  ✓ Skills → /home/quentin/.config/opencode/skills (OpenCode)
+  ✓ Skills → /home/quentin/.gemini/skills (Gemini CLI)
+  ✓ Cursor: rule + sessionStart hook (/home/quentin/.cursor/hooks/shared-agents-sync.sh)
+  ✓ Cursor: stop hook (ask for learning after big tasks)
+  ✓ Claude Code: SessionStart hook in /home/quentin/.claude/settings.json
+  ✓ Zed: merged block into /home/quentin/.config/zed/AGENTS.md
+  ✓ OpenAI Codex CLI: merged block into /home/quentin/.codex/AGENTS.md
+  ✓ OpenCode: merged block into /home/quentin/.config/opencode/AGENTS.md
+  ✓ Gemini CLI: merged block into /home/quentin/.gemini/GEMINI.md
+  ✓ Gemini CLI: merged block into /home/quentin/.gemini/AGENTS.md
+  ✓ GitHub Copilot: merged block into /home/quentin/.config/github-copilot/AGENTS.md
+  ✓ GitHub Copilot: merged block into /home/quentin/.copilot/AGENTS.md
+
+Configured:
+  • Cursor IDE
+  • Claude Code
+  • Zed
+  • OpenAI Codex CLI
+  • OpenCode
+  • Gemini CLI
+  • GitHub Copilot
+
+Verify: ./install.sh --check
+
+shared-agents check v0.1.0
+SHARED_AGENTS_HOME=/home/quentin/.shared-agents
+Repo: OK — ok
+
+TOOL           INSTALLED  CONFIGURED   STATUS
+------------------------------------------------------------
+cursor         yes        yes          ok
+claude-code    yes        yes          ok
+zed            yes        yes          ok
+codex          yes        yes          ok
+opencode       yes        yes          ok
+gemini         yes        yes          ok
+windsurf       no         no           missing_tool
+continue       no         no           missing_tool
+copilot        yes        yes          ok
+aider          no         no           missing_tool
+openclaw       yes        yes          ok
+generic        no         no           available
+
+  [windsurf] Tool not detected — install CLI, then re-run install.sh
+         detect: /home/quentin/.codeium/windsurf
+         docs:   adapters/windsurf/README.md
+  [continue] Tool not detected — install CLI, then re-run install.sh
+         detect: /home/quentin/.continue
+         docs:   adapters/continue/README.md
+  [aider] Tool not detected — install CLI, then re-run install.sh
+         detect: /home/quentin/.aider
+         docs:   adapters/aider/README.md
+→ 3 tool(s) not installed on this machine (expected if unused)
+
+Shell CLI:  source /home/quentin/.bashrc
+            (or open a new terminal)
+
+Install OK.
+
+CLI:  sa help   (auch: shared-agents help · sharedagents help)
+
+Wichtig — Shell neu laden:
+  source /home/quentin/.bashrc
+
+Befehle danach:
+  sa sync              Neueste Learnings pullen
+  sa review            Learning reviewen / approven
+  sa pending push      Pending ans Team pushen
+  sa unapprove         Learning aus approved entfernen
+  sa check             Adapter-Status
+  sa uninstall         Deinstallieren (y/N)
+
+Docs:     /home/quentin/.shared-agents/README.md
+Check:    sa check
+Wizard:   sa install --wizard
+Remove:   sa uninstall
+
+Script done on 2026-06-02 18:00:41+02:00 [COMMAND_EXIT_CODE="0"]
