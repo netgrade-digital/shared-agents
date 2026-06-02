@@ -14,13 +14,6 @@ learnings:
     tags: [mcp, cursor, manifest, installer, screaming-frog, team-setup]
     confidence: high
     created: 2026-06-02
-  - id: shared-agents-2026-06-test-sa-review-workflow
-    file: approved/by-domain/infra/2026-06-02-test-sa-review-workflow.md
-    project: shared-agents
-    domain: [infra, ai-tooling]
-    tags: [test, sa-review, git, workflow]
-    confidence: experimental
-    created: 2026-06-02
   - id: fantasy-2026-06-dragon-cache-invalidation
     file: approved/by-domain/infra/2026-06-02-dragon-cache-invalidation.md
     project: shared-agents
