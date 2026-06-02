@@ -1,3 +1,15 @@
 .DS_Store
 *.swp
 *.swo
+
+# Never commit .git internals copied into the repo root
+/config
+/description
+/HEAD
+/index
+/packed-refs
+/refs/
+/objects/
+/logs/
+/info/
+/hooks/
