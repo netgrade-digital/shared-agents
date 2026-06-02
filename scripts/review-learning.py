@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -201,6 +202,76 @@ def confirm(prompt: str) -> bool:
         print("Please answer y or n.")
 
 
+def run_git(
+    home: Path, args: list[str], *, check: bool = True
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=home,
+        capture_output=True,
+        text=True,
+    )
+    if check and result.returncode != 0:
+        err = (result.stderr or result.stdout or "").strip()
+        raise SystemExit(f"git {' '.join(args)} failed: {err}")
+    return result
+
+
+def git_publish(
+    home: Path,
+    dest: Path,
+    pending_path: Path,
+    entry: dict[str, str | list[str]],
+    *,
+    dry_run: bool = False,
+    no_git: bool = False,
+) -> int:
+    if no_git:
+        print("Skipped git commit/push (--no-git).")
+        return 0
+
+    if not (home / ".git").is_dir():
+        print("Not a git repo — skipped commit/push.")
+        return 0
+
+    learning_id = str(entry["id"])
+    commit_msg = f"docs(learnings): approve {learning_id}"
+    rel_dest = dest.relative_to(home)
+
+    if dry_run:
+        print("")
+        print("[dry-run] Would run:")
+        print(f"  git -C {home} add learnings/index.yaml {rel_dest}")
+        print(f"  git -C {home} add -u learnings/pending/")
+        print(f'  git -C {home} commit -m "{commit_msg}"')
+        print(f"  git -C {home} push")
+        return 0
+
+    run_git(home, ["add", "learnings/index.yaml", str(rel_dest)], check=True)
+    run_git(home, ["add", "-u", "learnings/pending/"], check=False)
+
+    staged = run_git(home, ["diff", "--cached", "--quiet"], check=False)
+    if staged.returncode == 0:
+        print("Nothing staged under learnings/ — skipped commit/push.")
+        return 0
+
+    run_git(home, ["commit", "-m", commit_msg], check=True)
+    print(f"Committed: {commit_msg}")
+
+    push = run_git(home, ["push"], check=False)
+    if push.returncode == 0:
+        out = (push.stdout or push.stderr or "").strip()
+        if out:
+            print(out)
+        print("Pushed to remote.")
+        return 0
+
+    err = (push.stderr or push.stdout or "push failed").strip()
+    print(f"Commit OK, but push failed: {err}", file=sys.stderr)
+    print(f"Retry: cd {home} && git push", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Review a pending learning and promote it to approved/."
@@ -222,6 +293,11 @@ def main() -> int:
         "--dry-run",
         action="store_true",
         help="Show actions without moving files or editing index.yaml",
+    )
+    parser.add_argument(
+        "--no-git",
+        action="store_true",
+        help="Skip automatic git commit and push after promote",
     )
     args = parser.parse_args()
 
@@ -272,18 +348,28 @@ def main() -> int:
         print("[dry-run] Would move to:", dest)
         print("[dry-run] Would append to learnings/index.yaml:")
         print(format_index_entry(entry).rstrip())
+        git_publish(
+            home,
+            dest,
+            pending_path,
+            entry,
+            dry_run=True,
+            no_git=args.no_git,
+        )
         return 0
 
     print("")
     print(f"Promoted: {dest}")
     print(f"Indexed:  {home / 'learnings' / 'index.yaml'}")
-    print("")
-    print("Next: commit + push/PR from shared-agents repo")
-    print(f"  cd {home}")
-    print("  git add learnings/")
-    print(f'  git commit -m "docs(learnings): approve {entry["id"]}"')
-    print("  git push")
-    return 0
+
+    return git_publish(
+        home,
+        dest,
+        pending_path,
+        entry,
+        dry_run=False,
+        no_git=args.no_git,
+    )
 
 
 if __name__ == "__main__":

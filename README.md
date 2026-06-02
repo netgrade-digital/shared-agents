@@ -280,6 +280,8 @@ shared-agents/
 │   ├── install.sh                 # Entrypoint: install | check | dry-run
 │   ├── install-adapters.py        # Detect, install, verify (stdlib only)
 │   ├── learning-path.sh           # Canonical pending path ausgeben
+│   ├── shell-aliases.sh           # sa-review, sa-sync, … (sourced from bashrc)
+│   ├── configure-shell-rc.sh      # Idempotent bashrc block
 │   ├── promote-learning.sh        # Kurzform: sofort promoten (-y)
 │   ├── review-learning.sh         # Interaktiv: review + promote + index
 │   ├── review-learning.py
@@ -390,17 +392,25 @@ Der Agent schreibt **nie direkt** nach `approved/`.
 
 ```bash
 # Interaktiv: pending anzeigen, bestätigen, verschieben + index.yaml
-~/.shared-agents/scripts/review-learning.sh
+sa-review
 
-# Bestimmte Datei reviewen
-~/.shared-agents/scripts/review-learning.sh learnings/pending/2026-05-28-sidebar-radix.md
+# Bestimmte Datei (Slug reicht — Pfad wird unter $SHARED_AGENTS_HOME aufgelöst)
+sa-review 2026-05-28-sidebar-radix.md
 
-# Nur anzeigen, was passieren würde
-~/.shared-agents/scripts/review-learning.sh --list
-~/.shared-agents/scripts/review-learning.sh learnings/pending/foo.md --dry-run
+# Nur anzeigen
+sa-review-list
+sa-review-dry 2026-05-28-sidebar-radix.md
 
 # Domain überschreiben (Default: erstes Feld aus frontmatter domain)
-~/.shared-agents/scripts/review-learning.sh learnings/pending/foo.md --domain vue
+sa-review 2026-05-28-sidebar-radix.md --domain vue
+```
+
+Aliase werden bei `install.sh` in `~/.bashrc` eingetragen (`scripts/shell-aliases.sh`). Nach Install: `source ~/.bashrc` oder neues Terminal.
+
+Low-level (ohne Alias):
+
+```bash
+~/.shared-agents/scripts/review-learning.sh --list
 ```
 
 Das Command:
@@ -409,8 +419,9 @@ Das Command:
 2. fragt `Approve and promote? [y/N]`
 3. verschiebt nach `learnings/approved/by-domain/<domain>/`
 4. trägt `learnings/index.yaml` automatisch ein (aus Frontmatter)
+5. **committet und pusht** `learnings/` automatisch (`--no-git` zum Überspringen)
 
-Danach nur noch: **commit + PR**.
+Danach ist das Learning im Remote — Team sync pull.
 
 `promote-learning.sh` bleibt als Kurzform (`-y`, ohne Preview) — bevorzugt: `review-learning.sh`.
 

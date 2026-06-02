@@ -106,13 +106,12 @@ if [[ $use_wizard -eq 1 ]]; then
   [[ $DRY_RUN -eq 1 ]] && WIZARD_ARGS+=(--dry-run)
   python3 "$SHARED_AGENTS_HOME/scripts/install-adapters.py" "${WIZARD_ARGS[@]}"
 else
-  if [[ $DRY_RUN -eq 0 ]] && ! grep -q 'SHARED_AGENTS_HOME=' "$SHELL_RC" 2>/dev/null; then
-    cat >> "$SHELL_RC" <<EOF
-
-# shared-agents team knowledge (https://bitbucket.org/netgrade/shared-agents)
-export SHARED_AGENTS_HOME="$SHARED_AGENTS_HOME"
-EOF
-    echo "Added SHARED_AGENTS_HOME to $SHELL_RC"
+  if [[ $DRY_RUN -eq 0 ]]; then
+    DRY_RUN="$DRY_RUN" bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
+      "$SHARED_AGENTS_HOME" "$SHELL_RC"
+  else
+    DRY_RUN=1 bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
+      "$SHARED_AGENTS_HOME" "$SHELL_RC"
   fi
 
   INSTALL_ARGS=(install "$SHARED_AGENTS_HOME")

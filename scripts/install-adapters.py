@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from enum import Enum
@@ -675,23 +676,26 @@ def tool_status_label(report: ToolReport) -> str:
     return dim("not installed")
 
 
-def configure_shell_rc(shell_rc: Path, home: str, dry_run: bool) -> bool:
-    marker = "SHARED_AGENTS_HOME="
-    if shell_rc.is_file() and marker in shell_rc.read_text():
-        print(f"  ✓ {shell_rc} already exports SHARED_AGENTS_HOME")
+def configure_shell_rc(shell_rc: Path, home: str, dry_run: bool, repo_home: Path | None = None) -> bool:
+    script = expand(home) / "scripts" / "configure-shell-rc.sh"
+    if not script.is_file() and repo_home is not None:
+        script = expand(str(repo_home)) / "scripts" / "configure-shell-rc.sh"
+    if not script.is_file():
+        print(f"  ! configure-shell-rc.sh not found under {home}")
         return False
-    block = (
-        "\n# shared-agents team knowledge\n"
-        f'export SHARED_AGENTS_HOME="{home}"\n'
+    env = os.environ.copy()
+    env["DRY_RUN"] = "1" if dry_run else "0"
+    result = subprocess.run(
+        ["bash", str(script), home, str(shell_rc)],
+        env=env,
+        capture_output=True,
+        text=True,
     )
-    if dry_run:
-        print(f"  [dry-run] would append SHARED_AGENTS_HOME to {shell_rc}")
-        return True
-    shell_rc.parent.mkdir(parents=True, exist_ok=True)
-    with shell_rc.open("a") as handle:
-        handle.write(block)
-    print(f"  ✓ Added SHARED_AGENTS_HOME to {shell_rc}")
-    return True
+    if result.stdout.strip():
+        print(result.stdout.rstrip())
+    if result.returncode != 0 and result.stderr.strip():
+        print(result.stderr.rstrip(), file=sys.stderr)
+    return result.returncode == 0
 
 
 def wizard_select_tools(reports: list[tuple[dict, ToolReport]]) -> set[str]:
@@ -785,13 +789,22 @@ def run_wizard(
     print(bold("Step 3/4 — Shell environment"))
     add_shell = True
     if shell_rc is not None:
-        if shell_rc.is_file() and "SHARED_AGENTS_HOME=" in shell_rc.read_text():
-            print(f"  ✓ {shell_rc} already configured")
+        rc_text = shell_rc.read_text() if shell_rc.is_file() else ""
+        has_home = "SHARED_AGENTS_HOME=" in rc_text
+        has_aliases = "shell-aliases.sh" in rc_text
+        if has_home and has_aliases:
+            print(f"  ✓ {shell_rc} already configured (SHARED_AGENTS_HOME + aliases)")
             add_shell = False
+        elif has_home and not has_aliases:
+            print(f"  → {shell_rc} has SHARED_AGENTS_HOME — will add review aliases")
+            add_shell = True
         elif is_tty():
-            add_shell = confirm(f"  Add SHARED_AGENTS_HOME to {shell_rc}?", True)
+            add_shell = confirm(
+                f"  Add SHARED_AGENTS_HOME + sa-review aliases to {shell_rc}?",
+                True,
+            )
         if add_shell:
-            configure_shell_rc(shell_rc, home, dry_run)
+            configure_shell_rc(shell_rc, home, dry_run, repo_home=repo_home)
     print()
 
     print(bold("Step 4/4 — Summary"))

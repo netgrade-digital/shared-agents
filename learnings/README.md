@@ -23,3 +23,16 @@ Details: [docs/canonical-paths.md](../docs/canonical-paths.md)
 | `approved/` | Mensch (PR) | **Ja** |
 
 Review: `scripts/review-learning.sh learnings/pending/<file>.md` (aus `$SHARED_AGENTS_HOME` ausführen).
+
+**Shell-Aliase** (via `install.sh` → `~/.bashrc`):
+
+| Alias | Aktion |
+|-------|--------|
+| `sa-review` | Interaktiv reviewen / Datei oder Slug übergeben |
+| `sa-review-list` | Pending-Liste |
+| `sa-review-dry` | Dry-run |
+| `sa-learning-path` | Canonical pending-Pfad ausgeben |
+| `sa-sync` | `sync.sh pull` |
+| `sa-check` | `install.sh --check` |
+
+Definiert in `scripts/shell-aliases.sh`, eingebunden via `scripts/configure-shell-rc.sh`.
