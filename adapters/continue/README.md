@@ -1,10 +1,12 @@
 # Continue.dev
 
-Auto-configured when `~/.continue` exists.
+Auto-configured by **`sa install`** when `~/.continue` exists (or `./install.sh` from repo root).
+
+Status: **`sa check`**
 
 ## Global instructions
 
-`install.sh` merges into `~/.continue/AGENTS.md`.
+`sa install` merges into `~/.continue/AGENTS.md`.
 
 ## Project rules
 

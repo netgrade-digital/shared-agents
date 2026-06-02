@@ -61,11 +61,11 @@
 
 ### Standard-Workflow (jede Session)
 
-1. **Sync** — `sync.sh pull` (automatisch via Hook oder als erste Agent-Aktion)
+1. **Sync** — **`sa sync`** (automatisch via Hook oder als erste Agent-Aktion)
 2. **Retrieve** — vor nicht-trivialen Tasks: `learnings/index.yaml` + grep in `approved/`
 3. **Arbeiten** — mit Projekt-Regeln des aktuellen Repos
 4. **Capture** — nach großem Task: Agent fragt *„Soll ich ein Team-Learning anlegen?"*
-5. **Review** — Mensch promoted `pending/` → `approved/` per PR
+5. **Review** — Mensch: **`sa pending push`** → **`sa review`** → `approved/`
 
 ### Pflicht-Skills (Team)
 
@@ -73,6 +73,7 @@
 |-------|--------|
 | `shared-agents-knowledge` | Sync, Learnings suchen, Grenzen (keine Secrets) |
 | `capture-learning` | Entwurf in `pending/` nur nach explizitem Ja |
+| `sa-cli` | CLI-Bedienung (`sa`, install, review, …) — ergänzt `sa help` |
 
 Weitere Skills (z. B. `shadcn-vue`, Domänen-Skills) können ins gleiche Repo unter `skills/` — ein Ordner, alle Tools symlinken dorthin.
 
@@ -85,11 +86,11 @@ Weitere Skills (z. B. `shadcn-vue`, Domänen-Skills) können ins gleiche Repo un
 ```bash
 git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
 cd ~/.shared-agents
-./install.sh --wizard
-# SHARED_AGENTS_HOME in ~/.bashrc (Wizard fragt danach)
+./sa install              # Wizard (TTY)
+source ~/.bashrc          # sa | shared-agents | sharedagents
 ```
 
-`install.sh` erkennt installierte Tools (Cursor, Claude, Zed, …) und setzt:
+**`sa install`** erkennt installierte Tools (Cursor, Claude, Zed, …) und setzt:
 
 - **Hooks** (Cursor, Claude Code) → `git pull` bei Session-Start
 - **Globale Rules / AGENTS.md** → „sync zuerst, Learnings nutzen, Learning fragen"
@@ -98,10 +99,10 @@ cd ~/.shared-agents
 ### 4.2 Check
 
 ```bash
-~/.shared-agents/install.sh --check
+sa check
 ```
 
-Ziel: alle genutzten Tools auf `ok`.
+Ziel: alle genutzten Tools auf `ok`. Details: **`sa help`** oder Skill **`sa-cli`**.
 
 ### 4.3 OpenClaw / Claw / Headless
 
@@ -120,7 +121,8 @@ Meist **nichts** — Hooks + Agent-Instructions pullen automatisch.
 Manuell nur bei Offline/Problemen:
 
 ```bash
-~/.shared-agents/scripts/sync.sh pull
+sa sync
+# = scripts/sync.sh pull
 ```
 
 ---
@@ -140,8 +142,8 @@ Bitbucket shared-agents
 **Migration Claw-Learnings:**
 
 1. Bestehende Claw-Learnings inventarisieren (Format, Ort)
-2. In `learnings/pending/` als Markdown-Entwürfe anlegen (keine Secrets)
-3. Team-Review → `approved/` + `index.yaml` (`project`, `domain`, `tags`)
+2. In `learnings/pending/` als Markdown-Entwürfe anlegen (keine Secrets) → **`sa pending push`**
+3. Team-Review → **`sa review`** → `approved/` + `index.yaml`
 4. Claw nur noch über `$SHARED_AGENTS_HOME` lesen — kein zweites Learning-Repo
 
 ---
@@ -150,18 +152,18 @@ Bitbucket shared-agents
 
 | Phase | Dauer | Inhalt | Erfolgskriterium |
 |-------|-------|--------|------------------|
-| **0 — Pilot** | 1 Woche | Quentin + 1–2 Personen: install, 3 echte Learnings | `--check` = ok, 1 Learning im Alltag genutzt |
-| **1 — Cursor-Nutzer** | 2 Wochen | Alle mit Cursor: `install.sh`, Regel aktiv | Kein paralleles „eigenes" Learning in Chats ohne PR |
+| **0 — Pilot** | 1 Woche | Quentin + 1–2 Personen: `sa install`, 3 echte Learnings | `sa check` = ok, 1 Learning im Alltag genutzt |
+| **1 — Cursor-Nutzer** | 2 Wochen | Alle mit Cursor: `sa install`, Regel aktiv | Kein paralleles „eigenes" Learning ohne `sa review` |
 | **2 — Claw** | 2 Wochen | Entrypoint in Claw-Jobs, Migration alter Learnings | Claw und Cursor finden dasselbe `approved/`-Learning |
 | **3 — Restliche IDEs** | laufend | Bei Bedarf Zed, Claude Code, … | Manifest erweitern, kein Sonderweg |
 | **4 — Governance** | dauerhaft | Review-Routine, Datenschutz-Matrix, Kosten-Tracking | Siehe Abschnitte 7–8 |
 
 **Onboarding-Checkliste (neuer Kollege):**
 
-- [ ] `git clone` + `install.sh --wizard`
-- [ ] `install.sh --check` — genutzte Tools `ok`
+- [ ] `git clone` + `./sa install` (Wizard)
+- [ ] `sa check` — genutzte Tools `ok`
 - [ ] Kurz: pending vs. approved, keine Secrets in Learnings
-- [ ] Einmal `review-learning.sh --list` gesehen (Review-Prozess)
+- [ ] Einmal `sa review list` gesehen (Review-Prozess)
 
 ---
 
@@ -268,16 +270,20 @@ Bitbucket shared-agents
 ## Anhang: Befehle
 
 ```bash
+# Hilfe
+sa                      # = sa help
+
 # Install / Update
-~/.shared-agents/install.sh
+sa install
 sa sync
 
-# Learnings reviewen (CLI aus ~/.bashrc nach install.sh)
+# Learnings
 sa review list
 sa review
+sa pending push <datei>
 
-# Status aller Tools
+# Status
 sa check
 ```
 
-Siehe auch [README.md](../README.md), [shared-mcps.md](shared-mcps.md) und [CONTRIBUTING.md](../CONTRIBUTING.md).
+Siehe auch [README.md](../README.md), Skill **`sa-cli`**, [shared-mcps.md](shared-mcps.md) und [CONTRIBUTING.md](../CONTRIBUTING.md).

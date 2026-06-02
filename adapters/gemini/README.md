@@ -1,10 +1,12 @@
 # Gemini CLI
 
-Auto-configured when `~/.gemini` exists.
+Auto-configured by **`sa install`** when `~/.gemini` exists (or `./install.sh` from repo root).
+
+Status: **`sa check`**
 
 ## Global instructions
 
-`install.sh` merges into:
+`sa install` merges into:
 
 - `~/.gemini/GEMINI.md` (primary)
 - `~/.gemini/AGENTS.md` (fallback)

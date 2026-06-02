@@ -159,7 +159,8 @@ profiles:
 cp "$SHARED_AGENTS_HOME/mcps/mcps.local.yaml.example" \
    "$SHARED_AGENTS_HOME/mcps.local.yaml"
 # editieren
-"$SHARED_AGENTS_HOME/scripts/install.sh"   # Adapter + MCPs
+sa install              # Adapter + MCPs (wenn implementiert)
+# Low-level: "$SHARED_AGENTS_HOME/install.sh"
 ```
 
 `mcps.local.yaml` gehört in `.gitignore` des Repos (Root oder Hinweis in README).
@@ -184,10 +185,12 @@ Cursor-`mcp.json` hat keine Kommentar-Marker. Deshalb **Namespacing**:
 
 | Befehl | Beschreibung |
 |--------|--------------|
-| `install.sh` | Adapter + MCPs (wenn Manifest + local ok) |
-| `install.sh --mcps-only` | Nur MCP-Block neu schreiben |
-| `install.sh --check` | Zeigt pro MCP: `ok` / `missing_local` / `detect_fail` |
-| `install.sh --dry-run` | Diff der `mcp.json` ohne Schreiben |
+| `sa install` | Adapter + MCPs (wenn Manifest + local ok) |
+| `sa install --mcps-only` | Nur MCP-Block neu schreiben (geplant) |
+| `sa check` | Zeigt pro MCP: `ok` / `missing_local` / `detect_fail` (geplant) |
+| `sa install --dry-run` | Diff der `mcp.json` ohne Schreiben (geplant) |
+
+Low-level: `./install.sh` — gleiche Flags, wenn an Installer angebunden.
 
 ### Check-Ausgabe (Beispiel)
 
@@ -282,7 +285,7 @@ Team-Manifest: **keine** Kunden-SSH-Hosts. Höchstens generische Templates + Lea
 | Phase | Inhalt |
 |-------|--------|
 | **1 — Doku** | Dieses Dokument + `manifest.example.json` + `mcps.local.yaml.example` |
-| **2 — Installer** | `install-mcps.py`, Integration in `install.sh --check` |
+| **2 — Installer** | `install-mcps.py`, Integration in **`sa check`** / `install.sh --check` |
 | **3 — Lokal** | Alte Keys `screaming-frog-spider*` entfernen oder via `aliases` im Manifest mappen → `sa-*` |
 | **4 — Team** | Onboarding-Checkliste erweitern; Pilot 2 Personen |
 
@@ -310,7 +313,7 @@ Installer entfernt alte Aliases beim nächsten Lauf.
 ## 13. Nächste Schritte (Implementierung)
 
 - [ ] `scripts/install-mcps.py` (stdlib, merge, detect, generator)
-- [ ] Hook in `scripts/install.sh` (`--mcps-only`, `--check` JSON-Feld `mcps`)
+- [ ] Hook in `install.sh` / **`sa install`** (`--mcps-only`, `sa check` JSON-Feld `mcps`)
 - [ ] `.gitignore`-Eintrag für `mcps.local.yaml` am Repo-Root
 - [ ] Learning-Vorlage `learnings/approved/by-domain/seo/screaming-frog-mcp-pool.md` (nach erstem Betrieb)
 - [ ] Optional: Skill `shared-agents-mcp` für Agent-Workflow vor SEO-Tasks
@@ -325,7 +328,8 @@ cp "$SHARED_AGENTS_HOME/mcps/mcps.local.yaml.example" \
    "$SHARED_AGENTS_HOME/mcps.local.yaml"
 
 # Install / Check (wenn implementiert)
-"$SHARED_AGENTS_HOME/scripts/install.sh"
-"$SHARED_AGENTS_HOME/scripts/install.sh" --check
-"$SHARED_AGENTS_HOME/scripts/install.sh" --mcps-only --dry-run
+sa install
+sa check
+sa install --mcps-only --dry-run
+# Low-level: "$SHARED_AGENTS_HOME/install.sh" …
 ```

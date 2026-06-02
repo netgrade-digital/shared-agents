@@ -1,8 +1,10 @@
 # Cursor
 
-Auto-configured by `install.sh` when `~/.cursor` exists.
+Auto-configured by **`sa install`** when `~/.cursor` exists (or `./install.sh` / `./sa install` from repo root).
 
-## What install.sh sets up
+Re-run **`sa install`** to merge updates safely · Status: **`sa check`**
+
+## What gets configured
 
 | Item | Path |
 |------|------|

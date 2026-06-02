@@ -19,8 +19,9 @@ Nach Implementierung:
 ```bash
 cp "$SHARED_AGENTS_HOME/mcps/mcps.local.yaml.example" \
    "$SHARED_AGENTS_HOME/mcps.local.yaml"
-# Werte anpassen, dann:
-"$SHARED_AGENTS_HOME/scripts/install.sh"
+# Werte anpassen, dann (nach Implementierung von install-mcps.py):
+sa install
+# oder: "$SHARED_AGENTS_HOME/install.sh"
 ```
 
 Team-verwaltete Server erscheinen in `~/.cursor/mcp.json` mit Prefix `sa-`. Eigene Einträge ohne dieses Prefix bleiben beim Re-Install erhalten.

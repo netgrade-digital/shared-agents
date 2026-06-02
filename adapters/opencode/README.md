@@ -1,10 +1,12 @@
 # OpenCode
 
-Auto-configured when `~/.config/opencode` exists.
+Auto-configured by **`sa install`** when `~/.config/opencode` exists (or `./install.sh` from repo root).
+
+Status: **`sa check`**
 
 ## Global instructions
 
-`install.sh` merges into `~/.config/opencode/AGENTS.md`.
+`sa install` merges into `~/.config/opencode/AGENTS.md`.
 
 ## Sync
 

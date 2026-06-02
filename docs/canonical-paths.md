@@ -17,10 +17,10 @@ Default: `~/.shared-agents`
 | Was | Absoluter Pfad | Wer schreibt |
 |-----|----------------|--------------|
 | Team-Skills (Quelle) | `$SHARED_AGENTS_HOME/skills/` | Mensch (PR) |
-| Learnings Index | `$SHARED_AGENTS_HOME/learnings/index.yaml` | Mensch / `review-learning.sh` |
-| Learnings **approved** | `$SHARED_AGENTS_HOME/learnings/approved/` | **Nur Mensch** (PR nach Review) |
+| Learnings Index | `$SHARED_AGENTS_HOME/learnings/index.yaml` | Mensch / **`sa review`** |
+| Learnings **approved** | `$SHARED_AGENTS_HOME/learnings/approved/` | **Nur Mensch** (`sa review`) |
 | Learnings **pending** | `$SHARED_AGENTS_HOME/learnings/pending/` | **Agent** (nach explizitem Ja) |
-| Sync | `$SHARED_AGENTS_HOME/scripts/sync.sh` | Hook / Agent |
+| Sync | `$SHARED_AGENTS_HOME/scripts/sync.sh` | Hook / Agent / **`sa sync`** |
 | Adapter-Manifest | `$SHARED_AGENTS_HOME/adapters/manifest.json` | Mensch (PR) |
 | MCP-Manifest (Entwurf) | `$SHARED_AGENTS_HOME/mcps/manifest.example.json` | Mensch (PR) |
 | MCP lokal (gitignored) | `$SHARED_AGENTS_HOME/mcps.local.yaml` | User |
@@ -60,11 +60,13 @@ Git-Commit für ein Learning: aus dem Clone, in dem die Datei liegt (meist `~/.s
 Hilfsskript:
 
 ```bash
-"$SHARED_AGENTS_HOME/scripts/learning-path.sh" 2026-06-02-my-slug
+sa pending path 2026-06-02-my-slug
+# oder: "$SHARED_AGENTS_HOME/scripts/learning-path.sh" 2026-06-02-my-slug
 # → /home/you/.shared-agents/learnings/pending/2026-06-02-my-slug.md
 ```
 
-Shell-CLI (nach `install.sh` in `~/.bashrc`): `sa` · `shared-agents` · `sharedagents` — siehe `scripts/shell-aliases.sh` und `sa help`.
+Shell-CLI (nach **`sa install`** in `~/.bashrc`): **`sa`** · `shared-agents` · `sharedagents` — **`sa` ohne Argument = `sa help`**.  
+Vollständige Bedienung: Skill **`sa-cli`** · Live-Referenz: **`sa help`**
 
 ---
 
@@ -72,7 +74,7 @@ Shell-CLI (nach `install.sh` in `~/.bashrc`): `sa` · `shared-agents` · `shared
 
 Vor nicht-trivialen Tasks:
 
-1. `"$SHARED_AGENTS_HOME/scripts/sync.sh" pull`
+1. **`sa sync`** (oder `"$SHARED_AGENTS_HOME/scripts/sync.sh" pull`)
 2. `$SHARED_AGENTS_HOME/learnings/index.yaml`
 3. Grep in `$SHARED_AGENTS_HOME/learnings/approved/`
 
@@ -89,5 +91,6 @@ Installierte Skills liegen unter `~/.agents/skills/` etc. und zeigen auf `$SHARE
 ## Siehe auch
 
 - [README.md](../README.md) — Learnings-Workflow
+- [skills/sa-cli/SKILL.md](../skills/sa-cli/SKILL.md) — CLI-Bedienung
 - [skills/capture-learning/SKILL.md](../skills/capture-learning/SKILL.md)
 - [rules/shared-agents-knowledge.mdc](../rules/shared-agents-knowledge.mdc)

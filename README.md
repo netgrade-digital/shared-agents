@@ -68,15 +68,23 @@ cd ~/.shared-agents
 
 # 3. Shell
 source ~/.bashrc
-sa help
+sa                  # Hilfe-Übersicht (gleich wie sa help)
 ```
 
 **Dev-Install** (lokaler Ordner, ohne Git-Remote):
 
 ```bash
 cd /path/to/shared-agents
-sa install --home "$HOME/.shared-agents"
+./sa install --home "$HOME/.shared-agents"
 # oder: ./install.sh --home "$HOME/.shared-agents"
+```
+
+**Bootstrap ohne vorherigen Clone** (frisches System oder nur Dev-Checkout):
+
+```bash
+cd /path/to/shared-agents   # Repo mit ./sa
+./sa install                # Wizard zuerst — bei Abbruch kein ~/.shared-agents
+source ~/.bashrc
 ```
 
 **Neues KI-Tool installiert?** → `sa install` erneut ausführen.
@@ -85,22 +93,24 @@ sa install --home "$HOME/.shared-agents"
 
 ## Befehlsübersicht
 
-Nach `./install.sh` und `source ~/.bashrc` (oder neuem Terminal):
+Nach `sa install` und `source ~/.bashrc` (oder neuem Terminal):
 
 ```bash
-sa help              # alle Befehle
+sa                   # Hilfe-Übersicht (Default ohne Argument)
+sa help              # explizit — gleiche Ausgabe
 shared-agents sync   # gleich wie sa sync
 sa review list
 sa review
 ```
 
-CLI: [`scripts/sa`](scripts/sa) · Aufruf: **`sa`** · **`shared-agents`** · **`sharedagents`**
+CLI: [`scripts/sa`](scripts/sa) · Aufruf: **`sa`** · **`shared-agents`** · **`sharedagents`** · **`./sa`** im Repo-Root
 
 ### `sa` CLI
 
 | Befehl | Beschreibung |
 |--------|--------------|
-| `sa help` | Alle Befehle mit Erklärung |
+| `sa` | Hilfe-Übersicht (Default ohne Argument) |
+| `sa help` | Wie `sa` — alle Befehle mit Erklärung |
 | `sa sync` | Neueste Learnings pullen |
 | `sa check` | Adapter-Status |
 | `sa install` | Setup-Wizard (TTY) — Pfad, Tools, Shell, Summary |
@@ -153,12 +163,12 @@ Der Installer ist **manifest-driven** ([`adapters/manifest.json`](adapters/manif
 
 ### Setup-Wizard (empfohlen)
 
-In einem Terminal startet `install.sh` automatisch den **TUI-Wizard** (Pfeiltasten, Space, Enter):
+In einem Terminal startet **`sa install`** automatisch den **TUI-Wizard** (Pfeiltasten, Space, Enter):
 
 ```bash
 sa install              # Setup-Wizard (Standard im Terminal)
 sa install --non-interactive   # Schnell, ohne Prompts
-cd ~/.shared-agents && ./install.sh
+cd ~/.shared-agents && ./install.sh   # gleich wie sa install
 ```
 
 | Schritt | Steuerung |
@@ -177,9 +187,10 @@ Fallback ohne TTY oder `SA_WIZARD_PLAIN=1`: klassische Text-Eingabe (Nummern, `a
 Nicht-interaktiv (CI, Scripts):
 
 ```bash
-install.sh --non-interactive              # alle erkannten Tools
-install.sh --non-interactive --tools cursor,claude-code
-install.sh --dry-run --wizard             # Wizard-Vorschau
+sa install --non-interactive              # alle erkannten Tools
+sa install --non-interactive --tools cursor,claude-code
+sa install --dry-run --wizard             # Wizard-Vorschau
+# Low-level: install.sh --non-interactive …
 ```
 
 ### Befehle
@@ -250,7 +261,7 @@ zed            yes        no           not_configured
 ```bash
 #!/bin/bash
 export SHARED_AGENTS_HOME="$HOME/.shared-agents"
-sa check --json 2>/dev/null || "$SHARED_AGENTS_HOME/scripts/install.sh" --check --json | jq '.tools[] | select(.status != "ok" and .status != "missing_tool")'
+sa check --json 2>/dev/null || "$SHARED_AGENTS_HOME/install.sh" --check --json | jq '.tools[] | select(.status != "ok" and .status != "missing_tool")'
 ```
 
 ---
@@ -332,7 +343,7 @@ Session / Thread start
 
 ```
 shared-agents/
-├── sa                             # ./sa help — CLI Entrypoint
+├── sa                             # ./sa — CLI (ohne Arg = help)
 ├── install.sh                     # ./install.sh — Install
 ├── uninstall.sh                   # ./uninstall.sh — Deinstallieren
 ├── README.md
@@ -340,11 +351,12 @@ shared-agents/
 ├── CONTRIBUTING.md
 ├── skills/
 │   ├── shared-agents-knowledge/   # Sync, Retrieve, Workflow
-│   └── capture-learning/          # Learning-Vorschläge
+│   ├── capture-learning/          # Learning-Vorschläge
+│   └── sa-cli/                    # CLI-Bedienung (sa help)
 ├── learnings/
 │   ├── README.md                  # pending vs approved + Schreibort
 │   ├── approved/                  # Freigegeben
-│   ├── pending/                   # KI-Entwürfe → PR
+│   ├── pending/                   # KI-Entwürfe → sa review
 │   └── index.yaml                 # Suchindex
 ├── rules/
 │   └── shared-agents-knowledge.mdc
@@ -353,7 +365,7 @@ shared-agents/
 │   ├── install-adapters.py        # Detect, install, verify, TUI wizard
 │   ├── wizard_tui.py              # TUI-Wizard (curses, Pfeiltasten/Space)
 │   ├── learning-path.sh           # Canonical pending path ausgeben
-│   ├── sa                           # sa help | sa sync | sa review …
+│   ├── sa                           # sa | sa help | sa sync | sa review …
 │   ├── shell-aliases.sh           # sa | shared-agents | sharedagents
 │   ├── configure-shell-rc.sh      # Idempotent bashrc block
 │   ├── publish-pending-learning.sh # Pending commit + push
@@ -443,7 +455,7 @@ Learnings haben **zwei Stufen**. Das ist der wichtigste Punkt:
 | Ordner | Wer schreibt | Wer liest | Bedeutung |
 |--------|--------------|-----------|-----------|
 | **`pending/`** | Agent (nur nach deinem **Ja**) | Niemand als Wissensbasis | Vorschlag / Entwurf |
-| **`approved/`** | Mensch (via PR) | Alle Agents | Offizielles Team-Wissen |
+| **`approved/`** | Mensch (via `sa review`) | Alle Agents | Offizielles Team-Wissen |
 
 **Merksatz:** Agent erstellt **Vorschläge**. Erst **`approved/`** macht daraus Team-Wahrheit.
 
@@ -531,6 +543,14 @@ sa uninstall --keep-repo  # nur Adapter, Repo behalten
 ### Format
 
 Team-Skills in `skills/`. `install.sh` symlinkt nach:
+
+| Skill | Zweck |
+|-------|--------|
+| `shared-agents-knowledge` | Sync, Learnings, Workflow |
+| `capture-learning` | Entwürfe in `pending/` |
+| `sa-cli` | CLI komplett — ergänzt `sa help` |
+
+Symlinks:
 
 | Pfad | Tools |
 |------|-------|
@@ -633,7 +653,7 @@ Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
 | Veraltete Learnings | `sa check` → Hook/AGENTS.md prüfen; `sa sync` testen |
 | Learning fehlt beim Team | In `approved/`? `index.yaml`? Kollege hat `sa sync`? |
 | `sa check --json` / `install.sh --check --json` | Exakte Pfade / Status pro Tool |
-| `sa` unbekannt nach Install | `source ~/.bashrc` oder neues Terminal |
+| `sa` unbekannt nach Install | `source ~/.bashrc` oder neues Terminal; dann `sa` für Hilfe |
 | Deinstall | `sa uninstall` — danach neues Terminal (`exec $SHELL`) |
 
 ---

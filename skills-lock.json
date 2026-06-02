@@ -10,6 +10,11 @@
       "source": "git@bitbucket.org:netgrade/shared-agents.git",
       "sourceType": "git",
       "skillPath": "skills/capture-learning/SKILL.md"
+    },
+    "sa-cli": {
+      "source": "git@bitbucket.org:netgrade/shared-agents.git",
+      "sourceType": "git",
+      "skillPath": "skills/sa-cli/SKILL.md"
     }
   }
 }

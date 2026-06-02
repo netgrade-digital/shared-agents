@@ -1,10 +1,12 @@
 # Windsurf
 
-Auto-configured when `~/.codeium/windsurf` exists.
+Auto-configured by **`sa install`** when `~/.codeium/windsurf` exists (or `./install.sh` from repo root).
+
+Status: **`sa check`**
 
 ## Global instructions
 
-`install.sh` merges into:
+`sa install` merges into:
 
 - `~/.codeium/windsurf/AGENTS.md`
 - `~/.codeium/windsurf/memories/global_rules.md` (if file/dir exists)

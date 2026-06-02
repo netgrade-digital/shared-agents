@@ -31,18 +31,22 @@ sa review list
 sa review 2026-06-02-my-slug.md
 ```
 
-**CLI:** `sa help` · auch `shared-agents` · `sharedagents`
+**CLI:** `sa` · `sa help` · `shared-agents` · `sharedagents` — ohne Argument = Hilfe-Übersicht  
+Vollständige Bedienung: Skill **`sa-cli`** in `$SHARED_AGENTS_HOME/skills/` (ergänzt `sa help`)
 
 | Befehl | Beschreibung |
 |--------|--------------|
-| `sa help` | Alle Befehle |
+| `sa` | Hilfe-Übersicht (Default) |
+| `sa help` | Wie `sa` — alle Befehle |
 | `sa review` | Review / approve |
 | `sa review list` | Pending-Liste |
 | `sa pending push` | Pending ans Team pushen |
 | `sa sync` | Pull |
 | `sa unapprove` | Aus approved entfernen |
 
-Definiert in `scripts/shell-aliases.sh`, eingebunden via `scripts/configure-shell-rc.sh`.
+Definiert in `scripts/shell-aliases.sh`, eingebunden via `scripts/configure-shell-rc.sh` (bei `sa install`).
+
+Shell-CLI nach Install: **`sa`** ohne Argument = Hilfe · **`sa help`** = gleich
 
 **Unapprove:** `sa unapprove` — Wizard: **[1] Löschen** oder **[2] Nach pending/** (`--to-pending` / `--delete` nur für Scripts mit `-y`).
 

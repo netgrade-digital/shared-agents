@@ -2,6 +2,8 @@
 
 No IDE hooks — use the **entrypoint wrapper** so sync never gets skipped.
 
+Install shared-agents first: **`sa install`** (or `./install.sh` from repo root).
+
 ## Every agent run
 
 ```bash
@@ -10,6 +12,8 @@ export SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
 ```
 
 This runs `sync.sh pull` then execs your command.
+
+Manual sync before a run: **`sa sync`**
 
 ## Docker
 
@@ -23,7 +27,7 @@ CMD ["node", "agent.js"]
 
 - Read skills from `$SHARED_AGENTS_HOME/skills/`
 - Search `learnings/approved/` before non-trivial steps
-- End: write to `learnings/pending/` → branch + PR
+- End: write to `learnings/pending/` → `sa pending push` → team review via `sa review`
 
 ## CI / cron
 

@@ -1,10 +1,12 @@
 # Codex CLI (OpenAI)
 
-Auto-configured when `~/.codex` exists.
+Auto-configured by **`sa install`** when `~/.codex` exists (or `./install.sh` from repo root).
+
+Status: **`sa check`**
 
 ## Global instructions
 
-`install.sh` merges the shared-agents block into:
+`sa install` merges the shared-agents block into:
 
 - `~/.codex/AGENTS.md`
 - `$CODEX_HOME/AGENTS.md` (if `CODEX_HOME` is set)

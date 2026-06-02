@@ -5,13 +5,19 @@ alwaysApply: true
 
 # Team Knowledge (shared-agents)
 
-Repo path: `~/.shared-agents` (or `$SHARED_AGENTS_HOME`). Canonical paths: `docs/canonical-paths.md` in that repo.
+Repo: `$SHARED_AGENTS_HOME` (default `~/.shared-agents`). Paths: `$SHARED_AGENTS_HOME/docs/canonical-paths.md`
+
+**Shell commands (canonical — do not duplicate here):** run **`sa help`**  
+Without bashrc alias: `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/scripts/sa" help`  
+Also: `shared-agents` · `sharedagents` · bare **`sa`** = same as `sa help`  
+Full guide for users/agents: skill **`sa-cli`**
 
 ## Automatic sync (mandatory — never ask the user)
 
 At the **start of every agent session**, before any other work:
 
-1. Run shell: `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/scripts/sync.sh" pull`
+1. Run: `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/scripts/sa" sync`  
+   (same as `scripts/sync.sh pull` — prefer `sa sync`)
 2. Do not ask permission. Do not mention sync unless it failed and blocks the task.
 3. If pull fails (offline): continue with local copy; retry sync before reading learnings.
 
@@ -27,14 +33,14 @@ After a **non-trivial** task (feature, bugfix, refactor, multi-file change, non-
 
 1. **Always ask the user:** „Soll ich ein Team-Learning in shared-agents anlegen?"
 2. Wait for explicit yes/no.
-3. **If yes:** use skill `capture-learning` → write **only** to `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/learnings/pending/"` (absolute path — **not** the Cursor workspace unless it equals `$SHARED_AGENTS_HOME`).
+3. **If yes:** skill `capture-learning` — paths, format, publish workflow (see skill). Shell: skill **`sa-cli`** or **`sa help`**.
 4. **If no:** stop — do not write anything.
-5. Tell user: pending needs PR review before it becomes team knowledge (`approved/`).
+5. Tell user: `pending/` is draft only; promotion to `approved/` is human **`sa review`** (skill **`sa-cli`** or **`sa help`**).
 
 Skip the question only for trivial work (typos, formatting, pure Q&A, no reusable insight).
 
-Team-relevant insight → skill `capture-learning` → `$SHARED_AGENTS_HOME/learnings/pending/`. No secrets. Never `approved/` from the agent.
+No secrets. Agent never writes `approved/`.
 
 ## Team skills
 
-`~/.shared-agents/skills/` — symlinked to `~/.agents/skills/`.
+`$SHARED_AGENTS_HOME/skills/` — symlinked to `~/.agents/skills/`.

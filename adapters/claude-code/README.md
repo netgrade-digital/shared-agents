@@ -1,8 +1,10 @@
 # Claude Code
 
-Auto-configured by `install.sh` when `~/.claude` exists.
+Auto-configured by **`sa install`** when `~/.claude` exists (or `./install.sh` from repo root).
 
-## What install.sh sets up
+Re-run **`sa install`** to merge safely · Status: **`sa check`**
+
+## What gets configured
 
 | Item | Path |
 |------|------|
@@ -30,4 +32,4 @@ Hook runs `adapters/claude-code/session-sync.sh` → `git pull` on every session
 }
 ```
 
-Re-run `install.sh` to merge safely.
+Re-run **`sa install`** to merge safely.

@@ -1,6 +1,8 @@
 # Zed
 
-Auto-configured by `install.sh` when `~/.config/zed` exists.
+Auto-configured by **`sa install`** when `~/.config/zed` exists (or `./install.sh` from repo root).
+
+Re-run **`sa install`** after Zed updates · Status: **`sa check`**
 
 ## Global instructions
 
