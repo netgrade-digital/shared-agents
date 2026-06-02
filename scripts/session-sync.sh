@@ -6,5 +6,5 @@ if [[ ! -d "$SHARED_AGENTS_HOME/.git" ]]; then
   exit 0
 fi
 
-git -C "$SHARED_AGENTS_HOME" pull --ff-only --quiet 2>/dev/null || true
+"$SHARED_AGENTS_HOME/scripts/sync.sh" pull --quiet 2>/dev/null || true
 exit 0

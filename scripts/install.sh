@@ -96,7 +96,10 @@ elif [[ "$REPO_SOURCE" == "$SHARED_AGENTS_HOME" ]]; then
   echo "Installing from live path: $SHARED_AGENTS_HOME"
 elif [[ -d "$SHARED_AGENTS_HOME/.git" ]]; then
   echo "Updating existing install at $SHARED_AGENTS_HOME"
-  git -C "$SHARED_AGENTS_HOME" pull --ff-only
+  git -C "$SHARED_AGENTS_HOME" config pull.rebase false
+  git -C "$SHARED_AGENTS_HOME" config pull.ff only
+  bash "$SHARED_AGENTS_HOME/scripts/sync.sh" pull 2>/dev/null || \
+    git -C "$SHARED_AGENTS_HOME" pull --ff-only --no-rebase
 elif [[ -e "$SHARED_AGENTS_HOME" && ! -d "$SHARED_AGENTS_HOME/.git" ]]; then
   echo "Updating copy at $SHARED_AGENTS_HOME from $REPO_SOURCE"
   cp -a "$REPO_SOURCE/." "$SHARED_AGENTS_HOME/"
@@ -117,6 +120,8 @@ chmod +x "$SHARED_AGENTS_HOME/scripts/install-adapters.py" 2>/dev/null || true
 
 if [[ $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME/.git" ]]; then
   fix_git_remote "$SHARED_AGENTS_HOME"
+  git -C "$SHARED_AGENTS_HOME" config pull.rebase false
+  git -C "$SHARED_AGENTS_HOME" config pull.ff only
 fi
 
 if [[ $use_wizard -eq 1 ]]; then
@@ -147,6 +152,8 @@ fi
 
 if [[ $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME/.git" ]]; then
   fix_git_remote "$SHARED_AGENTS_HOME"
+  git -C "$SHARED_AGENTS_HOME" config pull.rebase false
+  git -C "$SHARED_AGENTS_HOME" config pull.ff only
 fi
 
 cat <<EOF
