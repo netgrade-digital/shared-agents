@@ -41,9 +41,18 @@ pull_ff() {
   fi
 }
 
+show_status_reminder() {
+  local py="$SHARED_AGENTS_HOME/scripts/sa-status.py"
+  [[ -f "$py" ]] || return 0
+  python3 "$py" --quiet 2>/dev/null || true
+}
+
 case "$ACTION" in
   pull)
     pull_ff
+    if [[ "$QUIET" -eq 0 ]]; then
+      show_status_reminder
+    fi
     ;;
   status)
     git -C "$SHARED_AGENTS_HOME" status -sb

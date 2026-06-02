@@ -3,7 +3,7 @@ name: sa-cli
 description: >-
   Complete guide to the shared-agents shell CLI (sa). Use when the user asks
   how to run sa, sa help, install, sync, review, pending, unapprove, check,
-  uninstall, or any shared-agents terminal command. Also use when explaining
+  uninstall, status, or any shared-agents terminal command. Also use when explaining
   setup, wizard, or troubleshooting the CLI after sa install.
 ---
 
@@ -57,6 +57,7 @@ sa check                  # Adapter-Status
 | Setup | `sa install --wizard` | Wizard explizit |
 | Setup | `sa check` | Tool installiert vs. konfiguriert |
 | Setup | `sa sync` | `git pull` Learnings (ff-only) |
+| Setup | `sa status` | Offene Punkte: Review, Skills, Adapter |
 | Setup | `sa uninstall` | Deinstallieren (y/N) |
 | Learnings | `sa review` | Interaktiv: pending → approved |
 | Learnings | `sa review list` | Pending-Liste |
@@ -67,6 +68,30 @@ sa check                  # Adapter-Status
 | Learnings | `sa unapprove list` | Approved-Liste |
 
 Alias: **`sa install`** = **`sa setup`**
+
+---
+
+## Status / Erinnerungen — `sa status`
+
+Zeigt, was leicht vergessen wird:
+
+| Prüfung | Bedeutung | Aktion |
+|---------|-----------|--------|
+| Pending-Learnings | Dateien in `learnings/pending/` | `sa review list` · `sa review` |
+| Noch nicht gepusht | Lokale pending-Änderungen | `sa pending push` |
+| Skill-Symlinks | Neuer Skill im Repo, nicht verlinkt | `sa install` |
+| Adapter | Tool da, nicht konfiguriert | `sa install` |
+
+```bash
+sa status              # Vollständige Liste (oder „alles erledigt ✓“)
+sa status --brief      # Eine Zeile
+sa status --quiet      # Nur ausgeben wenn Handlung nötig (exit 1)
+sa status --json       # CI / Scripts
+```
+
+**Automatisch nach Pull:** `sa sync` (nicht `--quiet`) ruft `sa status --quiet` auf — Kurzhinweis direkt im Terminal.
+
+Cursor/Claude Session-Hook syncen still (`--quiet`); dort erinnert die **Rule** den Agenten, **`sa status --brief`** zu prüfen und dich kurz zu informieren.
 
 ---
 

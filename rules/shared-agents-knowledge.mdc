@@ -20,6 +20,7 @@ At the **start of every agent session**, before any other work:
    (same as `scripts/sync.sh pull` — prefer `sa sync`)
 2. Do not ask permission. Do not mention sync unless it failed and blocks the task.
 3. If pull fails (offline): continue with local copy; retry sync before reading learnings.
+4. After **`sa sync`** (non-quiet) or on request: run **`sa status --brief`** — if action needed, tell the user briefly (pending reviews, skill links, adapters).
 
 Cursor also runs `sessionStart` hook — still run sync once at session start if unsure hook ran.
 

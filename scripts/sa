@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
-SA_VERSION="0.3.0"
+SA_VERSION="0.3.1"
 SA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SA_REPO_ROOT="$(cd "$SA_DIR/.." && pwd)"
 DEFAULT_GIT_REMOTE="${SHARED_AGENTS_GIT_REMOTE:-git@bitbucket.org:netgrade/shared-agents.git}"
@@ -78,6 +78,7 @@ Setup
   check                Tool-Status prüfen
   uninstall [opts]     Deinstallieren (Bestätigung: y/N)
   sync                 Neueste Learnings pullen (Bitbucket)
+  status               Offene Punkte (Review, Skills, Adapter)
 
 Learnings
   review [file]        Pending reviewen → approved (+ commit/push)
@@ -97,6 +98,7 @@ Beispiele
   sa install --non-interactive        Schnell, ohne Prompts
   sa install --check                  Adapter-Status
   sa sync
+  sa status
   sa review list
   sa pending push 2026-06-02-my-slug.md
   sa review 2026-06-02-my-slug.md
@@ -153,6 +155,10 @@ dispatch() {
     sync)
       _sa_require_home
       exec "$(_sa_bin sync.sh)" pull "$@"
+      ;;
+    status|remind|inbox)
+      _sa_require_home
+      exec python3 "$(_sa_bin sa-status.py)" "$@"
       ;;
     uninstall)
       local uninstall_sh

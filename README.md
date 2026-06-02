@@ -112,6 +112,7 @@ CLI: [`scripts/sa`](scripts/sa) · Aufruf: **`sa`** · **`shared-agents`** · **
 | `sa` | Hilfe-Übersicht (Default ohne Argument) |
 | `sa help` | Wie `sa` — alle Befehle mit Erklärung |
 | `sa sync` | Neueste Learnings pullen |
+| `sa status` | Offene Punkte (Review, Skills, Adapter) |
 | `sa check` | Adapter-Status |
 | `sa install` | Setup-Wizard (TTY) — Pfad, Tools, Shell, Summary |
 | `sa install --non-interactive` | Ohne Wizard — alle erkannten Tools |
@@ -675,6 +676,6 @@ Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
 - **Lizenz:** [MIT](LICENSE)
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Design:** Manifest-driven, Python-Stdlib-only Installer, idempotent, keine Netzwerk-Calls
-- **Version:** CLI `sa` v0.3.0 · Installer `v0.1.0` (`install.sh` / `install-adapters.py --version`)
+- **Version:** CLI `sa` v0.3.1 · Installer `v0.1.0` (`install.sh` / `install-adapters.py --version`)
 
 Repo: `https://bitbucket.org/netgrade/shared-agents` (Branch `main`).
