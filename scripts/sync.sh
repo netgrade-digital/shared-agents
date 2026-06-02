@@ -14,7 +14,7 @@ fi
 
 if [[ ! -d "$SHARED_AGENTS_HOME" ]]; then
   echo "Shared agents repo not found at: $SHARED_AGENTS_HOME" >&2
-  echo "Run: ~/.shared-agents/scripts/install.sh" >&2
+  echo "Run: cd ~/.shared-agents && ./install.sh" >&2
   exit 1
 fi
 

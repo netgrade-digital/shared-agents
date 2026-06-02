@@ -15,7 +15,7 @@ block() {
 ${MARKER_BEGIN} (managed by install.sh)
 export SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME}"
 if [[ -f "\$SHARED_AGENTS_HOME/scripts/shell-aliases.sh" ]]; then
-  # sa-review, sa-review-list, sa-sync, …
+  # sa-sync, sa-review, sa-uninstall, …
   source "\$SHARED_AGENTS_HOME/scripts/shell-aliases.sh"
 fi
 ${MARKER_END}

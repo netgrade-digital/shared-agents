@@ -12,6 +12,7 @@ Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Ma
 
 - [Konzept](#konzept)
 - [Quick Start](#quick-start)
+- [Befehlsübersicht](#befehlsübersicht)
 - [Install & Check](#install--check)
 - [Unterstützte Tools](#unterstützte-tools)
 - [Automatischer Sync](#automatischer-sync)
@@ -60,13 +61,12 @@ Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Ma
 ```bash
 # 1. Klonen
 git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
-# oder HTTPS:
-# git clone https://bitbucket.org/netgrade/shared-agents.git ~/.shared-agents
+cd ~/.shared-agents
 
 # 2. Setup — Wizard: Agenten auswählen, Adapter setzen, Check am Ende
-~/.shared-agents/scripts/install.sh
+./install.sh
 
-# 3. Shell
+# 3. Shell (Wizard fragt danach nach ~/.bashrc)
 export SHARED_AGENTS_HOME="$HOME/.shared-agents"
 ```
 
@@ -74,10 +74,62 @@ export SHARED_AGENTS_HOME="$HOME/.shared-agents"
 
 ```bash
 cd /path/to/shared-agents
-./scripts/install.sh --source "$(pwd)" --home "$HOME/.shared-agents"
+./install.sh --home "$HOME/.shared-agents"
 ```
 
 **Neues KI-Tool installiert?** → `install.sh` erneut ausführen.
+
+---
+
+## Befehlsübersicht
+
+Nach `./install.sh` und `source ~/.bashrc` (oder neuem Terminal). Alle `sa-*`-Aliase liegen in [`scripts/shell-aliases.sh`](scripts/shell-aliases.sh).
+
+### Shell-Aliase (täglich)
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `sa-sync` | Neueste Learnings pullen (`sync.sh pull`) |
+| `sa-check` | Adapter-Status (`install.sh --check`) |
+| `sa-review-list` | Pending-Learnings anzeigen |
+| `sa-review [datei]` | Review + approve + commit/push |
+| `sa-review-dry [datei]` | Dry-run für Review |
+| `sa-unapprove-list` | Approved-Learnings anzeigen |
+| `sa-unapprove [id\|datei]` | Aus `approved/` entfernen (+ commit/push) |
+| `sa-unapprove … --to-pending` | Statt löschen → zurück nach `pending/` |
+| `sa-learning-path [slug]` | Canonical Pfad für pending-Datei |
+| `sa-uninstall` | Deinstallieren — **Bestätigung: y/N** |
+| `sa-uninstall --keep-repo` | Nur Adapter/Aliase, Repo behalten |
+| `sa-uninstall --dry-run` | Vorschau |
+
+**Häufige Flags** (Review/Unapprove): `--no-git` · `-y` / `--yes` (ohne Nachfrage) · `--dry-run`
+
+### Repo-Root (nach Clone)
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `./install.sh` | Install / Update + Wizard |
+| `./install.sh --check` | Status aller Tools |
+| `./install.sh --wizard` | Interaktiver Setup |
+| `./install.sh --non-interactive` | Alle erkannten Tools |
+| `./install.sh --dry-run` | Vorschau |
+| `./uninstall.sh` | Deinstallieren (wie `sa-uninstall`) |
+
+### Scripts (Low-level)
+
+| Script | Beschreibung |
+|--------|--------------|
+| `scripts/sync.sh pull` | Git pull (ff-only, ignoriert globales rebase) |
+| `scripts/sync.sh status` | Kurzer Git-Status |
+| `scripts/review-learning.sh` | Wie `sa-review` |
+| `scripts/unapprove-learning.sh` | Wie `sa-unapprove` |
+| `scripts/promote-learning.sh` | Approve ohne Preview (`-y`) |
+| `scripts/learning-path.sh` | Pending-Pfad ausgeben |
+| `scripts/ensure-git-remote.sh` | `origin` → Bitbucket fixen |
+| `scripts/install-adapters.py check` | JSON-Status für CI |
+| `scripts/agent-entrypoint.sh` | Headless: sync → exec |
+
+Details zu Learnings: [Learnings](#learnings) · Pfade: [Canonical Paths](#canonical-paths)
 
 ---
 
@@ -90,9 +142,9 @@ Der Installer ist **manifest-driven** ([`adapters/manifest.json`](adapters/manif
 In einem Terminal startet `install.sh` automatisch den **interaktiven Wizard** (OpenClaw-Style):
 
 ```bash
-~/.shared-agents/scripts/install.sh
+~/.shared-agents/install.sh
 # oder explizit:
-~/.shared-agents/scripts/install.sh --wizard
+cd ~/.shared-agents && ./install.sh --wizard
 ```
 
 Ablauf:
@@ -263,6 +315,8 @@ Session / Thread start
 
 ```
 shared-agents/
+├── install.sh                     # ./install.sh — Entrypoint (nach Clone)
+├── uninstall.sh                   # ./uninstall.sh — Deinstallieren
 ├── README.md
 ├── LICENSE
 ├── CONTRIBUTING.md
@@ -285,6 +339,11 @@ shared-agents/
 │   ├── promote-learning.sh        # Kurzform: sofort promoten (-y)
 │   ├── review-learning.sh         # Interaktiv: review + promote + index
 │   ├── review-learning.py
+│   ├── unapprove-learning.sh      # Approved entfernen (+ optional pending)
+│   ├── unapprove-learning.py
+│   ├── uninstall.sh               # Restlos deinstallieren
+│   ├── uninstall-adapters.py
+│   ├── remove-shell-rc.sh
 │   ├── sync.sh
 │   ├── session-sync.sh
 │   └── agent-entrypoint.sh
@@ -425,6 +484,24 @@ Das Command:
 
 Danach ist das Learning im Remote — Team sync pull.
 
+### Unapprove (aus approved entfernen)
+
+```bash
+sa-unapprove-list
+sa-unapprove fantasy-2026-06-dragon-cache-invalidation
+sa-unapprove shared-agents-2026-06-test-sa-review-workflow --to-pending
+```
+
+Entfernt Eintrag aus `index.yaml`, löscht Datei (oder `--to-pending`), commit + push wie bei `sa-review`.
+
+### Deinstallieren
+
+```bash
+sa-uninstall              # Bestätigung: y/N (überall im Terminal)
+sa-uninstall --keep-repo  # nur Adapter, Repo behalten
+./uninstall.sh            # alternativ im Repo-Root
+```
+
 `promote-learning.sh` bleibt als Kurzform (`-y`, ohne Preview) — bevorzugt: `review-learning.sh`.
 
 ### Format
@@ -498,9 +575,9 @@ Details: [`adapters/openclaw/README.md`](adapters/openclaw/README.md)
 3. Testen:
 
 ```bash
-./scripts/install.sh --dry-run
-./scripts/install.sh
-./scripts/install.sh --check
+./install.sh --dry-run
+./install.sh
+./install.sh --check
 ```
 
 Siehe [CONTRIBUTING.md](CONTRIBUTING.md).

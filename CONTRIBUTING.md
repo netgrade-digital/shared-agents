@@ -13,9 +13,9 @@ Thanks for helping make shared-agents open-source ready.
 
 3. **Test**:
    ```bash
-   ./scripts/install.sh --dry-run
-   ./scripts/install.sh
-   ./scripts/install.sh --check
+   ./install.sh --dry-run
+   ./install.sh
+   ./install.sh --check
    ```
 
 4. **Pull request** — include sample `install.sh --check` output

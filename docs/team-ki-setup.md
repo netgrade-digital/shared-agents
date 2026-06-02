@@ -84,7 +84,8 @@ Weitere Skills (z. B. `shadcn-vue`, Domänen-Skills) können ins gleiche Repo un
 
 ```bash
 git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
-~/.shared-agents/scripts/install.sh --wizard
+cd ~/.shared-agents
+./install.sh --wizard
 # SHARED_AGENTS_HOME in ~/.bashrc (Wizard fragt danach)
 ```
 
@@ -97,7 +98,7 @@ git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
 ### 4.2 Check
 
 ```bash
-~/.shared-agents/scripts/install.sh --check
+~/.shared-agents/install.sh --check
 ```
 
 Ziel: alle genutzten Tools auf `ok`.
@@ -268,7 +269,7 @@ Bitbucket shared-agents
 
 ```bash
 # Install / Update
-~/.shared-agents/scripts/install.sh
+~/.shared-agents/install.sh
 sa-sync
 
 # Learnings reviewen (Aliase aus ~/.bashrc nach install.sh)

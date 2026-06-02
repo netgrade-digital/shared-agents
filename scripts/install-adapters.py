@@ -380,7 +380,7 @@ def run_check(repo_home: Path, home: str, as_json: bool) -> int:
     needs_install = any(r.installed and not r.configured for r in reports)
     missing = sum(1 for r in reports if r.status == Status.MISSING_TOOL)
     if needs_install:
-        print(f"\n→ Run: {home}/scripts/install.sh")
+        print(f"\n→ Run: {home}/install.sh")
     if missing:
         print(f"→ {missing} tool(s) not installed on this machine (expected if unused)")
 
@@ -589,7 +589,7 @@ def run_install(
         for name in skipped:
             print(f"  ○ {name}")
 
-    print("\nVerify: scripts/install.sh --check")
+    print("\nVerify: ./install.sh --check")
     return 0
 
 

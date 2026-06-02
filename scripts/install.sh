@@ -158,8 +158,17 @@ fi
 
 cat <<EOF
 
-Docs:  $SHARED_AGENTS_HOME/README.md
-Check: $SHARED_AGENTS_HOME/scripts/install.sh --check
-JSON:  $SHARED_AGENTS_HOME/scripts/install-adapters.py check $SHARED_AGENTS_HOME --json
-Wizard: $SHARED_AGENTS_HOME/scripts/install.sh --wizard
+Install OK.
+
+Befehle (nach source ~/.bashrc oder neuem Terminal):
+  sa-sync          Neueste Learnings pullen
+  sa-review        Learning reviewen / approven
+  sa-unapprove     Learning aus approved entfernen
+  sa-check         Adapter-Status prüfen
+  sa-uninstall     Deinstallieren (Bestätigung: y/N)
+
+Docs:     $SHARED_AGENTS_HOME/README.md
+Check:    sa-check  — oder: $SHARED_AGENTS_HOME/install.sh --check
+Wizard:   $SHARED_AGENTS_HOME/install.sh --wizard
+Remove:   sa-uninstall  — oder: $SHARED_AGENTS_HOME/uninstall.sh
 EOF

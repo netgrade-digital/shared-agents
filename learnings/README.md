@@ -31,8 +31,15 @@ Review: `scripts/review-learning.sh learnings/pending/<file>.md` (aus `$SHARED_A
 | `sa-review` | Interaktiv reviewen / Datei oder Slug übergeben |
 | `sa-review-list` | Pending-Liste |
 | `sa-review-dry` | Dry-run |
+| `sa-unapprove` | Learning aus `approved/` entfernen |
+| `sa-unapprove-list` | Approved-Liste |
 | `sa-learning-path` | Canonical pending-Pfad ausgeben |
 | `sa-sync` | `sync.sh pull` |
 | `sa-check` | `install.sh --check` |
+| `sa-uninstall` | shared-agents restlos deinstallieren |
 
 Definiert in `scripts/shell-aliases.sh`, eingebunden via `scripts/configure-shell-rc.sh`.
+
+**Unapprove:** `sa-unapprove fantasy-2026-06-dragon-cache-invalidation` — optional `--to-pending` verschiebt zurück nach pending.
+
+**Uninstall:** `sa-uninstall` (Bestätigung: **y/N**) — `--keep-repo` behält den Git-Checkout.
