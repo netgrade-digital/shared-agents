@@ -229,7 +229,7 @@ def print_install_footer(*, home: str, shell_rc: str) -> None:
     print(plain("Docs:     ") + cyan(f"{home}/README.md"))
     print(plain("Check:    ") + green("sa check"))
     print(plain("Wizard:   ") + green("sa install"))
-    print(plain("Schnell:  ") + green("sa install --non-interactive"))
+    print(plain("Quick:    ") + green("sa install --non-interactive"))
     print(plain("Remove:   ") + green("sa uninstall"))
     print()
 

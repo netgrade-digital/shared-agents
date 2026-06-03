@@ -36,6 +36,8 @@ Env: **`SHARED_AGENTS_HOME`** (default `~/.shared-agents`) · Version: **`sa ver
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/netgrade-digital/shared-agents/refs/heads/main/scripts/bootstrap.sh | bash
+# Piped curl uses /dev/tty for the wizard when possible (TUI or text prompts).
+# Force auto-install only: SA_BOOTSTRAP_NON_INTERACTIVE=1 curl … | bash
 # or after clone: ./scripts/bootstrap.sh  ·  sa bootstrap
 source ~/.bashrc
 sa check

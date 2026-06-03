@@ -2,6 +2,11 @@
 # shared-agents bootstrap — one-shot setup (curl-friendly).
 # Usage: curl -fsSL …/scripts/bootstrap.sh | bash
 #    or: ./scripts/bootstrap.sh
+#    or: sa bootstrap
+#
+# curl | bash: script stdin is a pipe. When /dev/tty exists, the wizard runs there
+# (TUI in foot/alacritty; text wizard in Cursor). CI / no TTY:
+#   SA_BOOTSTRAP_NON_INTERACTIVE=1 curl … | bash
 set -euo pipefail
 
 DEFAULT_CORE_REMOTE="${SHARED_AGENTS_CORE_REMOTE:-${SHARED_AGENTS_GIT_REMOTE:-git@github.com:netgrade-digital/shared-agents.git}}"
@@ -57,9 +62,18 @@ if [[ -z "${SA_WIZARD_PLAIN:-}" ]]; then
   esac
 fi
 
+# curl | bash: script stdin is the pipe, not the keyboard — reattach /dev/tty when possible.
 BOOTSTRAP_EXTRA=()
+WIZARD_IN="/dev/stdin"
+WIZARD_OUT="/dev/stdout"
 if [[ ! -t 0 ]]; then
-  BOOTSTRAP_EXTRA+=(--non-interactive)
+  if [[ -r /dev/tty && -w /dev/tty && -z "${SA_BOOTSTRAP_NON_INTERACTIVE:-}" ]]; then
+    echo "Note: piped install — opening setup wizard on your terminal (/dev/tty)."
+    WIZARD_IN=/dev/tty
+    WIZARD_OUT=/dev/tty
+  else
+    BOOTSTRAP_EXTRA+=(--non-interactive)
+  fi
 fi
 
 exec python3 "$SCRIPT_DIR/bootstrap_wizard.py" \
@@ -68,4 +82,5 @@ exec python3 "$SCRIPT_DIR/bootstrap_wizard.py" \
   --shell-rc "$SHELL_RC" \
   --core-remote "$SHARED_AGENTS_CORE_REMOTE" \
   "${BOOTSTRAP_EXTRA[@]}" \
-  "$@"
+  "$@" \
+  <"$WIZARD_IN" >"$WIZARD_OUT"
