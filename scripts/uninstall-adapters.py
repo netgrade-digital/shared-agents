@@ -10,6 +10,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sa_ui import bullet_ok, heading, plain, print_dry_run_line, say_warn
+
 MARKER_BEGIN = "<!-- shared-agents:begin -->"
 MARKER_END = "<!-- shared-agents:end -->"
 
@@ -222,12 +225,15 @@ def run_uninstall(repo_home: Path, home: str, dry_run: bool) -> int:
             messages.append(f"Removed {generic}")
 
     if not messages:
-        print("Nothing to remove (no configured tools detected).")
+        say_warn("Nothing to remove (no configured tools detected).")
         return 0
 
-    print("Removed / would remove:")
+    print(heading("Removed / would remove:"))
     for msg in messages:
-        print(f"  • {msg}")
+        if msg.startswith("[dry-run]"):
+            print_dry_run_line(msg, symbol="○")
+        else:
+            bullet_ok(msg)
     return 0
 
 

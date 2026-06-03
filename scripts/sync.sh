@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
+SYNC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ACTION="${1:-pull}"
 QUIET=0
 
@@ -12,9 +13,29 @@ if [[ "${2:-}" == "--quiet" || "${1:-}" == "--quiet" ]]; then
   fi
 fi
 
+_sa_ui_py() {
+  if [[ -f "$SYNC_DIR/sa_ui.py" ]]; then
+    echo "$SYNC_DIR/sa_ui.py"
+  else
+    echo "$SHARED_AGENTS_HOME/scripts/sa_ui.py"
+  fi
+}
+
+_sa_status_py() {
+  if [[ -f "$SYNC_DIR/sa-status.py" ]]; then
+    echo "$SYNC_DIR/sa-status.py"
+  else
+    echo "$SHARED_AGENTS_HOME/scripts/sa-status.py"
+  fi
+}
+
 if [[ ! -d "$SHARED_AGENTS_HOME" ]]; then
-  echo "Shared agents repo not found at: $SHARED_AGENTS_HOME" >&2
-  echo "Run: cd ~/.shared-agents && ./install.sh" >&2
+  python3 "$(_sa_ui_py)" --error \
+    "Shared agents repo not found at: $SHARED_AGENTS_HOME" \
+    "Run: sa install" 2>/dev/null || {
+    echo "Shared agents repo not found at: $SHARED_AGENTS_HOME" >&2
+    echo "Run: sa install" >&2
+  }
   exit 1
 fi
 
@@ -42,7 +63,8 @@ pull_ff() {
 }
 
 show_status_reminder() {
-  local py="$SHARED_AGENTS_HOME/scripts/sa-status.py"
+  local py
+  py="$(_sa_status_py)"
   [[ -f "$py" ]] || return 0
   python3 "$py" --quiet 2>/dev/null || true
 }
@@ -51,6 +73,7 @@ case "$ACTION" in
   pull)
     pull_ff
     if [[ "$QUIET" -eq 0 ]]; then
+      python3 "$(_sa_ui_py)" --sync-ok 2>/dev/null || echo "Learnings synced."
       show_status_reminder
     fi
     ;;
@@ -58,7 +81,9 @@ case "$ACTION" in
     git -C "$SHARED_AGENTS_HOME" status -sb
     ;;
   *)
-    echo "Usage: sync.sh [pull|status] [--quiet]" >&2
+    python3 "$(_sa_ui_py)" --error "Usage: sync.sh [pull|status] [--quiet]" 2>/dev/null || {
+      echo "Usage: sync.sh [pull|status] [--quiet]" >&2
+    }
     exit 1
     ;;
 esac

@@ -10,6 +10,26 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sa_ui import (
+    cyan,
+    git_committed,
+    git_dry_run,
+    git_nothing_staged,
+    git_note,
+    git_push_failed,
+    git_pushed,
+    git_skip_no_git,
+    git_skip_not_repo,
+    heading,
+    list_section,
+    list_tsv_row,
+    say_info,
+    say_success,
+    say_warn_stderr,
+    say_warn,
+)
+
 DEFAULT_GIT_REMOTE = "git@bitbucket.org:netgrade/shared-agents.git"
 FM_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 
@@ -47,7 +67,7 @@ def resolve_pending(path_arg: str | None, home: Path) -> list[Path]:
         for candidate in candidates:
             if candidate.is_file() and candidate.suffix == ".md":
                 return [candidate.resolve()]
-        print(f"File not found: {path_arg}", file=sys.stderr)
+        say_warn_stderr(f"File not found: {path_arg}")
         return []
 
     changed = pending_changes(home)
@@ -56,14 +76,14 @@ def resolve_pending(path_arg: str | None, home: Path) -> list[Path]:
 
     files = sorted(p for p in pending.glob("*.md") if p.is_file())
     if not files:
-        print("No pending learnings to publish.", file=sys.stderr)
+        say_warn_stderr("No pending learnings to publish.")
         return []
     if len(files) == 1:
         return [files[0]]
-    print("Multiple pending files — specify one or use --all:")
+    say_warn("Multiple pending files — specify one or use --all:")
     for path in files:
         fm = parse_frontmatter(path.read_text())
-        print(f"  {path.name}\tlearning_id={fm.get('id', path.stem)}")
+        list_tsv_row(path.name, learning_id=fm.get("id", path.stem))
     return []
 
 
@@ -145,44 +165,46 @@ def publish(
     commit_msg = f"docs(learnings): pending {', '.join(labels)}"
 
     if no_git:
-        print("Skipped git commit/push (--no-git).")
+        git_skip_no_git()
         return 0
 
     if not (home / ".git").is_dir():
-        print("Not a git repo — skipped commit/push.")
-        print("Teammates cannot review until committed to remote.")
+        git_skip_not_repo(extra="Teammates cannot review until committed to remote.")
         return 1
 
     if dry_run:
-        print("[dry-run] Would run:")
-        print(f"  git -C {home} add {' '.join(rel_paths)}")
-        print(f'  git -C {home} commit -m "{commit_msg}"')
-        print(f"  git -C {home} push")
+        git_dry_run(
+            [
+                f"git -C {home} add {' '.join(rel_paths)}",
+                f'git -C {home} commit -m "{commit_msg}"',
+                f"git -C {home} push",
+            ]
+        )
         return 0
 
     fixed = ensure_git_remote(home)
     if fixed:
-        print(fixed)
+        git_note(fixed)
 
     run_git(home, ["add", *rel_paths], check=True)
     staged = run_git(home, ["diff", "--cached", "--quiet"], check=False)
     if staged.returncode == 0:
-        print("Nothing new to commit — pending already published.")
+        git_nothing_staged("Nothing new to commit — pending already published.")
         return 0
 
     run_git(home, ["commit", "-m", commit_msg], check=True)
-    print(f"Committed: {commit_msg}")
+    git_committed(commit_msg)
 
     push = run_git(home, ["push"], check=False)
     if push.returncode == 0:
         out = (push.stdout or push.stderr or "").strip()
         if out:
-            print(out)
-        print("Pushed — teammates can sa sync and sa review.")
+            say_info(out)
+        git_pushed("Pushed — teammates can sa sync and sa review.")
         return 0
 
     err = (push.stderr or push.stdout or "push failed").strip()
-    print(f"Commit OK, but push failed: {err}", file=sys.stderr)
+    git_push_failed(err)
     return 1
 
 
@@ -215,7 +237,7 @@ def main() -> int:
         return 1
 
     for path in files:
-        print(f"Publish pending: {path.relative_to(home)}")
+        say_success(f"Publish pending: {path.relative_to(home)}")
 
     return publish(home, files, dry_run=args.dry_run, no_git=args.no_git)
 

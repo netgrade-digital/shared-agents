@@ -48,31 +48,35 @@ done
 
 export SHARED_AGENTS_HOME
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SA_UI_PY="$SCRIPT_DIR/sa_ui.py"
+[[ -f "$SA_UI_PY" ]] || SA_UI_PY="$SHARED_AGENTS_HOME/scripts/sa_ui.py"
+
+_sa() {
+  if [[ -f "$SA_UI_PY" ]]; then
+    SA_KEEP_REPO="$KEEP_REPO" SHELL_RC="$SHELL_RC" SA_DRY_RUN="$DRY_RUN" \
+      SHARED_AGENTS_HOME="$SHARED_AGENTS_HOME" python3 "$SA_UI_PY" "$@"
+  fi
+}
+
 if [[ ! -d "$SHARED_AGENTS_HOME" ]]; then
+  _sa --out warn "Nothing to uninstall — $SHARED_AGENTS_HOME does not exist." || true
   echo "Nothing to uninstall — $SHARED_AGENTS_HOME does not exist."
   exit 0
 fi
 
-echo "shared-agents uninstall"
-echo "  HOME:      $SHARED_AGENTS_HOME"
-echo "  Shell rc:  $SHELL_RC"
-if [[ $KEEP_REPO -eq 1 ]]; then
-  echo "  Repo:      keep (adapters only)"
-else
-  echo "  Repo:      DELETE $SHARED_AGENTS_HOME"
-fi
-echo ""
+_sa --uninstall-intro
 
 if [[ $YES -eq 0 && $DRY_RUN -eq 0 ]]; then
-  echo "Entfernt Cursor/Claude-Hooks, Skill-Symlinks, Shell-CLI (sa, shared-agents)"
+  _sa --out plain "Entfernt Cursor/Claude-Hooks, Skill-Symlinks, Shell-CLI (sa, shared-agents)" || true
   if [[ $KEEP_REPO -eq 0 ]]; then
-    echo "und löscht $SHARED_AGENTS_HOME vollständig."
+    _sa --out plain "und löscht $SHARED_AGENTS_HOME vollständig." || true
   else
-    echo "— Git-Checkout unter $SHARED_AGENTS_HOME bleibt erhalten (--keep-repo)."
+    _sa --out plain "— Git-Checkout unter $SHARED_AGENTS_HOME bleibt erhalten (--keep-repo)." || true
   fi
   read -r -p "shared-agents deinstallieren? [y/N] " confirm
   if [[ ! "$confirm" =~ ^[yYjJ]([aA][eE]?[sS]?)?$ ]]; then
-    echo "Abgebrochen."
+    _sa --out warn "Abgebrochen." || true
     exit 1
   fi
 fi
@@ -85,45 +89,43 @@ run() {
   fi
 }
 
-echo "Step 1/3 — Tool adapters"
-if [[ -f "$SHARED_AGENTS_HOME/scripts/uninstall-adapters.py" ]]; then
-  args=(python3 "$SHARED_AGENTS_HOME/scripts/uninstall-adapters.py" "$SHARED_AGENTS_HOME")
+_sa --uninstall-step "Step 1/3 — Tool adapters"
+_adapters_py="$SCRIPT_DIR/uninstall-adapters.py"
+[[ -f "$_adapters_py" ]] || _adapters_py="$SHARED_AGENTS_HOME/scripts/uninstall-adapters.py"
+if [[ -f "$_adapters_py" ]]; then
+  args=(python3 "$_adapters_py" "$SHARED_AGENTS_HOME")
   [[ $DRY_RUN -eq 1 ]] && args+=(--dry-run)
   "${args[@]}"
 else
-  echo "  ! uninstall-adapters.py missing — skip"
+  _sa --out warn "  ! uninstall-adapters.py missing — skip" || true
 fi
 echo ""
 
-echo "Step 2/3 — Shell environment"
-if [[ -f "$SHARED_AGENTS_HOME/scripts/remove-shell-rc.sh" ]]; then
-  run bash "$SHARED_AGENTS_HOME/scripts/remove-shell-rc.sh" "$SHELL_RC"
+_sa --uninstall-step "Step 2/3 — Shell environment"
+_remove_rc="$SCRIPT_DIR/remove-shell-rc.sh"
+[[ -f "$_remove_rc" ]] || _remove_rc="$SHARED_AGENTS_HOME/scripts/remove-shell-rc.sh"
+if [[ -f "$_remove_rc" ]]; then
+  export SA_UI_PY
+  run bash "$_remove_rc" "$SHELL_RC"
 else
-  echo "  ! remove-shell-rc.sh missing — skip"
+  _sa --out warn "  ! remove-shell-rc.sh missing — skip" || true
 fi
 echo ""
 
-echo "Step 3/3 — Local repo"
+_sa --uninstall-step "Step 3/3 — Local repo"
 if [[ $KEEP_REPO -eq 1 ]]; then
-  echo "  ○ Keeping $SHARED_AGENTS_HOME (--keep-repo)"
+  _sa --dry-run-line "  ○ Keeping $SHARED_AGENTS_HOME (--keep-repo)"
 elif [[ $DRY_RUN -eq 1 ]]; then
-  echo "  [dry-run] would delete $SHARED_AGENTS_HOME"
+  _sa --dry-run-line "[dry-run] would delete $SHARED_AGENTS_HOME"
 else
   if [[ -d "$SHARED_AGENTS_HOME/.git" ]]; then
     dirty="$(git -C "$SHARED_AGENTS_HOME" status --porcelain 2>/dev/null || true)"
     if [[ -n "$dirty" ]]; then
-      echo "  Warning: uncommitted changes in $SHARED_AGENTS_HOME" >&2
+      _sa --error "  Warning: uncommitted changes in $SHARED_AGENTS_HOME" || true
     fi
   fi
   rm -rf "$SHARED_AGENTS_HOME"
-  echo "  ✓ Deleted $SHARED_AGENTS_HOME"
+  _sa --out success "  ✓ Deleted $SHARED_AGENTS_HOME" || true
 fi
 
-echo ""
-if [[ $DRY_RUN -eq 1 ]]; then
-  echo "Dry run complete — no changes made."
-else
-  echo "Uninstall complete."
-  echo "Neues Terminal öffnen (oder: exec \$SHELL) — sa / shared-agents sind dann weg."
-  echo "Re-install: sa install --wizard"
-fi
+_sa --uninstall-footer

@@ -11,6 +11,9 @@ import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sa_ui import bold, cyan, green, magenta, plain, print_logo, yellow
+
 
 @dataclass
 class StatusReport:
@@ -105,17 +108,17 @@ def collect(home: Path) -> StatusReport:
 def format_human(report: StatusReport) -> str:
     lines: list[str] = []
     if not report.has_action:
-        return "shared-agents: alles erledigt ✓"
+        return green("shared-agents: alles erledigt ✓")
 
-    lines.append("shared-agents — Offene Punkte")
+    lines.append(bold(cyan("shared-agents — Offene Punkte")))
     lines.append("")
 
     if report.pending_learnings:
-        lines.append(f"Learnings zum Review ({len(report.pending_learnings)}):")
+        lines.append(magenta(f"Learnings zum Review ({len(report.pending_learnings)}):"))
         for name in report.pending_learnings:
-            suffix = " (noch nicht gepusht)" if name in report.pending_unpublished else ""
-            lines.append(f"  • {name}{suffix}")
-        lines.append("  → sa review list · sa review <datei>")
+            suffix = plain(" (noch nicht gepusht)") if name in report.pending_unpublished else ""
+            lines.append(f"  • {yellow(name)}{suffix}")
+        lines.append(plain("  → sa review list · sa review <datei>"))
         lines.append("")
 
     if report.pending_unpublished:
@@ -123,24 +126,24 @@ def format_human(report: StatusReport) -> str:
             n for n in report.pending_unpublished if n not in report.pending_learnings
         ]
         if only_unpub:
-            lines.append("Pending noch nicht im Remote:")
+            lines.append(magenta("Pending noch nicht im Remote:"))
             for name in only_unpub:
-                lines.append(f"  • {name}")
-            lines.append("  → sa pending push <datei>")
+                lines.append(f"  • {yellow(name)}")
+            lines.append(plain("  → sa pending push <datei>"))
             lines.append("")
 
     if report.skill_issues:
-        lines.append(f"Skills / Symlinks ({len(report.skill_issues)}):")
+        lines.append(magenta(f"Skills / Symlinks ({len(report.skill_issues)}):"))
         for issue in report.skill_issues:
             lines.append(f"  • {issue}")
-        lines.append("  → sa install")
+        lines.append(plain("  → sa install"))
         lines.append("")
 
     if report.tools_need_install:
-        lines.append(f"Adapter ({len(report.tools_need_install)}):")
+        lines.append(magenta(f"Adapter ({len(report.tools_need_install)}):"))
         for item in report.tools_need_install:
             lines.append(f"  • {item}")
-        lines.append("  → sa install")
+        lines.append(plain("  → sa install"))
         lines.append("")
 
     return "\n".join(lines).rstrip()
@@ -148,7 +151,7 @@ def format_human(report: StatusReport) -> str:
 
 def format_brief(report: StatusReport) -> str:
     if not report.has_action:
-        return "shared-agents: alles erledigt"
+        return green("shared-agents: alles erledigt")
     parts: list[str] = []
     if report.pending_learnings:
         parts.append(
@@ -160,7 +163,7 @@ def format_brief(report: StatusReport) -> str:
         parts.append(f"{len(report.skill_issues)} Skill-Link(s)")
     if report.tools_need_install:
         parts.append(f"{len(report.tools_need_install)} Adapter")
-    return "shared-agents: " + ", ".join(parts) + " — sa status"
+    return yellow("shared-agents: ") + ", ".join(parts) + plain(" — sa status")
 
 
 def main() -> int:
@@ -207,6 +210,9 @@ def main() -> int:
         print(format_brief(report))
         return 1
 
+    if report.has_action:
+        print_logo()
+        print()
     print(format_human(report))
     return 1 if report.has_action else 0
 

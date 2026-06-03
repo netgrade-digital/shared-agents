@@ -11,6 +11,31 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sa_ui import (
+    cyan,
+    git_committed,
+    git_dry_run,
+    git_nothing_staged,
+    git_note,
+    git_push_failed,
+    git_pushed,
+    git_skip_no_git,
+    git_skip_not_repo,
+    green,
+    heading,
+    list_pick_item,
+    list_section,
+    list_tsv_row,
+    plain,
+    preview_body,
+    preview_header,
+    say_cancelled,
+    say_info,
+    say_warn_stderr,
+    say_warn,
+)
+
 DEFAULT_GIT_REMOTE = "git@bitbucket.org:netgrade/shared-agents.git"
 
 FM_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
@@ -121,28 +146,28 @@ def resolve_pending(path_arg: str | None, home: Path) -> Path | None:
         for candidate in candidates:
             if candidate.is_file():
                 return candidate.resolve()
-        print(f"File not found: {path_arg}", file=sys.stderr)
+        say_warn_stderr(f"File not found: {path_arg}")
         return None
 
     files = sorted(pending.glob("*.md"))
     if not files:
-        print("No pending learnings.")
+        say_warn("No pending learnings.")
         return None
     if len(files) == 1:
         return files[0]
 
-    print("Pending learnings:")
+    list_section("Pending learnings:")
     for idx, path in enumerate(files, start=1):
-        print(f"  {idx}) {path.name}")
+        list_pick_item(idx, path.name)
     while True:
-        choice = input("Select number (or q): ").strip().lower()
+        choice = input(f"{cyan('Select number (or q)')}: ").strip().lower()
         if choice in {"q", "quit", ""}:
             return None
         if choice.isdigit():
             num = int(choice)
             if 1 <= num <= len(files):
                 return files[num - 1]
-        print("Invalid choice.")
+        say_warn("Invalid choice.")
 
 
 def pick_domain(frontmatter: dict[str, str], override: str | None) -> str:
@@ -231,15 +256,14 @@ def warn_missing_versions(
 ) -> None:
     if versions:
         for msg in validate_version_strings(versions):
-            print(f"Warning: {msg}", file=sys.stderr)
+            say_warn_stderr(msg)
         return
     domains = {d.lower() for d in parse_yaml_list(frontmatter.get("domain", ""))}
     domains.add(domain.lower())
     if domains & STACK_DOMAINS:
-        print(
-            "Warning: no versions: in frontmatter — add stack versions when applicable "
-            "(e.g. versions: [shopware:6.6.10, php:8.3.14]).",
-            file=sys.stderr,
+        say_warn_stderr(
+            "no versions: in frontmatter — add stack versions when applicable "
+            "(e.g. versions: [shopware:6.6.10, php:8.3.14])."
         )
 
 
@@ -281,7 +305,7 @@ def confirm(prompt: str) -> bool:
             return False
         if answer in {"y", "yes"}:
             return True
-        print("Please answer y or n.")
+        say_warn("Please answer y or n.")
 
 
 def run_git(
@@ -332,11 +356,11 @@ def git_publish(
     no_git: bool = False,
 ) -> int:
     if no_git:
-        print("Skipped git commit/push (--no-git).")
+        git_skip_no_git()
         return 0
 
     if not (home / ".git").is_dir():
-        print("Not a git repo — skipped commit/push.")
+        git_skip_not_repo()
         return 0
 
     learning_id = str(entry["id"])
@@ -344,18 +368,20 @@ def git_publish(
     rel_dest = dest.relative_to(home)
 
     if dry_run:
-        print("")
-        print("[dry-run] Would run:")
-        print("  ensure git remote -> Bitbucket (not local dev checkout)")
-        print(f"  git -C {home} add learnings/index.yaml {rel_dest}")
-        print(f"  git -C {home} add -u learnings/pending/")
-        print(f'  git -C {home} commit -m "{commit_msg}"')
-        print(f"  git -C {home} push")
+        git_dry_run(
+            [
+                "ensure git remote -> Bitbucket (not local dev checkout)",
+                f"git -C {home} add learnings/index.yaml {rel_dest}",
+                f"git -C {home} add -u learnings/pending/",
+                f'git -C {home} commit -m "{commit_msg}"',
+                f"git -C {home} push",
+            ]
+        )
         return 0
 
     fixed = ensure_git_remote(home)
     if fixed:
-        print(fixed)
+        git_note(fixed)
 
     ensure_remote = home / "scripts" / "ensure-git-remote.sh"
     if ensure_remote.is_file():
@@ -365,38 +391,38 @@ def git_publish(
             text=True,
         )
         if fix.stdout.strip():
-            print(fix.stdout.strip())
+            git_note(fix.stdout.strip())
 
     run_git(home, ["add", "learnings/index.yaml", str(rel_dest)], check=True)
     run_git(home, ["add", "-u", "learnings/pending/"], check=False)
 
     staged = run_git(home, ["diff", "--cached", "--quiet"], check=False)
     if staged.returncode == 0:
-        print("Nothing staged under learnings/ — skipped commit/push.")
+        git_nothing_staged("Nothing staged under learnings/ — skipped commit/push.")
         return 0
 
     run_git(home, ["commit", "-m", commit_msg], check=True)
-    print(f"Committed: {commit_msg}")
+    git_committed(commit_msg)
 
     push = run_git(home, ["push"], check=False)
     if push.returncode == 0:
         out = (push.stdout or push.stderr or "").strip()
         if out:
-            print(out)
-        print("Pushed to remote.")
+            say_info(out)
+        git_pushed()
         return 0
 
     err = (push.stderr or push.stdout or "push failed").strip()
-    print(f"Commit OK, but push failed: {err}", file=sys.stderr)
+    hints: list[str] = []
     if "denyCurrentBranch" in err or "checked out branch" in err:
-        print(
-            "Hint: origin points at a local dev checkout. Run:\n"
-            f"  bash {home}/scripts/ensure-git-remote.sh\n"
+        hints = [
+            "Hint: origin points at a local dev checkout. Run:",
+            f"  bash {home}/scripts/ensure-git-remote.sh",
             f"  cd {home} && git push",
-            file=sys.stderr,
-        )
+        ]
     else:
-        print(f"Retry: cd {home} && git push", file=sys.stderr)
+        hints = [f"Retry: cd {home} && git push"]
+    git_push_failed(err, hints=hints)
     return 1
 
 
@@ -435,16 +461,18 @@ def main() -> int:
     if args.list:
         files = sorted(pending.glob("*.md"))
         if not files:
-            print("No pending learnings.")
+            say_warn("No pending learnings.")
             return 0
         for path in files:
             fm = parse_frontmatter(path.read_text())
             learning_id = fm.get("id", path.stem)
             project = fm.get("project", "?")
             versions = format_versions(parse_versions(fm.get("versions", "")))
-            print(
-                f"{path.name}\tlearning_id={learning_id}\tproject={project}"
-                f"\tversions={versions}"
+            list_tsv_row(
+                path.name,
+                learning_id=learning_id,
+                project=project,
+                versions=versions,
             )
         return 0
 
@@ -458,16 +486,15 @@ def main() -> int:
     versions = parse_versions(frontmatter.get("versions", ""))
     warn_missing_versions(frontmatter, domain, versions)
 
-    print("")
-    print(f"Review: {pending_path.name}")
-    print(f"Target: learnings/approved/by-domain/{domain}/")
-    print("-" * 72)
-    print(text.rstrip())
-    print("-" * 72)
+    preview_header(
+        f"Review: {pending_path.name}",
+        Target=f"learnings/approved/by-domain/{domain}/",
+    )
+    preview_body(text)
 
     if not args.yes and not args.dry_run:
         if not confirm("Approve and promote?"):
-            print("Cancelled.")
+            say_cancelled()
             return 0
 
     dest, entry = promote(
@@ -478,10 +505,9 @@ def main() -> int:
     )
 
     if args.dry_run:
-        print("")
-        print("[dry-run] Would move to:", dest)
-        print("[dry-run] Would append to learnings/index.yaml:")
-        print(format_index_entry(entry).rstrip())
+        say_warn(f"[dry-run] Would move to: {dest}")
+        say_warn("[dry-run] Would append to learnings/index.yaml:")
+        say_info(format_index_entry(entry).rstrip())
         git_publish(
             home,
             dest,
@@ -492,9 +518,9 @@ def main() -> int:
         )
         return 0
 
-    print("")
-    print(f"Promoted: {dest}")
-    print(f"Indexed:  {home / 'learnings' / 'index.yaml'}")
+    print()
+    say_success(f"Promoted: {dest}")
+    say_success(f"Indexed:  {home / 'learnings' / 'index.yaml'}")
 
     return git_publish(
         home,

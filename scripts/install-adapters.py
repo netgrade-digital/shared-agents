@@ -23,6 +23,21 @@ from enum import Enum
 from pathlib import Path
 from shutil import which
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sa_ui import (
+    TAGLINE,
+    bold,
+    cyan,
+    green,
+    is_tty as ui_is_tty,
+    plain,
+    print_banner as ui_print_banner,
+    highlight_paths,
+    print_dry_run_line,
+    red,
+    yellow,
+)
+
 MARKER_BEGIN = "<!-- shared-agents:begin -->"
 MARKER_END = "<!-- shared-agents:end -->"
 VERSION = "0.1.0"
@@ -349,42 +364,60 @@ def run_check(repo_home: Path, home: str, as_json: bool) -> int:
         print(json.dumps(payload, indent=2))
         return 0 if repo_ok else 1
 
-    print(f"shared-agents check v{VERSION}")
-    print(f"SHARED_AGENTS_HOME={home}")
-    print(f"Repo: {'OK' if repo_ok else 'MISSING'} — {repo_msg}\n")
+    print(f"{bold('shared-agents check')} {green(f'v{VERSION}')}")
+    print(f"{plain('SHARED_AGENTS_HOME=')}{cyan(home)}")
+    repo_label = green("OK") if repo_ok else red("MISSING")
+    print(f"Repo: {repo_label} — {plain(repo_msg)}\n")
 
     col_id = 14
-    print(f"{'TOOL':<{col_id}} {'INSTALLED':<10} {'CONFIGURED':<12} STATUS")
+    print(bold(f"{'TOOL':<{col_id}} {'INSTALLED':<10} {'CONFIGURED':<12} STATUS"))
     print("-" * 60)
     for r in reports:
-        inst = "yes" if r.installed else "no"
-        conf = "yes" if r.configured else "no"
-        print(f"{r.id:<{col_id}} {inst:<10} {conf:<12} {r.status.value}")
+        inst = green("yes") if r.installed else plain("no")
+        conf = green("yes") if r.configured else plain("no")
+        print(f"{r.id:<{col_id}} {inst:<10} {conf:<12} {_status_colored(r.status.value)}")
     print()
 
     for r in reports:
         if r.status == Status.OK or r.status == Status.AVAILABLE:
             continue
         hint = r.detect_path or (", ".join(r.detect_bins) if r.detect_bins else "—")
-        print(f"  [{r.id}] {r.message}")
+        print(f"  [{cyan(r.id)}] {plain(r.message)}")
         if hint:
-            print(f"         detect: {hint}")
+            print(f"         {plain('detect:')} {cyan(hint)}")
         if r.docs:
-            print(f"         docs:   {r.docs}")
+            print(f"         {plain('docs:')}   {cyan(r.docs)}")
 
     if skill_issues:
-        print("\nSkill links:")
+        print(bold("\nSkill links:"))
         for issue in skill_issues:
-            print(f"  ! {issue}")
+            print(f"  {yellow('!')} {plain(issue)}")
 
     needs_install = any(r.installed and not r.configured for r in reports)
     missing = sum(1 for r in reports if r.status == Status.MISSING_TOOL)
     if needs_install:
-        print(f"\n→ Run: {home}/install.sh")
+        print(f"\n{plain('→ Run:')} {green(f'{home}/install.sh')}")
     if missing:
-        print(f"→ {missing} tool(s) not installed on this machine (expected if unused)")
+        print(plain(f"→ {missing} tool(s) not installed on this machine (expected if unused)"))
 
     return 0 if repo_ok else 1
+
+
+def _status_colored(value: str) -> str:
+    if value == "ok":
+        return green(value)
+    if value in {"not_configured", "partial"}:
+        return yellow(value)
+    if value == "missing_tool":
+        return red(value)
+    return plain(value)
+
+
+def _print_action(msg: str) -> None:
+    if msg.startswith("[dry-run]"):
+        print_dry_run_line(msg, symbol="✓")
+    else:
+        print(f"  {green('✓')} {highlight_paths(msg)}")
 
 
 # --- install (unchanged logic, refactored) ---
@@ -543,9 +576,9 @@ def run_install(
 ) -> int:
     os.environ["SHARED_AGENTS_HOME"] = home
     manifest = load_manifest(repo_home)
-    print(f"Installing adapters v{VERSION} (SHARED_AGENTS_HOME={home})")
+    print(f"{bold('Installing adapters')} {green(f'v{VERSION}')} ({cyan(home)})")
     if dry_run:
-        print("DRY RUN — no files will be modified\n")
+        print(yellow("DRY RUN — no files will be modified\n"))
 
     messages = symlink_skills(repo_home, manifest["shared"]["skill_dirs"], dry_run=dry_run)
     configured: list[str] = []
@@ -573,23 +606,23 @@ def run_install(
             agents_block(home, "Copy into your CLI global AGENTS.md / CLAUDE.md / GEMINI.md.")
         )
 
-    print("Actions:")
+    print(bold("Actions:"))
     for msg in messages:
-        print(f"  ✓ {msg}")
+        _print_action(msg)
     if configured:
-        print("\nConfigured:")
+        print(bold("\nConfigured:"))
         for name in configured:
-            print(f"  • {name}")
+            print(f"  {green('•')} {plain(name)}")
     if missing:
-        print("\nNot installed (selected but missing on this machine):")
+        print(bold("\nNot installed (selected but missing on this machine):"))
         for name in missing:
-            print(f"  ✗ {name}")
+            print(f"  {red('✗')} {plain(name)}")
     if skipped:
-        print("\nSkipped (tool not detected):")
+        print(bold("\nSkipped (tool not detected):"))
         for name in skipped:
-            print(f"  ○ {name}")
+            print(f"  {yellow('○')} {plain(name)}")
 
-    print("\nVerify: ./install.sh --check")
+    print(f"\n{plain('Verify:')} {green('./install.sh --check')}")
     return 0
 
 
@@ -597,33 +630,7 @@ def run_install(
 
 
 def is_tty() -> bool:
-    return sys.stdin.isatty() and sys.stdout.isatty()
-
-
-def _c(code: str, text: str) -> str:
-    if not is_tty():
-        return text
-    return f"\033[{code}m{text}\033[0m"
-
-
-def bold(text: str) -> str:
-    return _c("1", text)
-
-
-def dim(text: str) -> str:
-    return _c("2", text)
-
-
-def green(text: str) -> str:
-    return _c("32", text)
-
-
-def yellow(text: str) -> str:
-    return _c("33", text)
-
-
-def cyan(text: str) -> str:
-    return _c("36", text)
+    return ui_is_tty()
 
 
 def prompt(text: str, default: str | None = None) -> str:
@@ -659,13 +666,7 @@ def confirm(text: str, default: bool = True) -> bool:
 
 
 def print_banner() -> None:
-    line = "═" * 58
-    print()
-    print(cyan(f"╔{line}╗"))
-    print(cyan("║") + bold("  shared-agents Setup Wizard".ljust(58)) + cyan("║"))
-    print(cyan(f"╚{line}╝"))
-    print(dim("  Team skills + learnings for your AI tools"))
-    print()
+    ui_print_banner(subtitle=f"Setup Wizard — {TAGLINE}")
 
 
 def tool_status_label(report: ToolReport) -> str:
@@ -673,7 +674,7 @@ def tool_status_label(report: ToolReport) -> str:
         return green("configured")
     if report.installed:
         return yellow("needs setup")
-    return dim("not installed")
+        return plain("not installed")
 
 
 def configure_shell_rc(shell_rc: Path, home: str, dry_run: bool, repo_home: Path | None = None) -> bool:
@@ -705,7 +706,7 @@ def wizard_select_tools(reports: list[tuple[dict, ToolReport]]) -> set[str]:
 
     while True:
         print(bold("Step 2/4 — Select AI tools"))
-        print(dim("  Toggle with number · all · detected · none · Enter to continue"))
+        print(plain("  Toggle with number · all · detected · none · Enter to continue"))
         print()
         for idx, (tool, report) in enumerate(reports, start=1):
             mark = "x" if tool["id"] in selected else " "
@@ -785,7 +786,7 @@ def run_wizard_plain(
         print("No tools selected — skills will still be linked.")
     print()
 
-    print(bold("Step 3/4 — Shell environment"))
+    print(bold(cyan("Step 3/4 — Shell environment")))
     add_shell = True
     shell_rc_path = shell_rc or expand("~/.bashrc")
     rc_text = shell_rc_path.read_text() if shell_rc_path.is_file() else ""

@@ -75,10 +75,12 @@ fix_git_remote() {
 }
 
 adapters_py() {
-  if [[ -f "$REPO_SOURCE/scripts/install-adapters.py" && "$REPO_SOURCE" != "$SHARED_AGENTS_HOME" ]]; then
+  if [[ "$REPO_SOURCE" != "$SHARED_AGENTS_HOME" && -f "$REPO_SOURCE/scripts/install-adapters.py" ]]; then
     echo "$REPO_SOURCE/scripts/install-adapters.py"
-  else
+  elif [[ -f "$SHARED_AGENTS_HOME/scripts/install-adapters.py" ]]; then
     echo "$SHARED_AGENTS_HOME/scripts/install-adapters.py"
+  else
+    echo "$REPO_SOURCE/scripts/install-adapters.py"
   fi
 }
 
@@ -106,11 +108,7 @@ run_check() {
     repo="$REPO_SOURCE"
   fi
   local py
-  if [[ -f "$repo/scripts/install-adapters.py" ]]; then
-    py="$repo/scripts/install-adapters.py"
-  else
-    py="$(adapters_py)"
-  fi
+  py="$(adapters_py)"
   local args=(check "$repo")
   [[ $CHECK_JSON -eq 1 ]] && args+=(--json)
   python3 "$py" "${args[@]}"
@@ -278,7 +276,23 @@ if [[ $DRY_RUN -eq 0 && -d "$SHARED_AGENTS_HOME/.git" ]]; then
   git -C "$SHARED_AGENTS_HOME" config pull.ff only
 fi
 
-cat <<EOF
+_sa_ui_sh="$SHARED_AGENTS_HOME/scripts/sa-ui.sh"
+[[ -f "$_sa_ui_sh" ]] || _sa_ui_sh="$REPO_SOURCE/scripts/sa-ui.sh"
+if [[ -f "$_sa_ui_sh" ]]; then
+  # shellcheck source=sa-ui.sh
+  source "$_sa_ui_sh"
+  echo
+  sa_print_logo
+  echo
+fi
+
+_sa_ui_py="${SHARED_AGENTS_HOME}/scripts/sa_ui.py"
+[[ -f "$_sa_ui_py" ]] || _sa_ui_py="$REPO_SOURCE/scripts/sa_ui.py"
+if [[ -f "$_sa_ui_py" ]]; then
+  SHARED_AGENTS_HOME="$SHARED_AGENTS_HOME" SHELL_RC="$SHELL_RC" \
+    python3 "$_sa_ui_py" --install-footer
+else
+  cat <<EOF
 
 Install OK.
 
@@ -301,3 +315,4 @@ Wizard:   sa install
 Schnell:  sa install --non-interactive
 Remove:   sa uninstall
 EOF
+fi

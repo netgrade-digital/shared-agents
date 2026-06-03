@@ -13,7 +13,12 @@ fi
 slug="$1"
 case "$slug" in
   */* | *\\*)
-    echo "learning-path.sh: slug must be a filename only (no directories)" >&2
+    _py="$(dirname "$0")/sa_ui.py"
+    if [[ -f "$_py" ]]; then
+      python3 "$_py" --error "learning-path.sh: slug must be a filename only (no directories)" >&2
+    else
+      echo "learning-path.sh: slug must be a filename only (no directories)" >&2
+    fi
     exit 1
     ;;
 esac

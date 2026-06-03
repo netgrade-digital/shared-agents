@@ -4,17 +4,51 @@ set -euo pipefail
 
 SHELL_RC="${1:-${SHELL_RC:-$HOME/.bashrc}}"
 DRY_RUN="${DRY_RUN:-0}"
-
 MARKER_BEGIN="# shared-agents team knowledge"
 MARKER_END="# shared-agents:shell-end"
+RC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SA_UI_PY="${SA_UI_PY:-$RC_DIR/sa_ui.py}"
+
+_sa_out() {
+  local kind="$1"
+  shift
+  if [[ -f "$SA_UI_PY" ]]; then
+    python3 "$SA_UI_PY" --out "$kind" "$@" || printf '%s\n' "$*"
+  else
+    printf '%s\n' "$*"
+  fi
+}
+
+_sa_dry() {
+  if [[ -f "$SA_UI_PY" ]]; then
+    python3 "$SA_UI_PY" --dry-run-line "$*" || printf '  %s\n' "$*"
+  else
+    printf '  %s\n' "$*"
+  fi
+}
 
 _cleanup_shell_rc() {
-  python3 - "$SHELL_RC" <<'PY'
+  python3 - "$SHELL_RC" "$SA_UI_PY" <<'PY'
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
+ui_py = sys.argv[2] if len(sys.argv) > 2 else ""
+
+
+def say_success(msg: str) -> None:
+    if ui_py and Path(ui_py).is_file():
+        subprocess.run(
+            [sys.executable, ui_py, "--out", "success", msg],
+            check=False,
+        )
+    else:
+        print(msg)
+
+
 if not path.is_file():
     sys.exit(0)
 
@@ -53,14 +87,16 @@ for line in lines:
         removed += 1
         continue
 
-    if stripped.startswith("#") and re.search(r"\bsa-(?:help|sync|review|check|uninstall|pending|unapprove)", stripped):
+    if stripped.startswith("#") and re.search(
+        r"\bsa-(?:help|sync|review|check|uninstall|pending|unapprove)", stripped
+    ):
         removed += 1
         continue
 
     if "unset -f" in line and "_sa_legacy" in line:
         removed += 1
         continue
-    if stripped.startswith('for _sa_legacy in sa-'):
+    if stripped.startswith("for _sa_legacy in sa-"):
         removed += 1
         continue
     if stripped.startswith("unset _sa_legacy"):
@@ -72,37 +108,51 @@ for line in lines:
 if removed:
     updated = "\n".join(out).rstrip()
     path.write_text(updated + ("\n" if updated else ""))
-    print(f"  ✓ Removed {removed} legacy sa / shared-agents line(s) from {path}")
+    say_success(f"  ✓ Removed {removed} legacy sa / shared-agents line(s) from {path}")
 PY
 }
 
 if [[ ! -f "$SHELL_RC" ]]; then
-  echo "  ○ $SHELL_RC not found — nothing to remove"
+  _sa_dry "○ $SHELL_RC not found — nothing to remove"
   exit 0
 fi
 
 if grep -qF "$MARKER_END" "$SHELL_RC" 2>/dev/null; then
   if [[ "$DRY_RUN" == "1" ]]; then
-    echo "  [dry-run] would remove shared-agents block from $SHELL_RC"
-    echo "  [dry-run] would remove legacy sa-* / CLI function lines from $SHELL_RC"
+    _sa_dry "[dry-run] would remove shared-agents block from $SHELL_RC"
+    _sa_dry "[dry-run] would remove legacy sa-* / CLI function lines from $SHELL_RC"
     exit 0
   fi
-  python3 - "$SHELL_RC" "$MARKER_BEGIN" "$MARKER_END" <<'PY'
+  python3 - "$SHELL_RC" "$MARKER_BEGIN" "$MARKER_END" "$SA_UI_PY" <<'PY'
+import subprocess
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
 begin = sys.argv[2]
 end = sys.argv[3]
+ui_py = sys.argv[4]
+
+
+def say(kind: str, msg: str) -> None:
+    if Path(ui_py).is_file():
+        subprocess.run(
+            [sys.executable, ui_py, "--out", kind, msg],
+            check=False,
+        )
+    else:
+        print(msg)
+
+
 text = path.read_text()
 if begin in text and end in text:
     start = text.index(begin)
     finish = text.index(end) + len(end)
     updated = (text[:start].rstrip() + "\n" + text[finish:].lstrip()).rstrip()
     path.write_text(updated + ("\n" if updated else ""))
-    print(f"  ✓ Removed shared-agents block from {path}")
+    say("success", f"  ✓ Removed shared-agents block from {path}")
 else:
-    print(f"  ○ No managed block in {path}")
+    say("warn", f"  ○ No managed block in {path}")
 PY
   _cleanup_shell_rc
   exit 0
@@ -110,15 +160,29 @@ fi
 
 if grep -qF 'SHARED_AGENTS_HOME=' "$SHELL_RC" 2>/dev/null; then
   if [[ "$DRY_RUN" == "1" ]]; then
-    echo "  [dry-run] would remove legacy SHARED_AGENTS_HOME lines from $SHELL_RC"
-    echo "  [dry-run] would remove legacy sa-* / CLI function lines from $SHELL_RC"
+    _sa_dry "[dry-run] would remove legacy SHARED_AGENTS_HOME lines from $SHELL_RC"
+    _sa_dry "[dry-run] would remove legacy sa-* / CLI function lines from $SHELL_RC"
     exit 0
   fi
-  python3 - "$SHELL_RC" <<'PY'
+  python3 - "$SHELL_RC" "$SA_UI_PY" <<'PY'
+import subprocess
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
+ui_py = sys.argv[2]
+
+
+def say_success(msg: str) -> None:
+    if Path(ui_py).is_file():
+        subprocess.run(
+            [sys.executable, ui_py, "--out", "success", msg],
+            check=False,
+        )
+    else:
+        print(msg)
+
+
 lines = path.read_text().splitlines()
 out = []
 skip_aliases = False
@@ -136,16 +200,16 @@ for line in lines:
         continue
     out.append(line)
 path.write_text("\n".join(out).rstrip() + ("\n" if out else ""))
-print(f"  ✓ Removed legacy shared-agents lines from {path}")
+say_success(f"  ✓ Removed legacy shared-agents lines from {path}")
 PY
   _cleanup_shell_rc
   exit 0
 fi
 
 if [[ "$DRY_RUN" == "1" ]]; then
-  echo "  [dry-run] would scan $SHELL_RC for legacy sa-* / CLI function lines"
+  _sa_dry "[dry-run] would scan $SHELL_RC for legacy sa-* / CLI function lines"
   exit 0
 fi
 
 _cleanup_shell_rc
-echo "  ○ No shared-agents configuration in $SHELL_RC"
+_sa_dry "○ No shared-agents configuration in $SHELL_RC"

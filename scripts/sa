@@ -3,32 +3,45 @@
 set -euo pipefail
 
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
-SA_VERSION="0.3.1"
+SA_VERSION="0.3.2"
 SA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=sa-ui.sh
+source "$SA_DIR/sa-ui.sh"
 SA_REPO_ROOT="$(cd "$SA_DIR/.." && pwd)"
 DEFAULT_GIT_REMOTE="${SHARED_AGENTS_GIT_REMOTE:-git@bitbucket.org:netgrade/shared-agents.git}"
 
+# Prefer scripts next to this sa (repo checkout); fall back to ~/.shared-agents
+_sa_script() {
+  local name="$1"
+  if [[ -f "$SA_DIR/$name" ]]; then
+    echo "$SA_DIR/$name"
+  else
+    echo "$SHARED_AGENTS_HOME/scripts/$name"
+  fi
+}
+
 _sa_bin() {
-  echo "$SHARED_AGENTS_HOME/scripts/$1"
+  _sa_script "$1"
 }
 
 _sa_resolve_install_sh() {
-  if [[ -f "$SHARED_AGENTS_HOME/install.sh" ]]; then
+  # Dev: ./sa from repo → use repo install.sh (not stale ~/.shared-agents copy)
+  if [[ "$SA_REPO_ROOT" != "$SHARED_AGENTS_HOME" && -f "$SA_REPO_ROOT/install.sh" ]]; then
+    echo "$SA_REPO_ROOT/install.sh"
+  elif [[ -f "$SHARED_AGENTS_HOME/install.sh" ]]; then
     echo "$SHARED_AGENTS_HOME/install.sh"
   elif [[ -f "$SA_REPO_ROOT/install.sh" ]]; then
     echo "$SA_REPO_ROOT/install.sh"
-  elif [[ -f "$(_sa_bin install.sh)" ]]; then
-    echo "$(_sa_bin install.sh)"
   fi
 }
 
 _sa_resolve_uninstall_sh() {
-  if [[ -f "$SHARED_AGENTS_HOME/uninstall.sh" ]]; then
+  if [[ "$SA_REPO_ROOT" != "$SHARED_AGENTS_HOME" && -f "$SA_REPO_ROOT/uninstall.sh" ]]; then
+    echo "$SA_REPO_ROOT/uninstall.sh"
+  elif [[ -f "$SHARED_AGENTS_HOME/uninstall.sh" ]]; then
     echo "$SHARED_AGENTS_HOME/uninstall.sh"
   elif [[ -f "$SA_REPO_ROOT/uninstall.sh" ]]; then
     echo "$SA_REPO_ROOT/uninstall.sh"
-  elif [[ -f "$(_sa_bin uninstall.sh)" ]]; then
-    echo "$(_sa_bin uninstall.sh)"
   fi
 }
 
@@ -38,8 +51,14 @@ _sa_home_missing() {
 
 _sa_require_home() {
   if _sa_home_missing; then
-    echo "shared-agents not found at: $SHARED_AGENTS_HOME" >&2
-    echo "Run: sa install   (or: shared-agents install)" >&2
+    if SA_VERSION="$SA_VERSION" _sa_ui_py --error \
+        "shared-agents not found at: $SHARED_AGENTS_HOME" \
+        "Run: sa install   (or: shared-agents install)" 2>/dev/null; then
+      :
+    else
+      echo "shared-agents not found at: $SHARED_AGENTS_HOME" >&2
+      echo "Run: sa install   (or: shared-agents install)" >&2
+    fi
     exit 1
   fi
 }
@@ -64,69 +83,25 @@ _sa_run_install() {
 }
 
 sa_help() {
-  cat <<EOF
-shared-agents CLI (sa) v${SA_VERSION}
-Repo: \$SHARED_AGENTS_HOME (${SHARED_AGENTS_HOME})
-
-Aufruf: sa | shared-agents | sharedagents  <command> [args…]
-
-Usage: sa <command> [args…]
-
-Setup
-  install [opts]       Setup-Wizard (TTY: TUI ↑↓ Space · Cursor: Text)
-  install --non-interactive   Ohne Wizard — alle erkannten Tools
-  check                Tool-Status prüfen
-  uninstall [opts]     Deinstallieren (Bestätigung: y/N)
-  sync                 Neueste Learnings pullen (Bitbucket)
-  status               Offene Punkte (Review, Skills, Adapter)
-
-Learnings
-  review [file]        Pending reviewen → approved (+ commit/push)
-  review list          Pending-Liste
-  review dry [file]    Dry-run für Review
-  pending push [file]    Pending commit + push (Team-Review)
-  pending path [slug]    Pfad für pending-Datei anzeigen
-  unapprove [id|file]  Aus approved entfernen (Wizard: löschen/pending)
-  unapprove list       Approved-Liste
-
-Info
-  help                 Diese Hilfe
-  version              Version anzeigen
-
-Beispiele
-  sa install                        Setup-Wizard (alles konfigurieren)
-  sa install --non-interactive        Schnell, ohne Prompts
-  sa install --check                  Adapter-Status
-  sa sync
-  sa status
-  sa review list
-  sa pending push 2026-06-02-my-slug.md
-  sa review 2026-06-02-my-slug.md
-
-Häufige Flags (install / review / unapprove / pending)
-  --wizard             Interaktiver Setup-Wizard (install)
-  --non-interactive    Alle erkannten Tools (install)
-  --dry-run            Vorschau
-  -y, --yes            Ohne Nachfrage
-  --no-git             Kein commit/push
-  --domain DOMAIN      Ziel-Domain (review)
-
-Erst-Install ohne ~/.shared-agents: sa install --wizard (klont von Bitbucket)
-Repo-Root: ./install.sh · ./sa install · sa help
-Doku: \$SHARED_AGENTS_HOME/README.md#befehlsübersicht
-EOF
+  SA_VERSION="$SA_VERSION" SHARED_AGENTS_HOME="$SHARED_AGENTS_HOME" \
+    _sa_ui_py --help
 }
 
 sa_version() {
-  echo "shared-agents sa v${SA_VERSION}"
-  echo "SHARED_AGENTS_HOME=${SHARED_AGENTS_HOME}"
-  local install_sh
+  local install_sh=""
+  local install_hint=""
   install_sh="$(_sa_resolve_install_sh)"
   if [[ -n "$install_sh" ]]; then
-    echo "install.sh=${install_sh}"
+    export SA_INSTALL_SH="$install_sh"
+    unset SA_INSTALL_HINT
   elif _sa_home_missing; then
-    echo "install.sh=(bootstrap via sa install)"
+    export SA_INSTALL_HINT="install.sh=(bootstrap via sa install)"
+    unset SA_INSTALL_SH
+  else
+    unset SA_INSTALL_SH SA_INSTALL_HINT
   fi
+  SA_VERSION="$SA_VERSION" SHARED_AGENTS_HOME="$SHARED_AGENTS_HOME" \
+    _sa_ui_py --version
 }
 
 dispatch() {
@@ -226,8 +201,10 @@ dispatch() {
       esac
       ;;
     *)
-      echo "Unknown command: sa $cmd" >&2
-      echo "Run: sa help" >&2
+      _sa_ui_py --error "Unknown command: sa $cmd" "Run: sa help" >&2 || {
+        echo "Unknown command: sa $cmd" >&2
+        echo "Run: sa help" >&2
+      }
       exit 1
       ;;
   esac
