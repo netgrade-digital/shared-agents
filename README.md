@@ -3,7 +3,7 @@
 Team-wide **skills and learnings** for AI assistants. Tool-neutral (Markdown + Git), automatic sync, manifest-based adapters for common IDEs and CLIs.
 
 > **Core (OSS) + private team repo · One install path · One learning format**  
-> Core remote: [bitbucket.org/netgrade/shared-agents](https://bitbucket.org/netgrade/shared-agents/src/main/)  
+> Core remote: [github.com/netgrade-digital/shared-agents](https://github.com/netgrade-digital/shared-agents)  
 > Default path: `~/.shared-agents` · Env: `$SHARED_AGENTS_HOME` · Team data: `~/.shared-agents/team/`
 
 ---
@@ -39,7 +39,7 @@ Team-wide **skills and learnings** for AI assistants. Tool-neutral (Markdown + G
 ```
      ┌──────────────────────┐         ┌──────────────────────┐
      │ Core (OSS remote)    │         │ Team (private remote) │
-     │ shared-agents        │         │ your-team-data        │
+     │ netgrade-digital/…   │         │ your-team-data        │
      └──────────┬───────────┘         └──────────┬───────────┘
                 │ sa sync (ff-only)             │
                 ▼                               ▼
@@ -65,7 +65,7 @@ Solo mode (no team remote): learnings stay under `core/learnings/` until you run
 
 ```bash
 # Recommended — one command (bootstrap wizard: Core + team repo + adapters)
-curl -fsSL https://bitbucket.org/netgrade/shared-agents/raw/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/netgrade-digital/shared-agents/main/scripts/bootstrap.sh | bash
 # Or after clone:
 ./scripts/bootstrap.sh
 # or: sa bootstrap
@@ -78,7 +78,7 @@ sa team verify      # optional sanity check after bootstrap
 **Classic (clone Core only, then wizard — team URL optional in wizard):**
 
 ```bash
-git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
+git clone git@github.com:netgrade-digital/shared-agents.git ~/.shared-agents
 cd ~/.shared-agents
 ./sa install
 source ~/.bashrc
@@ -166,7 +166,7 @@ CLI: [`scripts/sa`](scripts/sa) · invoke: **`sa`** · **`shared-agents`** · **
 | `scripts/unapprove-learning.sh` | Wie `sa unapprove` |
 | `scripts/promote-learning.sh` | Approve ohne Preview (`-y`) |
 | `scripts/learning-path.sh` | Pending-Pfad ausgeben |
-| `scripts/ensure-git-remote.sh` | `origin` → Bitbucket fixen |
+| `scripts/ensure-git-remote.sh` | Fix `origin` → canonical GitHub remote |
 | `scripts/install-adapters.py check` | JSON-Status für CI |
 | `scripts/agent-entrypoint.sh` | Headless: sync → exec |
 
@@ -396,7 +396,7 @@ shared-agents/
 │   ├── uninstall.sh               # Restlos deinstallieren
 │   ├── uninstall-adapters.py
 │   ├── remove-shell-rc.sh
-│   ├── ensure-git-remote.sh       # origin → Bitbucket fixen
+│   ├── ensure-git-remote.sh       # origin → canonical GitHub remote
 │   ├── sync.sh
 │   ├── session-sync.sh
 │   └── agent-entrypoint.sh
@@ -579,7 +579,7 @@ Symlinks:
 | `~/.gemini/skills/` | Gemini CLI |
 
 Skills liegen im Repo unter `skills/` — `install.sh` symlinkt sie nach `~/.agents/skills/` usw.  
-([skills.sh](https://skills.sh) ist GitHub-zentriert; für Bitbucket reicht Clone + `install.sh`.)
+([skills.sh](https://skills.sh) is GitHub-centric; this repo is on GitHub — clone + `install.sh` is enough.)
 
 ---
 
@@ -682,7 +682,7 @@ Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
 | Variable | Default | Beschreibung |
 |----------|---------|--------------|
 | `SHARED_AGENTS_HOME` | `~/.shared-agents` | Lokaler Repo-Pfad |
-| `SHARED_AGENTS_GIT_REMOTE` | Bitbucket `netgrade/shared-agents` | Core-Clone (`bootstrap` / `sa install`) |
+| `SHARED_AGENTS_GIT_REMOTE` | `git@github.com:netgrade-digital/shared-agents.git` | Core clone (`bootstrap` / `sa install`) |
 | `SHARED_AGENTS_CORE_REMOTE` | wie `SHARED_AGENTS_GIT_REMOTE` | Öffentliches Core-Repo |
 | `config.local.yaml` | — | Lokal: `team.remote` für privates Learnings-Repo (gitignored) |
 | `SA_WIZARD_PLAIN` | — | `1` = Text-Wizard statt TUI |
@@ -698,4 +698,4 @@ Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
 - **Design:** Manifest-driven, Python-Stdlib-only Installer, idempotent, keine Netzwerk-Calls
 - **Version:** CLI `sa` v0.3.1 · Installer `v0.1.0` (`install.sh` / `install-adapters.py --version`)
 
-Repo: `https://bitbucket.org/netgrade/shared-agents` (Branch `main`).
+Repo: [github.com/netgrade-digital/shared-agents](https://github.com/netgrade-digital/shared-agents) (branch `main`).
