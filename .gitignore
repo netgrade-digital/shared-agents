@@ -2,6 +2,11 @@
 *.swp
 *.swo
 
+# Python bytecode (never commit)
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Never commit .git internals copied into the repo root
 /config
 /description
