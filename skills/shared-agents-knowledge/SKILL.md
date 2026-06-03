@@ -27,9 +27,9 @@ IDE hooks also pull on session start (Cursor `sessionStart`, Claude `SessionStar
 ## Retrieve (before non-trivial tasks)
 
 1. Sync (pull) — always first.
-2. Read `learnings/index.yaml` for `project`, `domain`, `tags`.
+2. Read `learnings/index.yaml` for `project`, `domain`, `tags`, `versions`.
 3. Grep `learnings/approved/` for task keywords.
-4. Prefer `confidence: high`; treat `experimental` as hints.
+4. Prefer learnings whose `versions` match the project's stack (exact patch or same MAJOR.MINOR.PATCH line); treat `experimental` confidence as hints.
 5. Summarize briefly — do not dump the whole repo.
 
 ## Capture (after non-trivial tasks — ask first)

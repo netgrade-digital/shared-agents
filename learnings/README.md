@@ -48,6 +48,20 @@ Definiert in `scripts/shell-aliases.sh`, eingebunden via `scripts/configure-shel
 
 Shell-CLI nach Install: **`sa`** ohne Argument = Hilfe · **`sa help`** = gleich
 
+## Frontmatter: `versions`
+
+Bei Framework-/Runtime-Wissen immer die **verifizierte Version** angeben:
+
+```yaml
+versions: [shopware:6.6.10, php:8.3.14]
+versions: [laravel:11.31.0]
+versions: []   # nur wenn kein Stack (z. B. reines Team-Workflow-Wissen)
+```
+
+**Format:** mindestens `MAJOR.MINOR.PATCH` (drei Zahlen), keine Wildcards (`6.6.x`). Vierter Teil nur wenn vom Produkt geliefert; `.0` am Ende weglassen (`6.6.10.0` → `6.6.10`).
+
+Agents und Reviewer: Version aus Projektdateien (`composer.lock`, `package-lock.json`, Shopware-CLI) — die **exakte** Version, gegen die die Erkenntnis geprüft wurde.
+
 **Unapprove:** `sa unapprove` — Wizard: **[1] Löschen** oder **[2] Nach pending/** (`--to-pending` / `--delete` nur für Scripts mit `-y`).
 
 **Uninstall:** `sa uninstall` (Bestätigung: **y/N**) — `--keep-repo` behält den Git-Checkout.

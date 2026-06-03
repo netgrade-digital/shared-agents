@@ -52,6 +52,63 @@ def parse_yaml_list(value: str) -> list[str]:
     return [part.strip().strip("'\"") for part in inner.split(",") if part.strip()]
 
 
+def parse_versions(value: str) -> dict[str, str]:
+    """Parse `versions: [shopware:6.6.10, php:8.3.14]` into a dict."""
+    result: dict[str, str] = {}
+    for item in parse_yaml_list(value):
+        if ":" not in item:
+            continue
+        name, ver = item.split(":", 1)
+        name = name.strip()
+        ver = ver.strip().strip("'\"")
+        if name and ver:
+            result[name] = ver
+    return result
+
+
+def format_versions(versions: dict[str, str]) -> str:
+    if not versions:
+        return "[]"
+    inner = ", ".join(f"{k}:{v}" for k, v in sorted(versions.items()))
+    return f"[{inner}]"
+
+
+VERSION_FULL_RE = re.compile(r"^\d+\.\d+\.\d+(?:\.\d+)?$")
+
+
+def validate_version_strings(versions: dict[str, str]) -> list[str]:
+    """Return human-readable warnings for non-conforming version values."""
+    warnings: list[str] = []
+    for name, ver in versions.items():
+        lowered = ver.lower()
+        if "x" in lowered or "*" in ver:
+            warnings.append(
+                f"{name}:{ver} — use full patch (e.g. shopware:6.6.10), not wildcards"
+            )
+            continue
+        if not VERSION_FULL_RE.match(ver):
+            warnings.append(
+                f"{name}:{ver} — expected MAJOR.MINOR.PATCH (e.g. 6.6.10, 11.31.0)"
+            )
+    return warnings
+
+
+STACK_DOMAINS = {
+    "shopware",
+    "laravel",
+    "symfony",
+    "vue",
+    "nuxt",
+    "react",
+    "nextjs",
+    "php",
+    "node",
+    "wordpress",
+    "magento",
+    "typo3",
+}
+
+
 def resolve_pending(path_arg: str | None, home: Path) -> Path | None:
     pending = pending_dir(home)
     if path_arg:
@@ -107,20 +164,23 @@ def index_has_id(index_path: Path, learning_id: str) -> bool:
     return False
 
 
-def format_index_entry(entry: dict[str, str | list[str]]) -> str:
+def format_index_entry(entry: dict[str, str | list[str] | dict[str, str]]) -> str:
     domain = entry["domain"]
     tags = entry["tags"]
+    versions = entry.get("versions") or {}
     domain_yaml = ", ".join(domain)
     tags_yaml = ", ".join(tags)
-    return (
-        f"  - id: {entry['id']}\n"
-        f"    file: {entry['file']}\n"
-        f"    project: {entry['project']}\n"
-        f"    domain: [{domain_yaml}]\n"
-        f"    tags: [{tags_yaml}]\n"
-        f"    confidence: {entry['confidence']}\n"
-        f"    created: {entry['created']}\n"
-    )
+    lines = [
+        f"  - id: {entry['id']}",
+        f"    file: {entry['file']}",
+        f"    project: {entry['project']}",
+        f"    domain: [{domain_yaml}]",
+        f"    tags: [{tags_yaml}]",
+        f"    versions: {format_versions(versions)}",
+        f"    confidence: {entry['confidence']}",
+        f"    created: {entry['created']}",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def append_index(index_path: Path, entry: dict[str, str | list[str]]) -> None:
@@ -138,7 +198,7 @@ def append_index(index_path: Path, entry: dict[str, str | list[str]]) -> None:
 
 def build_index_entry(
     frontmatter: dict[str, str], rel_file: str
-) -> dict[str, str | list[str]]:
+) -> dict[str, str | list[str] | dict[str, str]]:
     learning_id = frontmatter.get("id", "").strip()
     if not learning_id:
         raise SystemExit("Frontmatter missing required field: id")
@@ -146,6 +206,7 @@ def build_index_entry(
     project = frontmatter.get("project", "unknown").strip()
     domain = parse_yaml_list(frontmatter.get("domain", "")) or ["general"]
     tags = parse_yaml_list(frontmatter.get("tags", "")) or domain
+    versions = parse_versions(frontmatter.get("versions", ""))
     confidence = frontmatter.get("confidence", "high").strip() or "high"
     created = frontmatter.get("created", "").strip()
     if not created:
@@ -159,9 +220,27 @@ def build_index_entry(
         "project": project,
         "domain": domain,
         "tags": tags,
+        "versions": versions,
         "confidence": confidence,
         "created": created,
     }
+
+
+def warn_missing_versions(
+    frontmatter: dict[str, str], domain: str, versions: dict[str, str]
+) -> None:
+    if versions:
+        for msg in validate_version_strings(versions):
+            print(f"Warning: {msg}", file=sys.stderr)
+        return
+    domains = {d.lower() for d in parse_yaml_list(frontmatter.get("domain", ""))}
+    domains.add(domain.lower())
+    if domains & STACK_DOMAINS:
+        print(
+            "Warning: no versions: in frontmatter — add stack versions when applicable "
+            "(e.g. versions: [shopware:6.6.10, php:8.3.14]).",
+            file=sys.stderr,
+        )
 
 
 def promote(
@@ -362,7 +441,11 @@ def main() -> int:
             fm = parse_frontmatter(path.read_text())
             learning_id = fm.get("id", path.stem)
             project = fm.get("project", "?")
-            print(f"{path.name}\tlearning_id={learning_id}\tproject={project}")
+            versions = format_versions(parse_versions(fm.get("versions", "")))
+            print(
+                f"{path.name}\tlearning_id={learning_id}\tproject={project}"
+                f"\tversions={versions}"
+            )
         return 0
 
     pending_path = resolve_pending(args.file, home)
@@ -372,6 +455,8 @@ def main() -> int:
     text = pending_path.read_text()
     frontmatter = parse_frontmatter(text)
     domain = pick_domain(frontmatter, args.domain)
+    versions = parse_versions(frontmatter.get("versions", ""))
+    warn_missing_versions(frontmatter, domain, versions)
 
     print("")
     print(f"Review: {pending_path.name}")

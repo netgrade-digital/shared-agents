@@ -61,6 +61,7 @@ id: project-YYYY-MM-short-slug
 project: project-name
 domain: [tag1, tag2]
 tags: [keyword1, keyword2]
+versions: [shopware:6.6.10, php:8.3.14]
 confidence: high
 source: task
 created: YYYY-MM-DD
@@ -79,6 +80,30 @@ Concrete steps or rule of thumb for next time.
 ## Links
 - path/to/file or PR URL (optional)
 ```
+
+### Versions (required when a stack applies)
+
+Always set **`versions:`** for framework/runtime-specific learnings. Use `[]` only when no stack version is relevant (e.g. pure process/infra docs).
+
+Format: list of `name:version` pairs (compatible with flat frontmatter parsing):
+
+```yaml
+versions: [shopware:6.6.10, php:8.3.14]
+versions: [laravel:11.31.0, php:8.3.14]
+versions: [vue:3.4.27, node:20.18.1]
+versions: []   # no stack — OK for shared-agents workflow, MCP setup, etc.
+```
+
+**Version format (mandatory for stack entries):**
+
+- **Full patch level** — `6.6.10`, not `6.6.x` or `6.6`
+- **Minimum `MAJOR.MINOR.PATCH`** (three numeric segments), e.g. `11.31.0`, `3.4.27`
+- **Fourth segment** only when the product publishes it (e.g. Shopware `6.6.10.0`); trailing `.0` may be dropped → `6.6.10`
+- **No wildcards** (`x`, `*`) — always the version the insight was verified against
+
+Common keys: `shopware`, `laravel`, `symfony`, `vue`, `nuxt`, `react`, `nextjs`, `php`, `node`, `wordpress`, `typo3`, `magento`.
+
+**How to determine:** read from the project (`composer.json`, `composer.lock`, `package.json`, Shopware Admin/CLI `bin/console --version`). Use the exact version from the environment where the learning was validated.
 
 ## After writing — mandatory publish
 

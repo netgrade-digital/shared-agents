@@ -3,6 +3,7 @@ id: alp-shopware-2026-06-order-reopen-in-progress
 project: alp-shopware
 domain: [shopware, checkout, order-management]
 tags: [state-machine, order-state, reopen, in_progress, admin, NetgradeOrderStatusFlow]
+versions: [shopware:6.5.8.14, php:8.2.31]
 confidence: high
 source: task
 created: 2026-06-03

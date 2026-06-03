@@ -5,6 +5,7 @@ learnings:
     project: shared-agents
     domain: [infra, ai-tooling]
     tags: [skills, learnings, sync, git]
+    versions: []
     confidence: high
     created: 2026-05-28
   - id: shared-agents-2026-06-shared-mcps-manifest
@@ -12,6 +13,7 @@ learnings:
     project: shared-agents
     domain: [infra, ai-tooling, seo]
     tags: [mcp, cursor, manifest, installer, screaming-frog, team-setup]
+    versions: []
     confidence: high
     created: 2026-06-02
   - id: alp-shopware-2026-06-order-reopen-in-progress
@@ -19,5 +21,6 @@ learnings:
     project: alp-shopware
     domain: [shopware, checkout, order-management]
     tags: [state-machine, order-state, reopen, in_progress, admin, NetgradeOrderStatusFlow]
+    versions: [shopware:6.5.8.14, php:8.2.31]
     confidence: high
     created: 2026-06-03

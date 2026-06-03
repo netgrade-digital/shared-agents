@@ -3,6 +3,7 @@ id: shared-agents-2026-06-shared-mcps-manifest
 project: shared-agents
 domain: [infra, ai-tooling, seo]
 tags: [mcp, cursor, manifest, installer, screaming-frog, team-setup]
+versions: []
 confidence: high
 source: task
 created: 2026-06-02

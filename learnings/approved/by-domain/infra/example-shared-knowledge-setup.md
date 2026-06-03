@@ -3,6 +3,7 @@ id: example-2026-05-shared-knowledge-setup
 project: shared-agents
 domain: [infra, ai-tooling]
 tags: [skills, learnings, sync, git, multi-cli]
+versions: []
 confidence: high
 source: manual
 created: 2026-05-28

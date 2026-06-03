@@ -409,6 +409,7 @@ id: project-2026-05-short-slug
 project: my-project
 domain: [vue, laravel]
 tags: [dropdown, sidebar]
+versions: [laravel:11.31.0, vue:3.4.27, php:8.3.14]
 confidence: high          # high | medium | experimental
 source: task              # task | pr | incident | manual
 created: 2026-05-28
@@ -427,6 +428,8 @@ Konkrete Regel für nächstes Mal.
 ## Links
 - path/to/file oder PR
 ```
+
+**`versions:`** — bei stack-spezifischen Learnings Pflicht mit **voller Patch-Version** (`MAJOR.MINOR.PATCH`, z. B. `shopware:6.6.10`, nicht `6.6.x`). Vierter Segment `.0` darf weg (`6.6.10.0` → `6.6.10`). Nur `[]`, wenn kein Framework/Runtime relevant ist. Wird bei `sa review` automatisch in `index.yaml` übernommen; Wildcards (`x`) lösen eine Warnung aus.
 
 ### Workflow: pending → approved
 
