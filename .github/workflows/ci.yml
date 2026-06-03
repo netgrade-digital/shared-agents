@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile Python scripts
+        run: python3 -m compileall -q scripts
+
+      - name: Adapter check (manifest + install logic)
+        env:
+          SHARED_AGENTS_HOME: ${{ github.workspace }}
+        run: python3 scripts/install-adapters.py check "${{ github.workspace }}" --json

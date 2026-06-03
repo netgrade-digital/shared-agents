@@ -1,703 +1,136 @@
-# Shared Agents
-
-Team-wide **skills and learnings** for AI assistants. Tool-neutral (Markdown + Git), automatic sync, manifest-based adapters for common IDEs and CLIs.
-
-> **Core (OSS) + private team repo · One install path · One learning format**  
-> Core remote: [github.com/netgrade-digital/shared-agents](https://github.com/netgrade-digital/shared-agents)  
-> Default path: `~/.shared-agents` · Env: `$SHARED_AGENTS_HOME` · Team data: `~/.shared-agents/team/`
+<p align="center">
+  <!-- Replace with your banner (recommended: 1200×400, docs/assets/shared-agents-banner.png) -->
+  <img src="docs/assets/shared-agents-banner.png" alt="Shared Agents"/>
+</p>
 
 ---
 
-## Contents
+<p align="center">
+  <strong>Team skills and learnings for AI assistants</strong> — one install, Git-synced, IDE-agnostic.
+</p>
 
-- [Concept](#concept)
-- [Quick Start](#quick-start)
-- [Command reference](#command-reference)
-- [Install & Check](#install--check)
-- [Unterstützte Tools](#unterstützte-tools)
-- [Automatischer Sync](#automatischer-sync)
-- [Täglicher Ablauf](#täglicher-ablauf)
-- [Repo-Struktur](#repo-struktur)
-- [Learnings](#learnings)
-- [Canonical Paths](#canonical-paths)
-- [Skills](#skills)
-- [Shared MCPs (geplant)](#shared-mcps-geplant)
-- [Headless / CI](#headless--ci)
-- [Neues Tool hinzufügen](#neues-tool-hinzufügen)
-- [Troubleshooting](#troubleshooting)
-- [Open Source](#open-source)
+<p align="center">
+  <a href="https://github.com/netgrade-digital/shared-agents/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/netgrade-digital/shared-agents/ci.yml?branch=main&label=BUILD&style=flat-square" alt="Build" /></a>
+  <a href="https://github.com/netgrade-digital/shared-agents/releases"><img src="https://img.shields.io/badge/RELEASE-v0.3.2-blue?style=flat-square" alt="Release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-2196f3?style=flat-square" alt="License" /></a>
+  <a href="https://github.com/netgrade-digital/shared-agents/stargazers"><img src="https://img.shields.io/github/stars/netgrade-digital/shared-agents?label=STARS&style=flat-square" alt="GitHub stars" /></a>
+</p>
+
+<p align="center">
+  If this project helps your team, consider giving it a <a href="https://github.com/netgrade-digital/shared-agents/stargazers">⭐ on GitHub</a>.
+</p>
 
 ---
 
-## Concept
+## Why this exists
 
-| What | Role | Analogy |
-|------|------|---------|
-| **Skills** | Stable workflows (“how we do X”) | Company playbook |
-| **Learnings** | Reusable knowledge (“Y breaks because of Z”) | Private team repo (`team/`) |
+Teams use many AI tools (Cursor, Claude Code, Zed, Codex, …). Each session starts cold: no shared workflows, no institutional memory, and knowledge trapped in chats or private notes.
+
+**Shared Agents** gives you one place to:
+
+- **Skills** — how we work (repeatable workflows for agents)
+- **Learnings** — what we already figured out (bugs, stack quirks, decisions)
+
+Everyone syncs the same content. Agents load it automatically at session start. Sensitive team data stays in a **private** repo, not public.
+
+---
+
+## What it is
+
+| Piece | Role |
+|-------|------|
+| **Core** (this repo) | Open-source CLI (`sa`), adapters, shared skills, installer |
+| **Team** (your private Git remote) | Learnings + optional team-only skills under `team/` |
+| **Local install** | `~/.shared-agents` (or `$SHARED_AGENTS_HOME`) on each machine |
 
 ```
-     ┌──────────────────────┐         ┌──────────────────────┐
-     │ Core (OSS remote)    │         │ Team (private remote) │
-     │ netgrade-digital/…   │         │ your-team-data        │
-     └──────────┬───────────┘         └──────────┬───────────┘
-                │ sa sync (ff-only)             │
-                ▼                               ▼
-         ~/.shared-agents                 ~/.shared-agents/team/
-         skills · adapters · scripts      team/learnings · team/skills
-                │                               │
-                └───────────┬───────────────────┘
-                            ▼
-              Cursor · Claude Code · Zed · Codex · …
+  GitHub (Core)              Your private remote (Team)
+        │                              │
+        └────────── sa sync ───────────┘
+                        │
+                        ▼
+              ~/.shared-agents  ──►  Cursor · Claude Code · Zed · …
 ```
 
-- **Core** = OSS tooling, adapters, shared skills (`sa sync` pulls first)
-- **Team** = private learnings + optional team-only skills (`sa sync` pulls second)
-- **Local** = `$SHARED_AGENTS_HOME` on each machine / container
-- **Adapters** = thin layer per IDE/CLI (hooks, AGENTS.md, symlinks)
-- **Sync** = automatic — no manual `git pull` in daily use
-
-Solo mode (no team remote): learnings stay under `core/learnings/` until you run `sa bootstrap` with a team URL.
+- **Tool-neutral** — Markdown + Git, no vendor lock-in
+- **Manifest-driven adapters** — hooks and global instructions per IDE/CLI
+- **Human-in-the-loop learnings** — agents propose drafts; a person approves via `sa review`
 
 ---
 
-## Quick Start
+## Quick start
 
 ```bash
-# Recommended — one command (bootstrap wizard: Core + team repo + adapters)
 curl -fsSL https://raw.githubusercontent.com/netgrade-digital/shared-agents/refs/heads/main/scripts/bootstrap.sh | bash
-# Piped curl reopens the wizard on /dev/tty (TUI in foot/alacritty; text wizard in Cursor).
-# Auto-only (no prompts): SA_BOOTSTRAP_NON_INTERACTIVE=1 curl … | bash
-# Or after clone:
-./scripts/bootstrap.sh
-# or: sa bootstrap
-
-source ~/.bashrc
-sa                  # help overview (same as sa help)
-sa team verify      # optional sanity check after bootstrap
 ```
 
-**Classic (clone Core only, then wizard — team URL optional in wizard):**
+The bootstrap wizard installs Core, optionally wires your team repo, and configures detected tools. Then open a new shell and run `sa`.
 
-```bash
-git clone git@github.com:netgrade-digital/shared-agents.git ~/.shared-agents
-cd ~/.shared-agents
-./sa install
-source ~/.bashrc
-```
-
-**Dev install** (local folder, no remote):
-
-```bash
-cd /path/to/shared-agents
-./sa install --home "$HOME/.shared-agents"
-# or: ./install.sh --home "$HOME/.shared-agents"
-```
-
-**Wizard before clone** (fresh machine, dev checkout only):
-
-```bash
-cd /path/to/shared-agents   # repo with ./sa
-./sa install                # wizard first — cancel leaves no ~/.shared-agents
-source ~/.bashrc
-```
-
-**New AI tool installed?** → run **`sa install`** again.
+Non-interactive (CI/scripts): `SA_BOOTSTRAP_NON_INTERACTIVE=1 curl -fsSL … | bash`
 
 ---
 
-## Command reference
+## Everyday use
 
-After `sa install` and `source ~/.bashrc` (or a new terminal):
+| Task | Command |
+|------|---------|
+| Pull latest Core + team data | `sa sync` |
+| Overview / all commands | `sa` or `sa help` |
+| Adapter health | `sa check` |
+| Review a learning draft | `sa review` |
 
-```bash
-sa                   # help overview (default)
-sa help              # explicit — same output
-shared-agents sync   # same as sa sync
-sa review list
-sa review
-```
-
-CLI: [`scripts/sa`](scripts/sa) · invoke: **`sa`** · **`shared-agents`** · **`sharedagents`** · **`./sa`** at repo root
-
-### `sa` CLI
-
-| Command | Description |
-|---------|-------------|
-| `sa` | Help overview (default) |
-| `sa help` | Same as `sa` — all commands explained |
-| `sa sync` | Pull Core + team learnings |
-| `sa status` | Open items (review, skills, adapters, team) |
-| `sa check` | Adapter status (+ team setup warnings) |
-| `sa bootstrap` | Full first-time setup (Core + private team repo + adapters) |
-| `sa install` | Setup wizard (TTY) — path, team repo, tools, shell |
-| `sa install --non-interactive` | No wizard — all detected tools |
-| `sa uninstall` | Uninstall (y/N) |
-| `sa review list` | List pending learnings |
-| `sa pending push [file]` | Commit + push pending (team review) |
-| `sa review [file]` | Review + approve + commit/push |
-| `sa review dry [file]` | Dry-run |
-| `sa unapprove list` | List approved learnings |
-| `sa unapprove [id\|file]` | Remove (wizard: delete / pending) |
-| `sa pending path [slug]` | Canonical pending path |
-| `sa team verify` | Validate team repo (git, index.yaml, folders) |
-| `sa team migrate` | Move legacy `learnings/` → `team/learnings/` |
-| `sa version` | CLI version |
-
-**Flags:** `--no-git` · `-y` / `--yes` · `--dry-run` · `sa unapprove --to-pending` / `--delete`
-
-### Repo-Root (nach Clone)
-
-| Befehl | Beschreibung |
-|--------|--------------|
-| `./install.sh` | Install / Update + Wizard (wie `sa install`) |
-| `./install.sh --check` | Status aller Tools |
-| `./install.sh --wizard` | TUI-Wizard (wie `sa install --wizard`) |
-| `./install.sh --non-interactive` | Alle erkannten Tools |
-| `./install.sh --dry-run` | Vorschau |
-| `./uninstall.sh` | Deinstallieren (wie `sa uninstall`) |
-
-### Scripts (Low-level)
-
-| Script | Beschreibung |
-|--------|--------------|
-| `scripts/sync.sh pull` | Core + Team pull (ff-only, ignoriert globales rebase) |
-| `scripts/sync.sh status` | Git-Status Core + Team |
-| `scripts/publish-pending-learning.sh` | Pending commit + push (`sa pending push`) |
-| `scripts/review-learning.sh` | Wie `sa review` |
-| `scripts/unapprove-learning.sh` | Wie `sa unapprove` |
-| `scripts/promote-learning.sh` | Approve ohne Preview (`-y`) |
-| `scripts/learning-path.sh` | Pending-Pfad ausgeben |
-| `scripts/ensure-git-remote.sh` | Fix `origin` → canonical GitHub remote |
-| `scripts/install-adapters.py check` | JSON-Status für CI |
-| `scripts/agent-entrypoint.sh` | Headless: sync → exec |
-
-Details zu Learnings: [Learnings](#learnings) · Pfade: [Canonical Paths](#canonical-paths)
+Sync also runs automatically via IDE hooks and agent instructions after install.
 
 ---
 
-## Install & Check
-
-Der Installer ist **manifest-driven** ([`adapters/manifest.json`](adapters/manifest.json)), idempotent und ohne Netzwerk-Calls.
-
-### Setup-Wizard (empfohlen)
-
-In einem Terminal startet **`sa install`** automatisch den **TUI-Wizard** (Pfeiltasten, Space, Enter):
-
-```bash
-sa install              # Setup-Wizard (Standard im Terminal)
-sa install --non-interactive   # Schnell, ohne Prompts
-cd ~/.shared-agents && ./install.sh   # gleich wie sa install
-```
-
-| Schritt | Steuerung |
-|---------|-----------|
-| **1 — Install-Pfad** | Pfad tippen · Enter bestätigen |
-| **2 — Agenten wählen** | `↑↓` navigieren · **Space** an/aus · `a` alle · `d` erkannte · Enter weiter |
-| **3 — Shell-CLI** | `←→` / `↑↓` Ja/Nein · Enter |
-| **4 — Summary** | `↑↓` Run/Cancel · Enter |
-
-Default bei Tools: alle **erkannten** Agenten sind vorausgewählt.
-
-Fallback ohne TTY oder `SA_WIZARD_PLAIN=1`: klassische Text-Eingabe (Nummern, `all`/`detected`).
-
-**Bootstrap:** Wizard läuft **vor** dem Clone — bei Abbruch wird `~/.shared-agents` **nicht** angelegt.
-
-Nicht-interaktiv (CI, Scripts):
-
-```bash
-sa install --non-interactive              # alle erkannten Tools
-sa install --non-interactive --tools cursor,claude-code
-sa install --dry-run --wizard             # Wizard-Vorschau
-# Low-level: install.sh --non-interactive …
-```
-
-### Befehle
-
-| Befehl | Beschreibung |
-|--------|--------------|
-| `install.sh` | Repo aktualisieren + **Wizard** (TTY) oder alle erkannten Tools |
-| `install.sh --wizard` | TUI-Wizard (Pfeiltasten, Space, Enter) |
-| `install.sh --non-interactive` | Alle erkannten Tools ohne Prompts |
-| `install.sh --tools cursor,claude-code` | Nur bestimmte Adapter |
-| `install.sh --check` | Status: welche Tools installiert / konfiguriert? |
-| `install.sh --check --json` | Wie oben, JSON (CI / Scripts) |
-| `install.sh --dry-run` | Vorschau — keine Dateien schreiben |
-| `install.sh --help` | Alle Optionen |
-
-Optionen:
-
-```bash
---source DIR     # Quell-Repo (Default: Parent von scripts/)
---home DIR       # Zielpfad (Default: ~/.shared-agents)
---shell-rc FILE  # Shell-RC für SHARED_AGENTS_HOME (Default: ~/.bashrc)
-```
-
-Low-level (von `install.sh` aufgerufen):
-
-```bash
-python3 scripts/install-adapters.py install ~/.shared-agents
-python3 scripts/install-adapters.py check  ~/.shared-agents --json
-```
-
-### Erkennung (installed)
-
-Ein Tool gilt als **installiert**, wenn mindestens eines zutrifft:
-
-1. **Config-Ordner** existiert (`detect` in Manifest, z.B. `~/.cursor`)
-2. **CLI-Binary** auf `$PATH` (`detect_bins`, z.B. `cursor`, `claude`, `aider`)
-
-### Konfiguration (configured)
-
-Ein Tool ist **konfiguriert**, wenn shared-agents aktiv ist:
-
-- **Hook-Tools** (Cursor, Claude Code): Hook in `hooks.json` / `settings.json` + Rule/Script
-- **AGENTS.md-Tools** (Zed, Codex, …): Marker-Block `<!-- shared-agents:begin -->` in globaler Config
-- **Skills**: Symlinks in `~/.agents/skills/` etc. zeigen auf `$SHARED_AGENTS_HOME/skills/`
-
-### Check-Ausgabe
-
-```text
-shared-agents check v0.1.0
-SHARED_AGENTS_HOME=/home/you/.shared-agents
-Repo: OK — ok
-
-TOOL           INSTALLED  CONFIGURED   STATUS
-cursor         yes        yes          ok
-windsurf       no         no           missing_tool
-zed            yes        no           not_configured
-```
-
-| STATUS | Bedeutung |
-|--------|-----------|
-| `ok` | Tool da + shared-agents eingerichtet |
-| `missing_tool` | CLI/Config nicht gefunden |
-| `not_configured` | Tool da, aber `install.sh` fehlt / veraltet |
-| `available` | Fallback (generic instructions) |
-
-### CI-Beispiel
-
-```bash
-#!/bin/bash
-export SHARED_AGENTS_HOME="$HOME/.shared-agents"
-sa check --json 2>/dev/null || "$SHARED_AGENTS_HOME/install.sh" --check --json | jq '.tools[] | select(.status != "ok" and .status != "missing_tool")'
-```
-
----
-
-## Unterstützte Tools
-
-Vollständige Registry: [`adapters/manifest.json`](adapters/manifest.json)
-
-| Tool | Sync | Was `install.sh` setzt | Docs |
-|------|------|------------------------|------|
-| Cursor | Hook | Rule + `sessionStart` hook | [cursor](adapters/cursor/README.md) |
-| Claude Code | Hook | `SessionStart` hook | [claude-code](adapters/claude-code/README.md) |
-| Zed | Agent¹ | `~/.config/zed/AGENTS.md` | [zed](adapters/zed/README.md) |
-| Codex CLI | Agent¹ | `~/.codex/AGENTS.md` | [codex](adapters/codex/README.md) |
-| OpenCode | Agent¹ | `~/.config/opencode/AGENTS.md` | [opencode](adapters/opencode/README.md) |
-| Gemini CLI | Agent¹ | `~/.gemini/GEMINI.md` | [gemini](adapters/gemini/README.md) |
-| Windsurf | Agent¹ | `~/.codeium/windsurf/AGENTS.md` | [windsurf](adapters/windsurf/README.md) |
-| Continue.dev | Agent¹ | `~/.continue/AGENTS.md` | [continue](adapters/continue/README.md) |
-| GitHub Copilot | Agent¹ | `~/.config/github-copilot/AGENTS.md` | [copilot](adapters/copilot/README.md) |
-| Aider | Agent¹ | `~/.aider/AGENTS.md` | [aider](adapters/aider/README.md) |
-| OpenClaw / headless | Entrypoint² | `agent-entrypoint.sh` | [openclaw](adapters/openclaw/README.md) |
-| Beliebiges CLI | Agent¹ | [generic/instructions.md](adapters/generic/instructions.md) | [generic](adapters/generic/README.md) |
-
-¹ **Agent-Sync** — globaler Instruction-Block: Agent führt `sync.sh pull` als ersten Shell-Befehl aus (ohne User-Rückfrage).
-
-² **Entrypoint** — Wrapper startet immer mit Sync:
-
-```bash
-"$SHARED_AGENTS_HOME/scripts/agent-entrypoint.sh" <dein-agent-befehl>
-```
-
----
-
-## Automatischer Sync
-
-Drei überlappende Sicherheitsnetze — absichtlich redundant:
-
-```
-Session / Thread start
-        │
-        ▼
-┌───────────────────┐
-│ 1. IDE/CLI Hook   │  Cursor, Claude Code → git pull (Hintergrund)
-└─────────┬─────────┘
-          ▼
-┌───────────────────┐
-│ 2. Instructions   │  AGENTS.md / Rule → sync als 1. Agent-Aktion
-└─────────┬─────────┘
-          ▼
-┌───────────────────┐
-│ 3. Skill          │  shared-agents-knowledge → sync vor Learnings
-└─────────┬─────────┘
-          ▼
-    Agent arbeitet
-```
-
-| Script | Aufgerufen von | Verhalten |
-|--------|----------------|-----------|
-| `sync.sh pull` | Hooks, Agent, `sa sync` | Core pull + `team/` pull (ff-only) |
-| `sync.sh status` | Debug | Git-Status Core + Team |
-| `session-sync.sh` | Cursor/Claude Hook | `sync.sh pull --quiet`, fail-open |
-| `agent-entrypoint.sh` | Headless/CI | `sync.sh pull` → exec |
-
-**Im Alltag kein manuelles Syncen.**
-
----
-
-## Täglicher Ablauf
-
-| Phase | Wer | Aktion |
-|-------|-----|--------|
-| Session Start | Hook / Agent | Neueste Learnings pullen |
-| Vor Tasks | Agent | `team/learnings/approved/` + `index.yaml` durchsuchen |
-| Nach großen Tasks | Agent → **du** | Frage: „Learning anlegen?" → bei **Ja**: `pending/` |
-| Review | **Mensch** | `sa review` → `approved/` + `index.yaml` (auto commit/push) |
-
----
-
-## Repo-Struktur
+## Repository layout
 
 ```
 shared-agents/
-├── sa                             # ./sa — CLI (ohne Arg = help)
-├── install.sh                     # ./install.sh — Install
-├── uninstall.sh                   # ./uninstall.sh — Deinstallieren
-├── README.md
-├── LICENSE
-├── CONTRIBUTING.md
-├── skills/
-│   ├── shared-agents-knowledge/   # Sync, Retrieve, Workflow
-│   ├── capture-learning/          # Learning-Vorschläge
-│   └── sa-cli/                    # CLI-Bedienung (sa help)
-├── config.local.yaml.example      # Vorlage (gitignored: config.local.yaml)
-├── rules/
-│   └── shared-agents-knowledge.mdc
-├── scripts/
-│   ├── install.sh                 # Entrypoint: install | check | dry-run
-│   ├── install-adapters.py        # Detect, install, verify, TUI wizard
-│   ├── wizard_tui.py              # TUI-Wizard (curses, Pfeiltasten/Space)
-│   ├── bootstrap.sh               # curl-Einstieg → Bootstrap-Wizard
-│   ├── bootstrap_wizard.py
-│   ├── sa_config.py               # Pfade Core vs team/
-│   ├── team_data.py               # Team-Repo init/sync
-│   ├── learning-path.sh           # Canonical pending path ausgeben
-│   ├── sa                           # sa | sa help | sa sync | sa review …
-│   ├── shell-aliases.sh           # sa | shared-agents | sharedagents
-│   ├── configure-shell-rc.sh      # Idempotent bashrc block
-│   ├── publish-pending-learning.sh # Pending commit + push
-│   ├── publish-pending-learning.py
-│   ├── promote-learning.sh        # Kurzform: sofort promoten (-y)
-│   ├── review-learning.sh         # Interaktiv: review + promote + index
-│   ├── review-learning.py
-│   ├── unapprove-learning.sh      # Approved entfernen (+ optional pending)
-│   ├── unapprove-learning.py
-│   ├── uninstall.sh               # Restlos deinstallieren
-│   ├── uninstall-adapters.py
-│   ├── remove-shell-rc.sh
-│   ├── ensure-git-remote.sh       # origin → canonical GitHub remote
-│   ├── sync.sh
-│   ├── session-sync.sh
-│   └── agent-entrypoint.sh
-├── docs/
-│   ├── learnings.md               # Learnings-Workflow (Team-Repo)
-│   ├── shared-mcps.md             # MCP-Design (Entwurf)
-│   └── canonical-paths.md         # Pflicht-Pfade für Agenten
-├── mcps/
-│   ├── manifest.example.json      # MCP-Manifest-Referenz
-│   └── mcps.local.yaml.example    # Lokale Werte (nicht committen)
-├── adapters/
-│   ├── manifest.json              # Tool-Registry (detect, detect_bins, paths)
-│   ├── cursor/ … generic/          # Pro-Tool Docs + Hook-Scripts
-│   └── generic/instructions.md    # Auto-generiert bei install
-└── skills-lock.json
+├── skills/              # Core skills (synced to ~/.agents/skills, etc.)
+├── adapters/            # Per-tool wiring (manifest.json + docs)
+├── scripts/             # sa CLI, sync, bootstrap, learning tools
+├── docs/                # Detailed guides
+├── rules/               # Cursor rule template
+└── team/                # Private team data (gitignored here — separate remote)
 ```
+
+Install path defaults to `~/.shared-agents`. Team learnings live at `team/learnings/` inside that directory.
 
 ---
 
-## Learnings
+## Documentation
 
-Team-Wissen liegt im **privaten Team-Repo** unter `$SHARED_AGENTS_HOME/team/` (nicht im Core). Setup: `sa bootstrap` · Doku: [docs/learnings.md](docs/learnings.md).
-
-### Datei-Format
-
-```markdown
----
-id: project-2026-05-short-slug
-project: my-project
-domain: [vue, laravel]
-tags: [dropdown, sidebar]
-versions: [laravel:11.31.0, vue:3.4.27, php:8.3.14]
-confidence: high          # high | medium | experimental
-source: task              # task | pr | incident | manual
-created: 2026-05-28
-author: name
----
-
-## Kontext
-Was ist passiert?
-
-## Erkenntnis
-Wiederverwendbare Erkenntnis.
-
-## Anwendung
-Konkrete Regel für nächstes Mal.
-
-## Links
-- path/to/file oder PR
-```
-
-**`versions:`** — bei stack-spezifischen Learnings Pflicht mit **voller Patch-Version** (`MAJOR.MINOR.PATCH`, z. B. `shopware:6.6.10`, nicht `6.6.x`). Vierter Segment `.0` darf weg (`6.6.10.0` → `6.6.10`). Nur `[]`, wenn kein Framework/Runtime relevant ist. Wird bei `sa review` automatisch in `index.yaml` übernommen; Wildcards (`x`) lösen eine Warnung aus.
-
-### Workflow: pending → approved
-
-Learnings haben **zwei Stufen**. Das ist der wichtigste Punkt:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. AGENT (nach großem Task + dein „Ja")                        │
-│    schreibt Entwurf →  team/learnings/pending/… + sa pending push  │
-│    Status: Entwurf — Team kann reviewen, Agents nutzen es noch nicht │
-└───────────────────────────────┬─────────────────────────────────┘
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. MENSCH (Review)                                              │
-│    • Inhalt prüfen (keine Secrets, stimmt es?)                  │
-│    • sa review [datei]  (verschiebt + index.yaml automatisch)   │
-│    • auto commit + push (nur Team-Repo unter team/)              │
-└───────────────────────────────┬─────────────────────────────────┘
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. TEAM (automatisch)                                           │
-│    sa sync → Learning in team/learnings/approved/               │
-│    Agents nutzen es bei passenden Tasks                         │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-| Ordner | Wer schreibt | Wer liest | Bedeutung |
-|--------|--------------|-----------|-----------|
-| **`pending/`** | Agent (nur nach deinem **Ja**) | Niemand als Wissensbasis | Vorschlag / Entwurf |
-| **`approved/`** | Mensch (via `sa review`) | Alle Agents | Offizielles Team-Wissen |
-
-**Merksatz:** Agent erstellt **Vorschläge**. Erst **`approved/`** macht daraus Team-Wahrheit.
-
-### Nach großen Tasks: immer fragen
-
-Der Agent **muss** nach nicht-trivialen Tasks fragen:
-
-> „Soll ich ein Team-Learning in shared-agents anlegen?"
-
-| Deine Antwort | Was passiert |
-|---------------|--------------|
-| **Ja** | Agent schreibt `pending/` + **`sa pending push`** (commit/push für Team-Review) |
-| **Nein** | Nichts |
-
-In **Cursor** zusätzlich: `stop`-Hook erinnert den Agenten am Session-Ende.  
-In **Zed/ andere CLIs**: steht in globaler `AGENTS.md` (via `install.sh`).
-
-Der Agent schreibt **nie direkt** nach `approved/`.
-
-**Pflicht-Pfad für Agenten:** Learnings unter `$SHARED_AGENTS_HOME/team/learnings/` (privates Team-Repo) — `sa pending path <slug>` (siehe [Canonical Paths](#canonical-paths), [docs/learnings.md](docs/learnings.md)).
-
-### Review (Mensch, ~30 Sek)
-
-```bash
-# Interaktiv: pending anzeigen, bestätigen, verschieben + index.yaml
-sa review
-
-# Bestimmte Datei (Slug reicht — Pfad wird unter $SHARED_AGENTS_HOME aufgelöst)
-sa review 2026-05-28-sidebar-radix.md
-
-# Nur anzeigen
-sa review list
-sa review dry 2026-05-28-sidebar-radix.md
-
-# Domain überschreiben (Default: erstes Feld aus frontmatter domain)
-sa review 2026-05-28-sidebar-radix.md --domain vue
-```
-
-Git-Commit und Push nach `sa review` erfolgen automatisch im **Team-Repo** (`team/`, privates Remote). Override: `--no-git`.
-
-**Hinweis:** Push geht nach `team/`-`origin`, nicht ins öffentliche Core-Repo. Core-`origin` nur für Tool-Updates.
-
-Low-level (direkt):
-
-```bash
-~/.shared-agents/scripts/review-learning.sh --list
-```
-
-Das Command:
-
-1. zeigt den Entwurf
-2. fragt `Approve and promote? [y/N]`
-3. verschiebt nach `team/learnings/approved/by-domain/<domain>/`
-4. trägt `team/learnings/index.yaml` automatisch ein (aus Frontmatter)
-5. **committet und pusht** im Team-Repo (`--no-git` zum Überspringen)
-
-Danach ist das Learning im Remote — Team sync pull.
-
-### Unapprove (aus approved entfernen)
-
-```bash
-sa unapprove list
-sa unapprove fantasy-2026-06-dragon-cache-invalidation
-# Wizard: [1] Löschen  [2] Nach pending/  [q] Abbrechen
-```
-
-Entfernt Eintrag aus `index.yaml`, dann Wizard (löschen vs. pending), commit + push wie bei `sa review`.
-
-### Deinstallieren
-
-```bash
-sa uninstall              # Bestätigung: y/N (überall im Terminal)
-shared-agents uninstall   # gleich
-sa uninstall --keep-repo  # nur Adapter; Core + team/ bleiben
-./uninstall.sh            # alternativ im Repo-Root
-```
-
-`promote-learning.sh` bleibt als Kurzform (`-y`, ohne Preview) — bevorzugt: `review-learning.sh`.
-
-### Format
-
-Team-Skills in `skills/`. `install.sh` symlinkt nach:
-
-| Skill | Zweck |
+| Topic | Guide |
 |-------|--------|
-| `shared-agents-knowledge` | Sync, Learnings, Workflow |
-| `capture-learning` | Entwürfe in `pending/` |
-| `sa-cli` | CLI komplett — ergänzt `sa help` |
-
-Symlinks:
-
-| Pfad | Tools |
-|------|-------|
-| `~/.agents/skills/` | Cursor, Zed, skills MCP |
-| `~/.claude/skills/` | Claude Code |
-| `~/.codex/skills/` | Codex CLI |
-| `~/.config/opencode/skills/` | OpenCode |
-| `~/.gemini/skills/` | Gemini CLI |
-
-Skills liegen im Repo unter `skills/` — `install.sh` symlinkt sie nach `~/.agents/skills/` usw.  
-([skills.sh](https://skills.sh) is GitHub-centric; this repo is on GitHub — clone + `install.sh` is enough.)
+| Learnings workflow | [docs/learnings.md](docs/learnings.md) |
+| Paths agents must use | [docs/canonical-paths.md](docs/canonical-paths.md) |
+| Migrating legacy `learnings/` | [docs/migration-team-data.md](docs/migration-team-data.md) |
+| Supported tools | [adapters/manifest.json](adapters/manifest.json) |
+| CLI reference (full) | Skill `sa-cli` in [skills/sa-cli/SKILL.md](skills/sa-cli/SKILL.md) |
 
 ---
 
-## Shared MCPs (geplant)
+## Contributing
 
-Team-weite **MCP-Server** (Cursor `mcp.json`, später weitere IDEs) im gleichen Stil wie Adapter: **Manifest + lokale Overrides + Installer** — nicht als kopiertes JSON mit SSH/Docker-Details im Git.
+Contributions to **Core** (adapters, CLI, docs, shared skills) are welcome. Team learnings belong in your **private team repo**, not in pull requests here.
 
-| Dokument | Inhalt |
-|----------|--------|
-| [docs/shared-mcps.md](docs/shared-mcps.md) | Design, Ebenen, Merge-Strategie, Migration, Sicherheit |
-| [mcps/README.md](mcps/README.md) | Kurzreferenz + Status |
-| [mcps/manifest.example.json](mcps/manifest.example.json) | Schema-Referenz (Browser Tools, SF-Spider-Generator) |
-| [mcps/mcps.local.yaml.example](mcps/mcps.local.yaml.example) | Vorlage für `~/.shared-agents/mcps.local.yaml` (gitignored) |
-
-**Status:** Entwurf — `install-mcps.py` noch nicht implementiert. Team-Server sollen Prefix `sa-` nutzen; private MCP-Einträge bleiben beim Re-Install erhalten.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## Canonical Paths
+## License
 
-**Pflicht für Agenten:** Dateien an feste Pfade unter `$SHARED_AGENTS_HOME` — nicht an den geöffneten Workspace.
-
-| Dokument | Inhalt |
-|----------|--------|
-| [docs/canonical-paths.md](docs/canonical-paths.md) | Learnings, Skills, Sync — absolut vs. Workspace |
-| [docs/learnings.md](docs/learnings.md) | Learnings-Workflow (Team-Repo) |
-| [docs/migration-team-data.md](docs/migration-team-data.md) | Alt-`learnings/` → `team/` · `sa team migrate` |
-| `scripts/learning-path.sh` | Gibt Pfad für pending-Learning aus |
-
-Learnings schreiben: `sa pending path <slug>` — Details in [docs/canonical-paths.md](docs/canonical-paths.md) und [docs/learnings.md](docs/learnings.md).
+[MIT](LICENSE) — maintained by [netgrade-digital](https://github.com/netgrade-digital).
 
 ---
 
-## Headless / CI
+## Star History
 
-```bash
-export SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
-
-# Agent immer über Entrypoint starten
-"$SHARED_AGENTS_HOME/scripts/agent-entrypoint.sh" node run-agent.js
-
-# Oder in Docker
-ENV SHARED_AGENTS_HOME=/data/shared-agents
-ENTRYPOINT ["/data/shared-agents/scripts/agent-entrypoint.sh"]
-```
-
-Details: [`adapters/openclaw/README.md`](adapters/openclaw/README.md)
-
----
-
-## Neues Tool hinzufügen
-
-1. Eintrag in [`adapters/manifest.json`](adapters/manifest.json):
-   - `detect`, `detect_bins`, `agents_md` und/oder `sync`
-2. `adapters/<tool-id>/README.md` anlegen
-3. Testen:
-
-```bash
-sa install --dry-run
-sa install
-sa check
-# oder: ./install.sh …
-```
-
-Siehe [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Unbekanntes CLI ohne Manifest: [`adapters/generic/instructions.md`](adapters/generic/instructions.md) in globale `AGENTS.md` / `CLAUDE.md` kopieren.
-
----
-
-## Scope: global vs. projekt
-
-| Scope | Ort | Inhalt |
-|-------|-----|--------|
-| Team-weit | `~/.shared-agents` | Skills, Learnings, Adapter |
-| Projekt | `.shared-agents/` Submodule | Optional, gleicher Inhalt |
-| Projekt-Regeln | Repo-`AGENTS.md`, `.cursor/rules/` | Nur dieses Projekt |
-
-Team-Wissen global halten. Projekt-Regeln ergänzen, ersetzen nicht.
-
----
-
-## Troubleshooting
-
-| Problem | Lösung |
-|---------|--------|
-| Tool in Check = `missing_tool` | CLI installieren, dann `sa install` |
-| Tool = `not_configured` | `sa install` ausführen |
-| Sync blockiert (Zed etc.) | `agent.tool_permissions.default: "allow"` oder einmal freigeben |
-| Veraltete Learnings | `sa check` → Hook/AGENTS.md prüfen; `sa sync` testen |
-| Learning fehlt beim Team | In `approved/`? `index.yaml`? Kollege hat `sa sync`? |
-| `sa check --json` / `install.sh --check --json` | Exakte Pfade / Status pro Tool |
-| `sa` unbekannt nach Install | `source ~/.bashrc` oder neues Terminal; dann `sa` für Hilfe |
-| Deinstall | `sa uninstall` — danach neues Terminal (`exec $SHELL`) |
-
----
-
-## Environment
-
-| Variable | Default | Beschreibung |
-|----------|---------|--------------|
-| `SHARED_AGENTS_HOME` | `~/.shared-agents` | Lokaler Repo-Pfad |
-| `SHARED_AGENTS_GIT_REMOTE` | `git@github.com:netgrade-digital/shared-agents.git` | Core clone (`bootstrap` / `sa install`) |
-| `SHARED_AGENTS_CORE_REMOTE` | wie `SHARED_AGENTS_GIT_REMOTE` | Öffentliches Core-Repo |
-| `config.local.yaml` | — | Lokal: `team.remote` für privates Learnings-Repo (gitignored) |
-| `SA_WIZARD_PLAIN` | — | `1` = Text-Wizard statt TUI |
-| `CODEX_HOME` | — | Optional: Codex liest auch `$CODEX_HOME/AGENTS.md` |
-| `SHELL_RC` | `~/.bashrc` | Shell-RC für Wizard / `install.sh` |
-
----
-
-## Open Source
-
-- **Lizenz:** [MIT](LICENSE)
-- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
-- **Design:** Manifest-driven, Python-Stdlib-only Installer, idempotent, keine Netzwerk-Calls
-- **Version:** CLI `sa` v0.3.1 · Installer `v0.1.0` (`install.sh` / `install-adapters.py --version`)
-
-Repo: [github.com/netgrade-digital/shared-agents](https://github.com/netgrade-digital/shared-agents) (branch `main`).
+<a href="https://www.star-history.com/?repos=netgrade-digital%2Fshared-agents&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=netgrade-digital/shared-agents&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=netgrade-digital/shared-agents&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=netgrade-digital/shared-agents&type=date&legend=top-left" />
+ </picture>
+</a>

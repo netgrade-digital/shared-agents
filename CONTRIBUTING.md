@@ -1,85 +1,133 @@
-# Contributing
+# Contributing to Shared Agents
 
-Thanks for helping make shared-agents open-source ready.
+Thank you for helping improve the **Core** open-source project. This document covers what belongs here, how to develop locally, and how to submit changes.
 
-## CLI
+---
 
-Team shell entry point: **`sa`** (aliases: `shared-agents`, `sharedagents`).  
-**`sa`** without arguments = **`sa help`**. Full guide: skill **`sa-cli`** in `skills/sa-cli/SKILL.md`.
+## Core vs team data
+
+| Contribute here (Core PR) | Do **not** commit to Core |
+|---------------------------|---------------------------|
+| `scripts/`, `sa` CLI | `team/learnings/` |
+| `adapters/`, `adapters/manifest.json` | `config.local.yaml` |
+| `skills/` (shared, OSS-safe) | Secrets, customer URLs, internal runbooks |
+| `docs/`, `rules/` | Private team skills with sensitive content |
+
+**Learnings** and optional **team-only skills** live in a **separate private Git repository**, mounted at `$SHARED_AGENTS_HOME/team/`. Configure it during `sa bootstrap` or in `config.local.yaml` (`team.remote`).
+
+---
+
+## Development setup
+
+Clone and install into your home directory (or use an existing bootstrap):
 
 ```bash
-./sa install --dry-run
+git clone git@github.com:netgrade-digital/shared-agents.git
+cd shared-agents
+./sa install --home "$HOME/.shared-agents"
+source ~/.bashrc
+```
+
+Work on the clone, then test changes:
+
+```bash
+sa install --dry-run
 sa install
 sa check
 ```
 
-Low-level equivalent: `./install.sh` (same options, forwarded by `sa install`).
+Run scripts directly when debugging: `python3 scripts/install-adapters.py check ~/.shared-agents`
 
-## Adding support for a new AI CLI
+---
 
-1. **Detect** — add entry to [`adapters/manifest.json`](adapters/manifest.json):
-   - `detect`: config directory path (e.g. `~/.mycli`)
-   - `detect_bins`: optional CLI binary names on `$PATH`
-   - `agents_md` or `sync` hook fields (see existing tools)
+## Pull requests
 
-2. **Document** — add `adapters/<tool-id>/README.md` (setup via **`sa install`**)
+1. **Branch** from `main` with a focused change (one feature or fix per PR).
+2. **Test** with `sa install` and `sa check` on at least one supported tool you have installed.
+3. **Describe** what changed and why; include `sa check` output if you touched adapters.
+4. **No secrets** — no tokens, private URLs, or team learnings in Core.
+5. **CLI changes** — update `scripts/sa` and keep `sa help` accurate; extend [skills/sa-cli/SKILL.md](skills/sa-cli/SKILL.md) when behavior is non-obvious.
 
-3. **Test**:
+We use fast-forward merges on `main`. Keep PRs small and reviewable.
+
+---
+
+## Adding support for a new AI tool
+
+1. Add an entry to [`adapters/manifest.json`](adapters/manifest.json):
+   - `detect` — config directory (e.g. `~/.cursor`)
+   - `detect_bins` — optional CLI names on `$PATH`
+   - `agents_md` and/or `sync` — see existing tools
+
+2. Add `adapters/<tool-id>/README.md` with setup notes.
+
+3. Verify:
+
    ```bash
    sa install --dry-run
    sa install
    sa check
-   # or: ./install.sh --dry-run && ./install.sh && ./install.sh --check
    ```
 
-4. **Pull request** — include sample `sa check` (or `install.sh --check`) output
+4. Open a PR with sample `sa check` output.
 
-## Manifest schema
+### Manifest fields
 
 | Field | Purpose |
 |-------|---------|
-| `detect` | Config dir; tool considered installed if this exists |
-| `detect_bins` | Extra detection via binary on PATH |
-| `agents_md` | Global instructions file (merged with marker block) |
-| `sync` | Hook-based sync (Cursor, Claude Code) |
+| `detect` | Config dir exists → tool considered **installed** |
+| `detect_bins` | Binary on `$PATH` → also counts as installed |
+| `agents_md` | Global instructions file (marker block merged on install) |
+| `sync` | Hook-based sync (e.g. Cursor, Claude Code) |
 
-## Check vs install
+**Installed** ≠ **configured**. `sa install` only configures tools that are detected as installed. `sa check` reports the full matrix.
 
-- **`sa install`** — only configures tools where `installed == true`
-- **`sa check`** — reports all tools: missing / not configured / ok
+For tools without a manifest entry, users can copy [adapters/generic/instructions.md](adapters/generic/instructions.md) into their global agent config.
 
-Installed = config dir exists **or** any `detect_bins` binary found.
+---
 
-Configured = shared-agents marker or hook present in expected paths.
+## Adding or changing Core skills
 
-## Canonical paths (mandatory for agents)
+- Place skills under `skills/<name>/SKILL.md`.
+- Keep content **safe for a public repo** (no credentials, no client-specific paths).
+- After adding a skill, run `sa install` so symlinks under `~/.agents/skills/` (and tool-specific paths) are updated.
+- If the skill changes agent workflow (paths, sync, learnings), update [rules/shared-agents-knowledge.mdc](rules/shared-agents-knowledge.mdc) and [skills/shared-agents-knowledge/SKILL.md](skills/shared-agents-knowledge/SKILL.md) when relevant.
 
-All team files live under `$SHARED_AGENTS_HOME` (default `~/.shared-agents`), **not** in the Cursor workspace or customer project unless that path equals `$SHARED_AGENTS_HOME`.
+---
 
-| Action | Path / command |
-|--------|-----------------|
-| Write learning draft | `sa pending path <slug>` → usually `team/learnings/pending/…` |
-| Publish draft | `sa pending push <file>` |
-| Read team knowledge | `$SHARED_AGENTS_HOME/team/learnings/approved/` + `index.yaml` |
-| Promote to approved | `sa review <file>` (human only) |
-| Resolve path | `sa pending path <slug>` or `scripts/learning-path.sh` |
+## Learnings (team repo, not Core)
 
-Full spec: [docs/canonical-paths.md](docs/canonical-paths.md). Update `capture-learning`, `sa-cli`, and `rules/shared-agents-knowledge.mdc` when changing this contract.
+Agents draft learnings in `team/learnings/pending/` after explicit user approval. Humans promote them with `sa review` into `team/learnings/approved/`.
+
+Contributors documenting this flow should edit [docs/learnings.md](docs/learnings.md) and [docs/canonical-paths.md](docs/canonical-paths.md), not put learning files in Core PRs.
+
+---
 
 ## Shared MCPs (planned)
 
-MCP server wiring is documented in [docs/shared-mcps.md](docs/shared-mcps.md). When implementing `install-mcps.py`:
+MCP wiring is specced in [docs/shared-mcps.md](docs/shared-mcps.md). When implemented:
 
-- Follow the same patterns as `install-adapters.py` (stdlib, idempotent, `--check`, `--dry-run`)
-- Wire through **`sa install`** / `install.sh` (not a separate legacy alias)
-- Never commit `mcps.local.yaml` or secrets in the manifest
-- Use managed prefix `sa-` for team servers; leave user keys untouched
+- Mirror `install-adapters.py` patterns (stdlib only, idempotent, `--check`, `--dry-run`)
+- Integrate via `sa install` / `install.sh`
+- Never commit `mcps.local.yaml` or secrets
+- Use managed prefix `sa-` for team servers
 
 Reference: [mcps/manifest.example.json](mcps/manifest.example.json)
 
-## Code style
+---
 
-- Installer: Python 3 stdlib only (no pip deps)
-- Shell: `bash`, `set -euo pipefail`
-- Idempotent: re-running `sa install` must be safe
-- CLI: extend `scripts/sa` — keep **`sa help`** in sync with new commands
+## Code guidelines
+
+| Area | Rule |
+|------|------|
+| Installer Python | **stdlib only** — no pip dependencies |
+| Shell | `bash`, `set -euo pipefail` where applicable |
+| Idempotency | Re-running `sa install` must be safe |
+| Ctrl+C | Interactive scripts use `UserCancelled` / `run_cli_main` from `sa_ui.py` |
+| Paths | Team files under `$SHARED_AGENTS_HOME` — see [docs/canonical-paths.md](docs/canonical-paths.md) |
+
+---
+
+## Questions
+
+Open a [GitHub issue](https://github.com/netgrade-digital/shared-agents/issues) for bugs or design questions. For day-to-day CLI usage, run `sa help` or read the `sa-cli` skill.
