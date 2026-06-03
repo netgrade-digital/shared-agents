@@ -311,18 +311,18 @@ else
 
 Install OK.
 
-CLI:  sa help   (auch: shared-agents help · sharedagents help)
+CLI:  sa help   (also: shared-agents help · sharedagents help)
 
-Wichtig — Shell neu laden:
+Reload your shell:
   source $SHELL_RC
 
-Befehle danach:
-  sa sync              Neueste Learnings pullen
-  sa review            Learning reviewen / approven
-  sa pending push      Pending ans Team pushen
-  sa unapprove         Learning aus approved entfernen
-  sa check             Adapter-Status
-  sa uninstall         Deinstallieren (y/N)
+Next commands:
+  sa sync              Pull Core + team learnings
+  sa review            Review / approve learnings
+  sa pending push      Push pending for team review
+  sa team verify       Validate team repo layout
+  sa check             Adapter status
+  sa uninstall         Uninstall (y/N)
 
 Docs:     $SHARED_AGENTS_HOME/README.md
 Check:    sa check

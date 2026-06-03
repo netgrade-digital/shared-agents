@@ -267,10 +267,11 @@ def git_publish(
     dry_run: bool = False,
     no_git: bool = False,
 ) -> int:
-    from sa_config import learnings_prefix_for_git
+    from sa_config import learnings_label, learnings_prefix_for_git
 
     repo = git_repo_home(home)
     prefix = learnings_prefix_for_git(home)
+    label = learnings_label(home)
 
     if no_git:
         git_skip_no_git()
@@ -297,7 +298,7 @@ def git_publish(
     run_git(repo, ["add", f"{prefix}/"], check=True)
     staged = run_git(repo, ["diff", "--cached", "--quiet"], check=False)
     if staged.returncode == 0:
-        git_nothing_staged("Nothing staged under learnings/ — skipped commit/push.")
+        git_nothing_staged(f"Nothing staged under {label} — skipped commit/push.")
         return 0
 
     run_git(repo, ["commit", "-m", commit_msg], check=True)
@@ -380,6 +381,9 @@ def main() -> int:
     args = parser.parse_args()
 
     home = shared_home()
+    from sa_config import learnings_label
+
+    label = learnings_label(home)
 
     if args.list:
         entries = index_entries(learnings_base(home) / "index.yaml")
@@ -415,7 +419,7 @@ def main() -> int:
         to_pending = False
     elif args.dry_run:
         to_pending = False
-        say_warn("[dry-run] Wizard würde fragen: [1] Löschen  [2] Nach pending/")
+        say_warn("[dry-run] Wizard would ask: [1] Delete  [2] Move to pending/")
     elif args.yes:
         to_pending = False
     else:
@@ -426,9 +430,9 @@ def main() -> int:
         to_pending = disposition == "pending"
 
     if to_pending:
-        arrow_line(f"learnings/pending/{approved_file.name}")
+        arrow_line(f"{label}pending/{approved_file.name}")
     else:
-        arrow_line("Datei löschen")
+        arrow_line("Delete file")
 
     pending_dest = unapprove(
         home,

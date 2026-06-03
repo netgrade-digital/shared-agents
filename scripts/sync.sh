@@ -89,7 +89,13 @@ case "$ACTION" in
     fi
     ;;
   status)
+    echo "core ($SHARED_AGENTS_HOME):"
     git -C "$SHARED_AGENTS_HOME" status -sb
+    if [[ -d "$SHARED_AGENTS_HOME/team/.git" ]]; then
+      echo ""
+      echo "team ($SHARED_AGENTS_HOME/team):"
+      git -C "$SHARED_AGENTS_HOME/team" status -sb
+    fi
     ;;
   *)
     python3 "$(_sa_ui_py)" --error "Usage: sync.sh [pull|status] [--quiet]" 2>/dev/null || {

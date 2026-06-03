@@ -1,18 +1,18 @@
 # Shared Agents
 
-Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Markdown + Git), automatischer Sync, manifest-basierte Adapter für gängige IDEs und CLIs.
+Team-wide **skills and learnings** for AI assistants. Tool-neutral (Markdown + Git), automatic sync, manifest-based adapters for common IDEs and CLIs.
 
-> **Ein Repo · Ein Pfad · Ein Format**  
-> Remote: [bitbucket.org/netgrade/shared-agents](https://bitbucket.org/netgrade/shared-agents/src/main/)  
-> Standardpfad: `~/.shared-agents` · Env: `$SHARED_AGENTS_HOME`
+> **Core (OSS) + private team repo · One install path · One learning format**  
+> Core remote: [bitbucket.org/netgrade/shared-agents](https://bitbucket.org/netgrade/shared-agents/src/main/)  
+> Default path: `~/.shared-agents` · Env: `$SHARED_AGENTS_HOME` · Team data: `~/.shared-agents/team/`
 
 ---
 
-## Inhalt
+## Contents
 
-- [Konzept](#konzept)
+- [Concept](#concept)
 - [Quick Start](#quick-start)
-- [Befehlsübersicht](#befehlsübersicht)
+- [Command reference](#command-reference)
 - [Install & Check](#install--check)
 - [Unterstützte Tools](#unterstützte-tools)
 - [Automatischer Sync](#automatischer-sync)
@@ -29,47 +29,53 @@ Team-weites **Skills- und Learnings-Repo** für KI-Assistenten. Tool-neutral (Ma
 
 ---
 
-## Konzept
+## Concept
 
-| Was | Rolle | Analogie |
-|-----|-------|----------|
-| **Skills** | Stabile Workflows („So machen wir X") | Firmen-Handbuch |
-| **Learnings** | Wiederverwendbares Wissen („Y bricht wegen Z") | Privates Team-Repo (`team/`) |
+| What | Role | Analogy |
+|------|------|---------|
+| **Skills** | Stable workflows (“how we do X”) | Company playbook |
+| **Learnings** | Reusable knowledge (“Y breaks because of Z”) | Private team repo (`team/`) |
 
 ```
-                    ┌─────────────────────────┐
-                    │  Bitbucket (Remote)     │
-                    │  netgrade/shared-agents │
-                    └───────────┬─────────────┘
-                                │ git pull / push (PR)
-          ┌─────────────────────┼─────────────────────┐
-          ▼                     ▼                     ▼
-   ~/.shared-agents       ~/.shared-agents       ~/.shared-agents
-   + Cursor               + Zed                  + OpenClaw
-   + Claude Code          + Codex                + …
+     ┌──────────────────────┐         ┌──────────────────────┐
+     │ Core (OSS remote)    │         │ Team (private remote) │
+     │ shared-agents        │         │ your-team-data        │
+     └──────────┬───────────┘         └──────────┬───────────┘
+                │ sa sync (ff-only)             │
+                ▼                               ▼
+         ~/.shared-agents                 ~/.shared-agents/team/
+         skills · adapters · scripts      team/learnings · team/skills
+                │                               │
+                └───────────┬───────────────────┘
+                            ▼
+              Cursor · Claude Code · Zed · Codex · …
 ```
 
-- **Ein Repo** = Single Source of Truth für Skills + Learnings
-- **Lokal** = `$SHARED_AGENTS_HOME` auf jedem Rechner / Container
-- **Adapter** = dünne Schicht pro IDE/CLI (Hooks, AGENTS.md, Symlinks)
-- **Sync** = automatisch — kein manuelles `git pull` im Alltag
+- **Core** = OSS tooling, adapters, shared skills (`sa sync` pulls first)
+- **Team** = private learnings + optional team-only skills (`sa sync` pulls second)
+- **Local** = `$SHARED_AGENTS_HOME` on each machine / container
+- **Adapters** = thin layer per IDE/CLI (hooks, AGENTS.md, symlinks)
+- **Sync** = automatic — no manual `git pull` in daily use
+
+Solo mode (no team remote): learnings stay under `core/learnings/` until you run `sa bootstrap` with a team URL.
 
 ---
 
 ## Quick Start
 
 ```bash
-# Empfohlen — ein Befehl (Bootstrap-Wizard: Core + Team-Repo + Adapter)
+# Recommended — one command (bootstrap wizard: Core + team repo + adapters)
 curl -fsSL https://bitbucket.org/netgrade/shared-agents/raw/main/scripts/bootstrap.sh | bash
-# Alternativ nach Clone:
+# Or after clone:
 ./scripts/bootstrap.sh
-# oder: sa bootstrap
+# or: sa bootstrap
 
 source ~/.bashrc
-sa                  # Hilfe-Übersicht (gleich wie sa help)
+sa                  # help overview (same as sa help)
+sa team verify      # optional sanity check after bootstrap
 ```
 
-**Klassisch (nur Core klonen, dann Wizard):**
+**Classic (clone Core only, then wizard — team URL optional in wizard):**
 
 ```bash
 git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
@@ -78,63 +84,63 @@ cd ~/.shared-agents
 source ~/.bashrc
 ```
 
-**Dev-Install** (lokaler Ordner, ohne Git-Remote):
+**Dev install** (local folder, no remote):
 
 ```bash
 cd /path/to/shared-agents
 ./sa install --home "$HOME/.shared-agents"
-# oder: ./install.sh --home "$HOME/.shared-agents"
+# or: ./install.sh --home "$HOME/.shared-agents"
 ```
 
-**Bootstrap ohne vorherigen Clone** (frisches System oder nur Dev-Checkout):
+**Wizard before clone** (fresh machine, dev checkout only):
 
 ```bash
-cd /path/to/shared-agents   # Repo mit ./sa
-./sa install                # Wizard zuerst — bei Abbruch kein ~/.shared-agents
+cd /path/to/shared-agents   # repo with ./sa
+./sa install                # wizard first — cancel leaves no ~/.shared-agents
 source ~/.bashrc
 ```
 
-**Neues KI-Tool installiert?** → `sa install` erneut ausführen.
+**New AI tool installed?** → run **`sa install`** again.
 
 ---
 
-## Befehlsübersicht
+## Command reference
 
-Nach `sa install` und `source ~/.bashrc` (oder neuem Terminal):
+After `sa install` and `source ~/.bashrc` (or a new terminal):
 
 ```bash
-sa                   # Hilfe-Übersicht (Default ohne Argument)
-sa help              # explizit — gleiche Ausgabe
-shared-agents sync   # gleich wie sa sync
+sa                   # help overview (default)
+sa help              # explicit — same output
+shared-agents sync   # same as sa sync
 sa review list
 sa review
 ```
 
-CLI: [`scripts/sa`](scripts/sa) · Aufruf: **`sa`** · **`shared-agents`** · **`sharedagents`** · **`./sa`** im Repo-Root
+CLI: [`scripts/sa`](scripts/sa) · invoke: **`sa`** · **`shared-agents`** · **`sharedagents`** · **`./sa`** at repo root
 
 ### `sa` CLI
 
-| Befehl | Beschreibung |
-|--------|--------------|
-| `sa` | Hilfe-Übersicht (Default ohne Argument) |
-| `sa help` | Wie `sa` — alle Befehle mit Erklärung |
-| `sa sync` | Neueste Learnings pullen |
-| `sa status` | Offene Punkte (Review, Skills, Adapter) |
-| `sa check` | Adapter-Status |
-| `sa bootstrap` | Voller Erst-Setup (Core + privates Team-Repo + Adapter) |
-| `sa install` | Setup-Wizard (TTY) — Pfad, Team-Repo, Tools, Shell |
-| `sa install --non-interactive` | Ohne Wizard — alle erkannten Tools |
-| `sa uninstall` | Deinstallieren (y/N) |
-| `sa review list` | Pending-Learnings |
-| `sa pending push [datei]` | Pending commit + push (Team-Review) |
-| `sa review [datei]` | Review + approve + commit/push |
-| `sa review dry [datei]` | Dry-run |
-| `sa unapprove list` | Approved-Learnings |
-| `sa unapprove [id\|datei]` | Entfernen (Wizard: löschen/pending) |
-| `sa pending path [slug]` | Canonical pending-Pfad |
-| `sa team verify` | Team-Repo prüfen (git, index.yaml, Ordner) |
-| `sa team migrate` | Alt-`learnings/` → `team/learnings/` migrieren |
-| `sa version` | CLI-Version |
+| Command | Description |
+|---------|-------------|
+| `sa` | Help overview (default) |
+| `sa help` | Same as `sa` — all commands explained |
+| `sa sync` | Pull Core + team learnings |
+| `sa status` | Open items (review, skills, adapters, team) |
+| `sa check` | Adapter status (+ team setup warnings) |
+| `sa bootstrap` | Full first-time setup (Core + private team repo + adapters) |
+| `sa install` | Setup wizard (TTY) — path, team repo, tools, shell |
+| `sa install --non-interactive` | No wizard — all detected tools |
+| `sa uninstall` | Uninstall (y/N) |
+| `sa review list` | List pending learnings |
+| `sa pending push [file]` | Commit + push pending (team review) |
+| `sa review [file]` | Review + approve + commit/push |
+| `sa review dry [file]` | Dry-run |
+| `sa unapprove list` | List approved learnings |
+| `sa unapprove [id\|file]` | Remove (wizard: delete / pending) |
+| `sa pending path [slug]` | Canonical pending path |
+| `sa team verify` | Validate team repo (git, index.yaml, folders) |
+| `sa team migrate` | Move legacy `learnings/` → `team/learnings/` |
+| `sa version` | CLI version |
 
 **Flags:** `--no-git` · `-y` / `--yes` · `--dry-run` · `sa unapprove --to-pending` / `--delete`
 
@@ -153,8 +159,8 @@ CLI: [`scripts/sa`](scripts/sa) · Aufruf: **`sa`** · **`shared-agents`** · **
 
 | Script | Beschreibung |
 |--------|--------------|
-| `scripts/sync.sh pull` | Git pull (ff-only, ignoriert globales rebase) |
-| `scripts/sync.sh status` | Kurzer Git-Status |
+| `scripts/sync.sh pull` | Core + Team pull (ff-only, ignoriert globales rebase) |
+| `scripts/sync.sh status` | Git-Status Core + Team |
 | `scripts/publish-pending-learning.sh` | Pending commit + push (`sa pending push`) |
 | `scripts/review-learning.sh` | Wie `sa review` |
 | `scripts/unapprove-learning.sh` | Wie `sa unapprove` |
@@ -331,9 +337,10 @@ Session / Thread start
 
 | Script | Aufgerufen von | Verhalten |
 |--------|----------------|-----------|
-| `sync.sh pull` | Hooks, Agent | `git pull --ff-only` |
-| `session-sync.sh` | Cursor/Claude Hook | fail-open (blockiert IDE nie) |
-| `agent-entrypoint.sh` | Headless/CI | sync → exec |
+| `sync.sh pull` | Hooks, Agent, `sa sync` | Core pull + `team/` pull (ff-only) |
+| `sync.sh status` | Debug | Git-Status Core + Team |
+| `session-sync.sh` | Cursor/Claude Hook | `sync.sh pull --quiet`, fail-open |
+| `agent-entrypoint.sh` | Headless/CI | `sync.sh pull` → exec |
 
 **Im Alltag kein manuelles Syncen.**
 

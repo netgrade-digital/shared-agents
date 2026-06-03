@@ -11,7 +11,7 @@ Re-run **`sa install`** to merge safely · Status: **`sa check`**
 | Session hook | `~/.claude/settings.json` → `hooks.SessionStart` |
 | Skills | Symlinked to `~/.claude/skills/` |
 
-Hook runs `adapters/claude-code/session-sync.sh` → `git pull` on every session start.
+Hook runs `adapters/claude-code/session-sync.sh` → `sync.sh pull` (Core + Team) on every session start.
 
 ## Manual hook command
 

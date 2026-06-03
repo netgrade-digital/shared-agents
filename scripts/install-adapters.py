@@ -416,6 +416,7 @@ def run_check(repo_home: Path, home: str, as_json: bool) -> int:
         print(bold("\nTeam data:"))
         for issue in team_issues:
             print(f"  {yellow('!')} {plain(issue)}")
+        print(plain("  → sa team verify · sa team migrate · docs/migration-team-data.md"))
 
     needs_install = any(r.installed and not r.configured for r in reports)
     missing = sum(1 for r in reports if r.status == Status.MISSING_TOOL)

@@ -158,6 +158,15 @@ def learnings_prefix_for_git(core: Path | None = None) -> str:
         return "learnings"
 
 
+def learnings_label(core: Path | None = None) -> str:
+    """Human-readable learnings path for CLI messages (from $SHARED_AGENTS_HOME)."""
+    root = core or core_home()
+    prefix = learnings_prefix_for_git(root)
+    if uses_team_data(root):
+        return f"team/{prefix}/"
+    return f"{prefix}/"
+
+
 def check_team_setup(core: Path | None = None) -> list[str]:
     """Warnings for team/ layout, config, and legacy learnings/ in core home."""
     root = core or core_home()
@@ -173,7 +182,7 @@ def check_team_setup(core: Path | None = None) -> list[str]:
             )
         elif not (td / ".git").is_dir():
             issues.append(
-                "team.remote set but team/ is not a git repo — run: sa bootstrap"
+                "team.remote set but team/ is not a git repository — run: sa bootstrap"
             )
 
     if legacy.is_dir():
@@ -184,7 +193,7 @@ def check_team_setup(core: Path | None = None) -> list[str]:
             has_index_entries = True
         if legacy_md or has_index_entries:
             issues.append(
-                "Legacy learnings/ in $SHARED_AGENTS_HOME — run: sa team migrate "
+                "Legacy learnings/ under $SHARED_AGENTS_HOME — run: sa team migrate "
                 "(see docs/migration-team-data.md)"
             )
     return issues

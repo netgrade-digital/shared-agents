@@ -369,10 +369,11 @@ def git_publish(
     dry_run: bool = False,
     no_git: bool = False,
 ) -> int:
-    from sa_config import learnings_prefix_for_git
+    from sa_config import learnings_label, learnings_prefix_for_git
 
     repo = git_home(home)
     prefix = learnings_prefix_for_git(home)
+    label = learnings_label(home)
 
     if no_git:
         git_skip_no_git()
@@ -418,7 +419,7 @@ def git_publish(
 
     staged = run_git(repo, ["diff", "--cached", "--quiet"], check=False)
     if staged.returncode == 0:
-        git_nothing_staged("Nothing staged under learnings/ — skipped commit/push.")
+        git_nothing_staged(f"Nothing staged under {label} — skipped commit/push.")
         return 0
 
     run_git(repo, ["commit", "-m", commit_msg], check=True)

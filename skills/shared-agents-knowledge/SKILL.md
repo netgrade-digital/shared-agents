@@ -18,6 +18,8 @@ Path: `$SHARED_AGENTS_HOME` (default: `~/.shared-agents`)
 "${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/scripts/sync.sh" pull
 ```
 
+Pulls **Core** (`~/.shared-agents`) and **Team** (`~/.shared-agents/team/`) when configured.
+
 - Do not ask the user to sync manually.
 - Do not skip because "probably up to date".
 - Offline/errors: continue with local files; note only if learnings may be stale.

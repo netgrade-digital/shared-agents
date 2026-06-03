@@ -122,17 +122,17 @@ def collect(home: Path) -> StatusReport:
 def format_human(report: StatusReport) -> str:
     lines: list[str] = []
     if not report.has_action:
-        return green("shared-agents: alles erledigt ✓")
+        return green("shared-agents: all clear ✓")
 
-    lines.append(bold(cyan("shared-agents — Offene Punkte")))
+    lines.append(bold(cyan("shared-agents — open items")))
     lines.append("")
 
     if report.pending_learnings:
-        lines.append(magenta(f"Learnings zum Review ({len(report.pending_learnings)}):"))
+        lines.append(magenta(f"Learnings to review ({len(report.pending_learnings)}):"))
         for name in report.pending_learnings:
-            suffix = plain(" (noch nicht gepusht)") if name in report.pending_unpublished else ""
+            suffix = plain(" (not pushed yet)") if name in report.pending_unpublished else ""
             lines.append(f"  • {yellow(name)}{suffix}")
-        lines.append(plain("  → sa review list · sa review <datei>"))
+        lines.append(plain("  → sa review list · sa review <file>"))
         lines.append("")
 
     if report.pending_unpublished:
@@ -140,17 +140,19 @@ def format_human(report: StatusReport) -> str:
             n for n in report.pending_unpublished if n not in report.pending_learnings
         ]
         if only_unpub:
-            lines.append(magenta("Pending noch nicht im Remote:"))
+            lines.append(magenta("Pending not on remote yet:"))
             for name in only_unpub:
                 lines.append(f"  • {yellow(name)}")
-            lines.append(plain("  → sa pending push <datei>"))
+            lines.append(plain("  → sa pending push <file>"))
             lines.append("")
 
     if report.team_issues:
         lines.append(magenta(f"Team data ({len(report.team_issues)}):"))
         for issue in report.team_issues:
             lines.append(f"  • {yellow(issue)}")
-        lines.append(plain("  → sa bootstrap · sa team migrate · docs/migration-team-data.md"))
+        lines.append(
+            plain("  → sa team verify · sa team migrate · sa bootstrap · docs/migration-team-data.md")
+        )
         lines.append("")
 
     if report.skill_issues:
@@ -172,11 +174,11 @@ def format_human(report: StatusReport) -> str:
 
 def format_brief(report: StatusReport) -> str:
     if not report.has_action:
-        return green("shared-agents: alles erledigt")
+        return green("shared-agents: all clear")
     parts: list[str] = []
     if report.pending_learnings:
         parts.append(
-            f"{len(report.pending_learnings)} Learning(s) zum Review"
+            f"{len(report.pending_learnings)} learning(s) to review"
         )
     if report.pending_unpublished:
         parts.append(f"{len(report.pending_unpublished)} pending unpubl.")
