@@ -72,6 +72,8 @@ source ~/.bashrc
 | Setup | `sa check` | Tool installed vs configured (+ team warnings) |
 | Setup | `sa sync` | Pull Core + team; link skills + rules |
 | Setup | `sa status` | Open items: review, skills, adapters, team |
+| Setup | `sa doctor` | Diagnose symlink / rule link issues |
+| Setup | `sa doctor --fix` | Repair (backup + relink blocking rule files) |
 | Setup | `sa team verify` | Deep team repo validation |
 | Setup | `sa team migrate` | Legacy `learnings/` → `team/learnings/` |
 | Setup | `sa uninstall` | Uninstall (y/N) |
@@ -102,8 +104,8 @@ Shows easy-to-forget work:
 | Pending learnings | `team/learnings/pending/` (team repo) | `sa review list` · `sa review` |
 | Not pushed yet | Local pending changes | `sa pending push` |
 | Team setup | Config / legacy layout | `sa team verify` · `sa team migrate` |
-| Skill symlinks | New skill not linked | `sa sync` (or `sa install` first time) |
-| Rule symlinks | New rule not linked | `sa sync` (or `sa install` first time) |
+| Skill symlinks | New skill not linked | `sa sync` · `sa doctor --fix` |
+| Rule symlinks | Missing link or local file blocks symlink | `sa doctor --fix` · `sa sync` |
 | Adapters | Tool present, not configured | `sa install` |
 
 ```bash
@@ -115,9 +117,22 @@ sa status --json       # CI / scripts
 
 **After `sa sync` (non-quiet):** runs `sa status --quiet` for a short terminal hint.
 
-Cursor/Claude hooks sync quietly (`--quiet`); the **rule** reminds agents to run **`sa status --brief`** and tell you briefly if needed.
+**Rule-Link(s)** in brief status often means a Cursor rule exists as a regular file — **`sa doctor --fix`** backs it up and relinks.
 
 **`sa check` vs `sa team verify`:** `check` uses quick `check_team_setup()` warnings; **`sa team verify`** is stricter (folders, index, origin, `--strict`).
+
+---
+
+## Doctor — `sa doctor`
+
+```bash
+sa doctor              # diagnose (same sources as sa status)
+sa doctor --fix        # backup blocking rule files + run sync-links
+sa doctor --fix -y     # no prompts (default yes on --fix)
+sa doctor --fix --dry-run
+```
+
+Backups: `$SHARED_AGENTS_HOME/.doctor-backups/`. Does not replace learnings workflow or run full `sa install`.
 
 ---
 

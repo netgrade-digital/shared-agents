@@ -18,3 +18,5 @@ Per-tool wiring is defined in [`manifest.json`](manifest.json). **`sa install`**
 | [Generic](generic/README.md) | Copy-paste instructions | Manual |
 
 Team content (all tools): `sa skill new|list|rm` · `sa rule new|list|rm` — see root [README.md](../README.md).
+
+Repair symlink issues (e.g. Cursor rule as regular file): **`sa doctor --fix`**

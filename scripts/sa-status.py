@@ -163,14 +163,14 @@ def format_human(report: StatusReport) -> str:
         lines.append(magenta(f"Skills / Symlinks ({len(report.skill_issues)}):"))
         for issue in report.skill_issues:
             lines.append(f"  • {issue}")
-        lines.append(plain("  → sa sync (or sa install for first-time adapter setup)"))
+        lines.append(plain("  → sa doctor --fix  (or sa sync for missing links only)"))
         lines.append("")
 
     if report.rule_issues:
         lines.append(magenta(f"Rules / Symlinks ({len(report.rule_issues)}):"))
         for issue in report.rule_issues:
             lines.append(f"  • {issue}")
-        lines.append(plain("  → sa sync (or sa install for first-time adapter setup)"))
+        lines.append(plain("  → sa doctor --fix  (backup + symlink for local rule files)"))
         lines.append("")
 
     if report.tools_need_install:

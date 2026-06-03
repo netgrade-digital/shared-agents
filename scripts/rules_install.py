@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -353,6 +354,47 @@ def symlink_points_to_shared_rules(dest: Path, source_roots: list[Path]) -> bool
         if target == root or root in target.parents:
             return True
     return False
+
+
+def backup_and_symlink(
+    dest: Path,
+    source: Path,
+    backup_dir: Path,
+    *,
+    dry_run: bool,
+) -> tuple[str, bool]:
+    """Replace dest with symlink to source; backup regular file first. Returns (message, differs)."""
+    differs = False
+    if dest.is_file() and not dest.is_symlink() and source.is_file():
+        try:
+            differs = dest.read_text(encoding="utf-8") != source.read_text(encoding="utf-8")
+        except OSError:
+            differs = True
+
+    if dry_run:
+        note = "backup + symlink" if differs or dest.exists() else "symlink"
+        return f"[dry-run] would {note}: {dest.name} → {source}", differs
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    if dest.exists() or dest.is_symlink():
+        if dest.is_symlink():
+            dest.unlink()
+        elif dest.is_file():
+            backup = backup_dir / dest.name
+            if backup.exists():
+                from datetime import datetime
+
+                stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                backup = backup_dir / f"{dest.name}.{stamp}"
+            shutil.copy2(dest, backup)
+            dest.unlink()
+        elif dest.is_dir():
+            shutil.rmtree(dest)
+
+    dest.symlink_to(source.resolve())
+    if differs:
+        return f"Relinked {dest.name} (local copy backed up — differed from source)", True
+    return f"Relinked {dest.name} (local copy backed up)", differs
 
 
 def uninstall_rule_symlinks(

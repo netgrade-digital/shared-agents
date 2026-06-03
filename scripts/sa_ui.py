@@ -156,6 +156,7 @@ def print_help(*, version: str, home: str) -> None:
     _cmd("team verify", "           Validate team repo (git, index, folders)")
     _cmd("team migrate", "          Move legacy learnings/ → team/learnings/")
     _cmd("status", "               Open items (review, skills, adapters)")
+    _cmd("doctor", "               Diagnose + fix symlinks / rule links (--fix)")
     print()
 
     print(f"  {cyan('Team content')}")
@@ -189,6 +190,8 @@ def print_help(*, version: str, home: str) -> None:
     _example("sa install --check", "                  Adapter status")
     _example("sa sync")
     _example("sa status")
+    _example("sa doctor")
+    _example("sa doctor --fix")
     _example("sa team verify")
     _example("sa skill new")
     _example("sa skill rm my-skill")

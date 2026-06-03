@@ -15,7 +15,7 @@ Re-run **`sa sync`** after team changes (auto-links skills + rules) · First-tim
 
 Sync runs **automatically** on every Cursor session — no manual pull.
 
-Existing rule files that are **not** symlinks are left untouched (local overrides preserved).
+Existing rule files that are **not** symlinks are left untouched (local overrides preserved). To relink: **`sa doctor --fix`** (backs up to `$SHARED_AGENTS_HOME/.doctor-backups/`).
 
 ## Team skills & rules
 

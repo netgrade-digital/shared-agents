@@ -149,6 +149,10 @@ dispatch() {
       _sa_require_home
       exec python3 "$(_sa_bin sa-status.py)" "$@"
       ;;
+    doctor|fix|repair)
+      _sa_require_home
+      exec python3 "$(_sa_script sa-doctor.py)" "$@"
+      ;;
     uninstall)
       local uninstall_sh
       uninstall_sh="$(_sa_resolve_uninstall_sh)"

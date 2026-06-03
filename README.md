@@ -77,6 +77,7 @@ Non-interactive (CI/scripts): `SA_BOOTSTRAP_NON_INTERACTIVE=1 curl -fsSL … | b
 | Task | Command |
 |------|---------|
 | Pull latest Core + team; link skills + rules | `sa sync` |
+| Fix symlink / rule link issues | `sa doctor --fix` |
 | Overview / all commands | `sa` or `sa help` |
 | First-time adapter setup (hooks, base blocks) | `sa install` |
 | Adapter health | `sa check` |
