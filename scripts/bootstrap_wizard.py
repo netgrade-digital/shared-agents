@@ -20,6 +20,8 @@ def _load_install_adapters():
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load {path}")
     mod = importlib.util.module_from_spec(spec)
+    # Required before exec_module: dataclasses (Py 3.14+) resolve cls.__module__ via sys.modules
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -34,7 +36,7 @@ DEFAULT_CORE_REMOTE = os.environ.get(
     "SHARED_AGENTS_CORE_REMOTE",
     os.environ.get(
         "SHARED_AGENTS_GIT_REMOTE",
-        "git@bitbucket.org:netgrade/shared-agents.git",
+        "git@github.com:netgrade-digital/shared-agents.git",
     ),
 )
 
