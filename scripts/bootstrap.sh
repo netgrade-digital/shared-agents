@@ -4,7 +4,7 @@
 #    or: ./scripts/bootstrap.sh
 set -euo pipefail
 
-DEFAULT_CORE_REMOTE="${SHARED_AGENTS_CORE_REMOTE:-${SHARED_AGENTS_GIT_REMOTE:-git@bitbucket.org:netgrade/shared-agents.git}}"
+DEFAULT_CORE_REMOTE="${SHARED_AGENTS_CORE_REMOTE:-${SHARED_AGENTS_GIT_REMOTE:-git@github.com:netgrade-digital/shared-agents.git}}"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
 SHELL_RC="${SHELL_RC:-$HOME/.bashrc}"
 
@@ -33,16 +33,17 @@ need_cmd() {
 need_cmd git
 need_cmd python3
 
-# Curl pipe: no script on disk — clone core first (shallow), then run wizard from checkout.
+# Curl pipe: no script on disk — ensure core checkout, then run wizard from ~/.shared-agents.
 if [[ -z "$SCRIPT_DIR" || ! -f "$SCRIPT_DIR/bootstrap_wizard.py" ]]; then
-  if [[ ! -f "$SHARED_AGENTS_HOME/scripts/bootstrap_wizard.py" ]]; then
+  mkdir -p "$(dirname "$SHARED_AGENTS_HOME")"
+  if [[ -d "$SHARED_AGENTS_HOME/.git" ]]; then
+    echo "Updating shared-agents core → $SHARED_AGENTS_HOME"
+    git -C "$SHARED_AGENTS_HOME" config pull.rebase false 2>/dev/null || true
+    git -C "$SHARED_AGENTS_HOME" config pull.ff only 2>/dev/null || true
+    git -C "$SHARED_AGENTS_HOME" pull --ff-only --no-rebase 2>/dev/null || true
+  elif [[ ! -f "$SHARED_AGENTS_HOME/scripts/bootstrap_wizard.py" ]]; then
     echo "Cloning shared-agents core → $SHARED_AGENTS_HOME"
-    mkdir -p "$(dirname "$SHARED_AGENTS_HOME")"
-    if [[ -d "$SHARED_AGENTS_HOME/.git" ]]; then
-      git -C "$SHARED_AGENTS_HOME" pull --ff-only --no-rebase 2>/dev/null || true
-    else
-      git clone --depth 1 "$DEFAULT_CORE_REMOTE" "$SHARED_AGENTS_HOME"
-    fi
+    git clone --depth 1 "$DEFAULT_CORE_REMOTE" "$SHARED_AGENTS_HOME"
   fi
   SCRIPT_DIR="$SHARED_AGENTS_HOME/scripts"
 fi
