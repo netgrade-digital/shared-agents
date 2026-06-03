@@ -26,7 +26,6 @@ from shutil import which
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sa_ui import (
     TAGLINE,
-    UserCancelled,
     bold,
     cyan,
     green,
@@ -1000,7 +999,7 @@ def gather_wizard_choices(
         except WizardTuiFailed as exc:
             print(f"  → {exc} — using text prompts.", file=sys.stderr)
             result = None
-            plain = run_wizard_plain(
+            wizard_result = run_wizard_plain(
                 repo_home,
                 home,
                 reports,
@@ -1009,13 +1008,12 @@ def gather_wizard_choices(
                 ask_team=ask_team,
                 bootstrap=bootstrap,
             )
-            if plain is None:
+            if wizard_result is None:
                 return None
-            ph, team_remote, selected, add_shell, _ = plain
+            ph, team_remote, selected, add_shell, _ = wizard_result
             return SavedWizardChoices(ph, sorted(selected), add_shell, team_remote)
 
         if result is None or not result.run_setup:
-            print(plain("Cancelled."))
             return None
         return SavedWizardChoices(
             result.home,
@@ -1024,22 +1022,18 @@ def gather_wizard_choices(
             result.team_remote,
         )
 
-    try:
-        plain = run_wizard_plain(
-            repo_home,
-            home,
-            reports,
-            dry_run=False,
-            shell_rc=shell_rc_path,
-            ask_team=ask_team,
-            bootstrap=bootstrap,
-        )
-    except UserCancelled:
+    wizard_result = run_wizard_plain(
+        repo_home,
+        home,
+        reports,
+        dry_run=False,
+        shell_rc=shell_rc_path,
+        ask_team=ask_team,
+        bootstrap=bootstrap,
+    )
+    if wizard_result is None:
         return None
-    if plain is None:
-        print(plain("Cancelled."))
-        return None
-    ph, team_remote, selected, add_shell, _ = plain
+    ph, team_remote, selected, add_shell, _ = wizard_result
     return SavedWizardChoices(ph, sorted(selected), add_shell, team_remote)
 
 
