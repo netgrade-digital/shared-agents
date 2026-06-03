@@ -9,13 +9,13 @@ description: >-
 
 # shared-agents CLI (`sa`)
 
-**Canonical live help:** run **`sa`** or **`sa help`** — always prefer that over memorizing flags.
+**Canonical live help:** run **`sa`** or **`sa help`** — prefer that over memorizing flags.
 
 ```bash
-sa                  # Hilfe-Übersicht (Default ohne Argument)
-sa help             # gleich
-shared-agents …     # Alias
-sharedagents …      # Alias
+sa                  # help overview (default)
+sa help             # same
+shared-agents …     # alias
+sharedagents …      # alias
 ```
 
 Without shell aliases (agents, CI, fresh shell):
@@ -24,98 +24,116 @@ Without shell aliases (agents, CI, fresh shell):
 "${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/scripts/sa" help
 ```
 
-Repo root (Dev-Checkout): **`./sa`** · **`./sa install`**
+Repo root (dev checkout): **`./sa`** · **`./sa install`**
 
 Env: **`SHARED_AGENTS_HOME`** (default `~/.shared-agents`) · Version: **`sa version`**
 
 ---
 
-## Erst-Setup (typischer Ablauf)
+## First-time setup
+
+**Recommended (Core + private team repo + adapters):**
+
+```bash
+curl -fsSL https://bitbucket.org/netgrade/shared-agents/raw/main/scripts/bootstrap.sh | bash
+# or after clone: ./scripts/bootstrap.sh  ·  sa bootstrap
+source ~/.bashrc
+sa check
+sa team verify    # optional but useful after bootstrap
+```
+
+**Classic (Core only, then wizard — team repo optional in wizard):**
 
 ```bash
 git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
 cd ~/.shared-agents
-./sa install              # Wizard (TTY) — oder: sa install nach bashrc
-source ~/.bashrc          # sa | shared-agents | sharedagents aktiv
-sa check                  # Adapter-Status
+./sa install
+source ~/.bashrc
 ```
 
-**Bootstrap ohne Clone:** aus Dev-Checkout `./sa install` — Wizard **vor** Clone; Abbruch legt **kein** `~/.shared-agents` an.
+**From dev checkout without `~/.shared-agents` yet:** `./sa install` — wizard runs **before** clone; cancel leaves no `~/.shared-agents`.
 
-**Neues KI-Tool installiert?** → `sa install` erneut.
+**New AI tool installed?** → run **`sa install`** again.
 
 ---
 
-## Befehle (Übersicht)
+## Commands (overview)
 
-| Bereich | Befehl | Kurz |
-|---------|--------|------|
-| Info | `sa` · `sa help` | Alle Befehle |
-| Info | `sa version` | CLI-Version + HOME |
-| Setup | `sa install` | Wizard (Standard im Terminal) |
-| Setup | `sa install --non-interactive` | Alle erkannten Tools, ohne Prompts |
-| Setup | `sa install --wizard` | Wizard explizit |
-| Setup | `sa check` | Tool installiert vs. konfiguriert |
-| Setup | `sa sync` | `git pull` Learnings (ff-only) |
-| Setup | `sa status` | Offene Punkte: Review, Skills, Adapter |
-| Setup | `sa uninstall` | Deinstallieren (y/N) |
-| Learnings | `sa review` | Interaktiv: pending → approved |
-| Learnings | `sa review list` | Pending-Liste |
+| Area | Command | Summary |
+|------|---------|---------|
+| Info | `sa` · `sa help` | All commands |
+| Info | `sa version` | CLI version + HOME |
+| Setup | `sa bootstrap` | Full first-time setup (Core + team + adapters) |
+| Setup | `sa install` | Setup wizard (default in TTY) |
+| Setup | `sa install --non-interactive` | All detected tools, no prompts |
+| Setup | `sa install --wizard` | Wizard explicitly |
+| Setup | `sa check` | Tool installed vs configured (+ team warnings) |
+| Setup | `sa sync` | Pull Core + team repo (ff-only) |
+| Setup | `sa status` | Open items: review, skills, adapters, team |
+| Setup | `sa team verify` | Deep team repo validation |
+| Setup | `sa team migrate` | Legacy `learnings/` → `team/learnings/` |
+| Setup | `sa uninstall` | Uninstall (y/N) |
+| Learnings | `sa review` | Interactive: pending → approved |
+| Learnings | `sa review list` | Pending list |
 | Learnings | `sa review dry [file]` | Dry-run |
-| Learnings | `sa pending push [file]` | pending commit + push |
-| Learnings | `sa pending path [slug]` | Canonical pending-Pfad |
-| Learnings | `sa unapprove [id\|file]` | Aus approved entfernen |
-| Learnings | `sa unapprove list` | Approved-Liste |
+| Learnings | `sa pending push [file]` | Commit + push pending |
+| Learnings | `sa pending path [slug]` | Canonical pending path |
+| Learnings | `sa unapprove [id\|file]` | Remove from approved |
+| Learnings | `sa unapprove list` | Approved list |
 
 Alias: **`sa install`** = **`sa setup`**
 
 ---
 
-## Status / Erinnerungen — `sa status`
+## Status — `sa status`
 
-Zeigt, was leicht vergessen wird:
+Shows easy-to-forget work:
 
-| Prüfung | Bedeutung | Aktion |
-|---------|-----------|--------|
-| Pending-Learnings | Dateien in `learnings/pending/` | `sa review list` · `sa review` |
-| Noch nicht gepusht | Lokale pending-Änderungen | `sa pending push` |
-| Skill-Symlinks | Neuer Skill im Repo, nicht verlinkt | `sa install` |
-| Adapter | Tool da, nicht konfiguriert | `sa install` |
+| Check | Meaning | Action |
+|-------|---------|--------|
+| Pending learnings | `team/learnings/pending/` (team repo) | `sa review list` · `sa review` |
+| Not pushed yet | Local pending changes | `sa pending push` |
+| Team setup | Config / legacy layout | `sa team verify` · `sa team migrate` |
+| Skill symlinks | New skill not linked | `sa install` |
+| Adapters | Tool present, not configured | `sa install` |
 
 ```bash
-sa status              # Vollständige Liste (oder „alles erledigt ✓“)
-sa status --brief      # Eine Zeile
-sa status --quiet      # Nur ausgeben wenn Handlung nötig (exit 1)
-sa status --json       # CI / Scripts
+sa status              # full list (or “all clear ✓”)
+sa status --brief      # one line
+sa status --quiet      # print only when action needed (exit 1)
+sa status --json       # CI / scripts
 ```
 
-**Automatisch nach Pull:** `sa sync` (nicht `--quiet`) ruft `sa status --quiet` auf — Kurzhinweis direkt im Terminal.
+**After `sa sync` (non-quiet):** runs `sa status --quiet` for a short terminal hint.
 
-Cursor/Claude Session-Hook syncen still (`--quiet`); dort erinnert die **Rule** den Agenten, **`sa status --brief`** zu prüfen und dich kurz zu informieren.
+Cursor/Claude hooks sync quietly (`--quiet`); the **rule** reminds agents to run **`sa status --brief`** and tell you briefly if needed.
+
+**`sa check` vs `sa team verify`:** `check` uses quick `check_team_setup()` warnings; **`sa team verify`** is stricter (folders, index, origin, `--strict`).
 
 ---
 
 ## Setup — `sa install`
 
-Ruft `install.sh` auf (manifest-driven, idempotent).
+Calls `install.sh` (manifest-driven, idempotent).
 
-### Wizard (empfohlen, TTY)
+### Wizard (recommended, TTY)
 
 ```bash
 sa install
 ```
 
-| Schritt | Steuerung |
-|---------|-----------|
-| Install-Pfad | Pfad tippen · Enter |
-| Agenten | `↑↓` · **Space** an/aus · `a` alle · `d` erkannte · Enter |
-| Shell-CLI | `←→` / `↑↓` Ja/Nein · Enter |
-| Summary | `↑↓` Run/Cancel · Enter (Default: Cancel) |
+| Step | Controls |
+|------|----------|
+| Install path | Type path · Enter |
+| Agents | `↑↓` · **Space** toggle · `a` all · `d` detected · Enter |
+| Team repo URL | Optional private remote for learnings |
+| Shell CLI | `←→` / `↑↓` Yes/No · Enter |
+| Summary | `↑↓` Run/Cancel · Enter (default: Cancel) |
 
-- **Cursor / VS Code Terminal:** oft Text-Wizard (`SA_WIZARD_PLAIN=1` automatisch)
-- **foot / alacritty:** TUI mit Pfeiltasten
+- **Cursor / VS Code terminal:** often plain text wizard (`SA_WIZARD_PLAIN=1`)
+- **foot / alacritty:** TUI with arrow keys
 
-### Schnell / CI
+### Quick / CI
 
 ```bash
 sa install --non-interactive
@@ -124,36 +142,38 @@ sa install --dry-run
 sa install --dry-run --wizard
 ```
 
-### Install-Optionen (an `install.sh` durchgereicht)
+### Install flags (passed through to `install.sh`)
 
-| Flag | Bedeutung |
-|------|-----------|
-| `--home DIR` | Zielpfad (Default: `~/.shared-agents`) |
-| `--source DIR` | Quell-Repo (Dev-Checkout) |
-| `--shell-rc FILE` | bashrc für `SHARED_AGENTS_HOME` + `sa` (Default: `~/.bashrc`) |
-| `--tools IDS` | Nur bestimmte Adapter (kommagetrennt) |
-| `--check` | Status statt Install (`sa check`) |
-| `--check --json` | JSON für CI |
-| `--dry-run` | Vorschau, keine Writes |
+| Flag | Meaning |
+|------|---------|
+| `--home DIR` | Target path (default: `~/.shared-agents`) |
+| `--source DIR` | Source repo (dev checkout) |
+| `--shell-rc FILE` | bashrc for `SHARED_AGENTS_HOME` + `sa` |
+| `--tools IDS` | Comma-separated adapter IDs only |
+| `--check` | Status instead of install (`sa check`) |
+| `--check --json` | JSON for CI |
+| `--dry-run` | Preview, no writes |
 
-Low-level: `./install.sh` im Repo-Root — gleiche Optionen.
+Low-level: `./install.sh` at repo root — same options.
 
 ---
 
-## Status — `sa check`
+## Check — `sa check`
 
 ```bash
 sa check
-sa check --json          # CI / Scripts
-sa install --check       # gleich
+sa check --json
+sa install --check    # same
 ```
 
-| STATUS | Bedeutung |
-|--------|-----------|
-| `ok` | Tool da + shared-agents eingerichtet |
-| `missing_tool` | CLI/Config nicht gefunden |
-| `not_configured` | Tool da, Adapter fehlt/veraltet → `sa install` |
+| STATUS | Meaning |
+|--------|---------|
+| `ok` | Tool present + shared-agents configured |
+| `missing_tool` | CLI/config not found |
+| `not_configured` | Tool present, adapter missing → `sa install` |
 | `available` | generic fallback |
+
+Team warnings appear under **Team data:** when relevant.
 
 ---
 
@@ -161,51 +181,57 @@ sa install --check       # gleich
 
 ```bash
 sa sync
-# = "$SHARED_AGENTS_HOME/scripts/sync.sh" pull
+# = scripts/sync.sh pull
+#   1) git pull  ~/.shared-agents        (Core — tools, adapters, OSS skills)
+#   2) git pull  ~/.shared-agents/team/  (Team — learnings, team skills)
 ```
 
-- ff-only pull von Bitbucket
-- Agenten: am Session-Start (Hook + Rule); manuell nur bei Offline/Debug
+- Both repos **ff-only**
+- Without `team/` / without `team.remote`: Core only (solo fallback under `core/learnings/`)
+- Agents: session start via hook (`session-sync.sh` → `sync.sh pull --quiet`)
+- Manual: after offline, before review, when a teammate pushed
 
 ---
 
-## Learnings-Workflow
+## Learnings workflow
 
 ```text
-Agent schreibt pending/  →  sa pending push  →  sa review  →  approved/
+Agent writes pending/  →  sa pending push  →  sa review  →  approved/
 ```
 
-### Pending veröffentlichen — `sa pending push`
+### Publish pending — `sa pending push`
 
 ```bash
 sa pending push 2026-06-02-my-slug.md
 sa pending push              # unstaged pending/*.md
-# Flags: --all --dry-run --no-git
+# flags: --all --dry-run --no-git
 ```
+
+Commits/pushes **team repo** only when team mode is active.
 
 ### Review — `sa review`
 
 ```bash
 sa review list
 sa review dry 2026-06-02-my-slug.md
-sa review                    # interaktiv: Datei wählen
+sa review                    # interactive file picker
 sa review 2026-06-02-my-slug.md
 ```
 
-| Flag | Bedeutung |
-|------|-----------|
-| `--domain DOMAIN` | Ziel-Ordner unter `approved/by-domain/` |
-| `--dry-run` | Nur anzeigen |
-| `--no-git` | Kein commit/push |
-| `-y` / `--yes` | Ohne Bestätigung |
+| Flag | Meaning |
+|------|---------|
+| `--domain DOMAIN` | Target under `approved/by-domain/` |
+| `--dry-run` | Show only |
+| `--no-git` | No commit/push |
+| `-y` / `--yes` | Skip confirmation |
 
-Verschiebt nach `learnings/approved/`, trägt `index.yaml` ein, commit + push (nur `learnings/`).
+Moves to `team/learnings/approved/`, updates `index.yaml`, commit + push (team repo only in team mode).
 
-### Pfad auflösen — `sa pending path`
+### Resolve path — `sa pending path`
 
 ```bash
 sa pending path 2026-06-02-my-slug
-# → …/learnings/pending/2026-06-02-my-slug.md
+# → …/team/learnings/pending/2026-06-02-my-slug.md  (with team repo)
 ```
 
 ### Unapprove — `sa unapprove`
@@ -213,50 +239,80 @@ sa pending path 2026-06-02-my-slug
 ```bash
 sa unapprove list
 sa unapprove fantasy-2026-06-dragon-cache
-# Wizard: [1] Löschen  [2] Nach pending/  [q] Abbrechen
+# wizard: [1] Delete  [2] Move to pending/  [q] Cancel
 ```
 
-| Flag | Bedeutung |
-|------|-----------|
-| `--to-pending` | Nach pending/ (non-interactive) |
-| `--delete` | Datei löschen (non-interactive) |
-| `--dry-run` · `--no-git` · `-y` | wie bei review |
+| Flag | Meaning |
+|------|---------|
+| `--to-pending` | Move to pending/ (non-interactive) |
+| `--delete` | Delete file (non-interactive) |
+| `--dry-run` · `--no-git` · `-y` | same as review |
 
-Alias: **`sa unapprove`** = **`sa rm`** (Learning entfernen, nicht Repo löschen)
+Alias: **`sa unapprove`** = **`sa rm`** (remove learning, not uninstall repo)
 
 ---
 
-## Deinstall — `sa uninstall`
+## Uninstall — `sa uninstall`
 
 ```bash
-sa uninstall                 # Bestätigung: y/N
-sa uninstall -y              # ohne Nachfrage
-sa uninstall --keep-repo     # nur Adapter, Repo behalten
+sa uninstall
+sa uninstall -y
+sa uninstall --keep-repo     # adapters only; keep core + team/
 sa uninstall --dry-run
 ```
 
-Danach: **`source ~/.bashrc`** oder neues Terminal.
+Removes hooks and skill symlinks (Core **and** team skills). Without `--keep-repo`: deletes `$SHARED_AGENTS_HOME` including `team/` and `config.local.yaml`.
+
+Then: **`source ~/.bashrc`** or new terminal. Fresh setup: **`sa bootstrap`**.
 
 ---
 
-## Häufige Probleme
+## Team repo — `sa team verify`
 
-| Problem | Lösung |
-|---------|--------|
-| `sa: command not found` | `source ~/.bashrc` oder `"$SHARED_AGENTS_HOME/scripts/sa" help` |
-| shared-agents not installed | `sa install` oder `./sa install` |
+After bootstrap or when debugging team layout:
+
+```bash
+sa team verify
+sa team verify --json
+sa team verify --strict      # exit 1 on warnings
+```
+
+Checks: `team/.git`, `origin` vs `config.local.yaml`, `learnings/index.yaml`, `pending/` / `approved/`, legacy `~/shared-agents/learnings/`.
+
+---
+
+## Migration — `sa team migrate`
+
+If `~/.shared-agents/learnings/` still exists (pre Core/team split):
+
+```bash
+sa team migrate --dry-run
+sa team migrate
+```
+
+See `$SHARED_AGENTS_HOME/docs/migration-team-data.md`.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `sa: command not found` | `source ~/.bashrc` or `"$SHARED_AGENTS_HOME/scripts/sa" help` |
+| shared-agents not installed | `sa bootstrap` or `sa install` / `./sa install` |
 | Tool `not_configured` | `sa install` |
-| Veraltete Learnings | `sa sync` · Hook/`sa check` prüfen |
-| Wizard abgebrochen, halbes Setup | `rm -rf ~/.shared-agents` · `./sa install` neu |
+| Stale learnings | `sa sync` · check hooks / `sa check` |
+| Team layout / legacy paths | `sa team verify` · `sa team migrate` |
+| Wizard cancelled, half setup | `rm -rf ~/.shared-agents` · `sa bootstrap` again |
 
 ---
 
-## Agent-Anweisung
+## Agent instruction
 
-Wenn der User CLI-Hilfe braucht:
+When the user needs CLI help:
 
-1. **`sa help`** ausführen (voller, aktueller Text aus `scripts/sa`).
-2. Dieses Skill für Kontext und Workflows — **keine** parallele Command-Liste erfinden.
-3. Pfade: **`$SHARED_AGENTS_HOME`** — siehe Skill `shared-agents-knowledge` und `capture-learning`.
+1. Run **`sa help`** (live text from `scripts/sa_ui.py`).
+2. Use this skill for workflows — do not invent a parallel command list.
+3. Paths: **`$SHARED_AGENTS_HOME`** — see skills `shared-agents-knowledge` and `capture-learning`.
 
-Weitere Doku: **`$SHARED_AGENTS_HOME/README.md`** · **`docs/canonical-paths.md`**
+More docs: **`$SHARED_AGENTS_HOME/README.md`** · **`docs/canonical-paths.md`**

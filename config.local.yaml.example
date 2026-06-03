@@ -1,0 +1,10 @@
+# Copy to $SHARED_AGENTS_HOME/config.local.yaml (gitignored).
+# Written automatically by bootstrap / install wizard.
+
+version: 1
+core:
+  home: ~/.shared-agents
+  remote: git@github.com:your-org/shared-agents.git
+team:
+  remote: git@github.com:your-org/team-agents.git
+  # null = solo mode (learnings under core/learnings/)

@@ -16,10 +16,13 @@ Default: `~/.shared-agents`
 
 | Was | Absoluter Pfad | Wer schreibt |
 |-----|----------------|--------------|
-| Team-Skills (Quelle) | `$SHARED_AGENTS_HOME/skills/` | Mensch (PR) |
-| Learnings Index | `$SHARED_AGENTS_HOME/learnings/index.yaml` | Mensch / **`sa review`** |
-| Learnings **approved** | `$SHARED_AGENTS_HOME/learnings/approved/` | **Nur Mensch** (`sa review`) |
-| Learnings **pending** | `$SHARED_AGENTS_HOME/learnings/pending/` | **Agent** (nach explizitem Ja) |
+| Core-Skills (OSS) | `$SHARED_AGENTS_HOME/skills/` | Upstream (PR ins Core) |
+| Team-Skills | `$SHARED_AGENTS_HOME/team/skills/` | Team-Repo (privat) |
+| Learnings Index | `$SHARED_AGENTS_HOME/team/learnings/index.yaml` | Mensch / **`sa review`** |
+| Learnings **approved** | `$SHARED_AGENTS_HOME/team/learnings/approved/` | **Nur Mensch** (`sa review`) |
+| Learnings **pending** | `$SHARED_AGENTS_HOME/team/learnings/pending/` | **Agent** (nach explizitem Ja) |
+| Lokale Config | `$SHARED_AGENTS_HOME/config.local.yaml` | Installer / **`sa bootstrap`** (gitignored) |
+| Team-Daten (privat) | `$SHARED_AGENTS_HOME/team/` | Eigenes Git-Remote — **nie** ins Core-Remote committen |
 | Sync | `$SHARED_AGENTS_HOME/scripts/sync.sh` | Hook / Agent / **`sa sync`** |
 | Adapter-Manifest | `$SHARED_AGENTS_HOME/adapters/manifest.json` | Mensch (PR) |
 | MCP-Manifest (Entwurf) | `$SHARED_AGENTS_HOME/mcps/manifest.example.json` | Mensch (PR) |
@@ -32,19 +35,24 @@ Default: `~/.shared-agents`
 Agenten **müssen** Learnings-Entwürfe hier ablegen:
 
 ```text
-${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/learnings/pending/YYYY-MM-DD-short-slug.md
+${SHARED_AGENTS_HOME}/team/learnings/pending/YYYY-MM-DD-short-slug.md
 ```
+
+Auflösung per CLI: `sa pending path <slug>` (nutzt `config.local.yaml` / Solo-Fallback).
+
+**Nicht im Core-Repo:** Learnings liegen nur im privaten Team-Clone unter `team/` — siehe [learnings.md](learnings.md).
 
 ### Verboten
 
-- Learnings in den **Cursor-Workspace** schreiben (z. B. `Development/Work/shared-agents/learnings/pending/`), **wenn** das nicht derselbe Pfad wie `$SHARED_AGENTS_HOME` ist
+- Learnings in den **Cursor-Workspace** oder ins **Core-Repo** committen
+- Learnings in den Dev-Checkout `Development/…/shared-agents/` schreiben, **wenn** das nicht `$SHARED_AGENTS_HOME` ist
 - Learnings im **Kunden-Projekt** (`.cursor/`, `docs/`, Projekt-Root)
 - Relative Pfade wie `learnings/pending/foo.md` ohne aufgelöstes `$SHARED_AGENTS_HOME`
 - Direkt nach `learnings/approved/` schreiben
 
 ### Pflicht vor dem Schreiben
 
-1. Pfad explizit auflösen: `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/learnings/pending/…"`
+1. Pfad explizit auflösen: `sa pending path <slug>` oder `"${SHARED_AGENTS_HOME}/team/learnings/pending/…"`
 2. Optional prüfen: Zielverzeichnis existiert (sonst anlegen)
 3. **Nicht** annehmen, dass Workspace-Root = `$SHARED_AGENTS_HOME`
 
@@ -62,7 +70,7 @@ Hilfsskript:
 ```bash
 sa pending path 2026-06-02-my-slug
 # oder: "$SHARED_AGENTS_HOME/scripts/learning-path.sh" 2026-06-02-my-slug
-# → /home/you/.shared-agents/learnings/pending/2026-06-02-my-slug.md
+# → /home/you/.shared-agents/team/learnings/pending/2026-06-02-my-slug.md
 ```
 
 Shell-CLI (nach **`sa install`** in `~/.bashrc`): **`sa`** · `shared-agents` · `sharedagents` — **`sa` ohne Argument = `sa help`**.  
@@ -75,8 +83,8 @@ Vollständige Bedienung: Skill **`sa-cli`** · Live-Referenz: **`sa help`**
 Vor nicht-trivialen Tasks:
 
 1. **`sa sync`** (oder `"$SHARED_AGENTS_HOME/scripts/sync.sh" pull`)
-2. `$SHARED_AGENTS_HOME/learnings/index.yaml`
-3. Grep in `$SHARED_AGENTS_HOME/learnings/approved/`
+2. `$SHARED_AGENTS_HOME/team/learnings/index.yaml`
+3. Grep in `$SHARED_AGENTS_HOME/team/learnings/approved/`
 
 Nicht nur im Workspace suchen.
 
@@ -90,7 +98,8 @@ Installierte Skills liegen unter `~/.agents/skills/` etc. und zeigen auf `$SHARE
 
 ## Siehe auch
 
-- [README.md](../README.md) — Learnings-Workflow
+- [learnings.md](learnings.md) — Workflow (Team-Repo)
+- [README.md](../README.md) — Übersicht
 - [skills/sa-cli/SKILL.md](../skills/sa-cli/SKILL.md) — CLI-Bedienung
 - [skills/capture-learning/SKILL.md](../skills/capture-learning/SKILL.md)
 - [rules/shared-agents-knowledge.mdc](../rules/shared-agents-knowledge.mdc)

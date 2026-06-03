@@ -19,6 +19,7 @@ class ShellRcState(str, Enum):
 @dataclass
 class WizardChoices:
     home: str
+    team_remote: str | None
     selected_tools: set[str]
     add_shell: bool
     run_setup: bool
@@ -137,17 +138,22 @@ def _wait_enter(
             return
 
 
-def _screen_welcome(stdscr: curses.window) -> None:
+def _screen_welcome(stdscr: curses.window, *, bootstrap: bool = False) -> None:
     stdscr.clear()
+    title = "shared-agents Bootstrap" if bootstrap else "shared-agents Setup Wizard"
     _draw_frame(
         stdscr,
-        "shared-agents Setup Wizard",
+        title,
         "Welcome",
         "Enter/Space = weiter · Esc = abbrechen",
     )
     _safe_addstr(stdscr, 6, 4, "Team skills + learnings for your AI tools", _attr(stdscr, 2))
-    _safe_addstr(stdscr, 8, 4, "This wizard configures adapters, shell CLI (sa),", 0)
-    _safe_addstr(stdscr, 9, 4, "and symlinks team skills to your machine.", 0)
+    if bootstrap:
+        _safe_addstr(stdscr, 8, 4, "Core (open tools) + your private team-data repo.", 0)
+        _safe_addstr(stdscr, 9, 4, "One wizard — adapters, sa CLI, learnings scaffold.", 0)
+    else:
+        _safe_addstr(stdscr, 8, 4, "This wizard configures adapters, shell CLI (sa),", 0)
+        _safe_addstr(stdscr, 9, 4, "and symlinks team skills to your machine.", 0)
     _wait_enter(stdscr, 12)
     stdscr.refresh()
 
@@ -161,7 +167,7 @@ def _screen_path(stdscr: curses.window, default_home: str) -> str:
         _draw_frame(
             stdscr,
             "Install location",
-            "Step 1/4 — SHARED_AGENTS_HOME",
+            "Step 1/5 — SHARED_AGENTS_HOME",
             "Type path · Enter confirm · Esc cancel",
         )
         _safe_addstr(stdscr, 6, 4, "Where should shared-agents live on this machine?", 0)
@@ -205,13 +211,67 @@ def _screen_path(stdscr: curses.window, default_home: str) -> str:
             cursor += 1
 
 
+def _screen_team_remote(stdscr: curses.window) -> str | None:
+    use_team = _screen_yes_no(
+        stdscr,
+        title="Team data (private)",
+        step="Step 2/5 — Learnings + team skills",
+        question=(
+            "Separate git repo for team learnings/skills?\n"
+            "(Core stays public — team/ is local only)"
+        ),
+        default=True,
+    )
+    if not use_team:
+        return None
+
+    buf: list[str] = []
+    cursor = 0
+    while True:
+        stdscr.clear()
+        _draw_frame(
+            stdscr,
+            "Team data remote",
+            "Step 2/5 — git remote URL",
+            "Type URL · Enter confirm · Esc cancel",
+        )
+        _safe_addstr(stdscr, 6, 4, "Empty private repo URL (SSH or HTTPS):", 0)
+        _safe_addstr(stdscr, 8, 4, "URL:", _attr(stdscr, 1, bold=True))
+        line = "".join(buf)
+        _safe_addstr(stdscr, 8, 10, line + " ", 0)
+        height, width = stdscr.getmaxyx()
+        cx = min(10 + cursor, width - 2)
+        if 8 < height:
+            stdscr.move(8, cx)
+
+        key = stdscr.getch()
+        if key in (10, 13, curses.KEY_ENTER):
+            value = "".join(buf).strip()
+            if value:
+                return value
+            _safe_addstr(stdscr, 10, 4, "URL required (or go back and choose Solo).", _attr(stdscr, 3, bold=True))
+            stdscr.refresh()
+            stdscr.getch()
+            continue
+        if key in (27, ord("q")):
+            raise WizardCancelled
+        if key in (curses.KEY_BACKSPACE, 127, 8):
+            if cursor > 0:
+                buf.pop(cursor - 1)
+                cursor -= 1
+            continue
+        if 32 <= key <= 126 and chr(key).isprintable():
+            buf.insert(cursor, chr(key))
+            cursor += 1
+
+
 def _screen_tools(stdscr: curses.window, rows: list[ToolRow], selected: set[str]) -> set[str]:
     if not rows:
         stdscr.clear()
         _draw_frame(
             stdscr,
             "Select AI tools",
-            "Step 2/4 — No installable tools in manifest",
+            "Step 3/5 — No installable tools in manifest",
             "Enter continue · Esc cancel",
         )
         _wait_enter(stdscr, 8)
@@ -226,7 +286,7 @@ def _screen_tools(stdscr: curses.window, rows: list[ToolRow], selected: set[str]
         _draw_frame(
             stdscr,
             "Select AI tools",
-            "Step 2/4 — Space toggle · a all · d detected · Enter continue",
+            "Step 3/5 — Space toggle · a all · d detected · Enter continue",
             "↑↓ move · Space toggle · a/d/n shortcuts · Enter continue · Esc cancel",
         )
 
@@ -332,7 +392,7 @@ def _screen_shell(
         _draw_frame(
             stdscr,
             "Shell environment",
-            "Step 3/4 — Already configured",
+            "Step 4/5 — Already configured",
             "Enter continue · Esc cancel",
         )
         _safe_addstr(stdscr, 6, 4, f"{shell_rc}", _attr(stdscr, 2))
@@ -350,7 +410,7 @@ def _screen_shell(
     return _screen_yes_no(
         stdscr,
         title="Shell environment",
-        step="Step 3/4 — Shell CLI",
+        step="Step 4/5 — Shell CLI",
         question=question,
         default=True,
     )
@@ -360,6 +420,7 @@ def _screen_summary(
     stdscr: curses.window,
     *,
     home: str,
+    team_remote: str | None,
     rows: list[ToolRow],
     selected: set[str],
     add_shell: bool,
@@ -374,13 +435,19 @@ def _screen_summary(
         _draw_frame(
             stdscr,
             "Summary",
-            "Step 4/4 — Confirm setup",
+            "Step 5/5 — Confirm setup",
             "↑↓ choose · Enter confirm · Esc cancel",
         )
         y = 6
         _safe_addstr(stdscr, y, 4, f"Install path: {home}", 0)
         y += 1
-        _safe_addstr(stdscr, y, 4, "Skills:       link all team skills", 0)
+        if team_remote:
+            team_line = f"Team data:    {team_remote}"
+        else:
+            team_line = "Team data:    solo (core learnings only)"
+        _safe_addstr(stdscr, y, 4, team_line[: width - 6], 0)
+        y += 1
+        _safe_addstr(stdscr, y, 4, "Skills:       link core + team skills", 0)
         y += 1
         if shell_state == ShellRcState.CONFIGURED:
             shell_line = f"Shell:        keep existing ({shell_rc})"
@@ -430,13 +497,19 @@ def _wizard_main(
     rows: list[ToolRow],
     shell_rc: str,
     shell_state: ShellRcState,
+    bootstrap: bool = False,
+    ask_team: bool = True,
 ) -> WizardChoices:
     curses.curs_set(1)
     stdscr.keypad(True)
     _init_colors()
 
-    _screen_welcome(stdscr)
+    _screen_welcome(stdscr, bootstrap=bootstrap)
     home = _screen_path(stdscr, default_home)
+
+    team_remote: str | None = None
+    if ask_team:
+        team_remote = _screen_team_remote(stdscr)
 
     selected = {row.tool_id for row in rows if row.installed}
     selected = _screen_tools(stdscr, rows, selected)
@@ -445,6 +518,7 @@ def _wizard_main(
     run_setup = _screen_summary(
         stdscr,
         home=home,
+        team_remote=team_remote,
         rows=rows,
         selected=selected,
         add_shell=add_shell,
@@ -455,6 +529,7 @@ def _wizard_main(
     curses.curs_set(0)
     return WizardChoices(
         home=home,
+        team_remote=team_remote,
         selected_tools=selected,
         add_shell=add_shell,
         run_setup=run_setup,
@@ -467,6 +542,8 @@ def run_wizard_tui(
     rows: list[ToolRow],
     shell_rc: str,
     shell_state: ShellRcState,
+    bootstrap: bool = False,
+    ask_team: bool = True,
 ) -> WizardChoices | None:
     try:
         return curses.wrapper(
@@ -475,6 +552,8 @@ def run_wizard_tui(
             rows=rows,
             shell_rc=shell_rc,
             shell_state=shell_state,
+            bootstrap=bootstrap,
+            ask_team=ask_team,
         )
     except WizardCancelled:
         return None

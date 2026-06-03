@@ -25,9 +25,9 @@ CMD ["node", "agent.js"]
 
 ## During run
 
-- Read skills from `$SHARED_AGENTS_HOME/skills/`
-- Search `learnings/approved/` before non-trivial steps
-- End: write to `learnings/pending/` → `sa pending push` → team review via `sa review`
+- Read skills from `$SHARED_AGENTS_HOME/skills/` and `$SHARED_AGENTS_HOME/team/skills/`
+- Search `$SHARED_AGENTS_HOME/team/learnings/approved/` before non-trivial steps
+- End: `sa pending path <slug>` → `sa pending push` → team review via `sa review`
 
 ## CI / cron
 

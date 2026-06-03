@@ -58,9 +58,9 @@ All team files live under `$SHARED_AGENTS_HOME` (default `~/.shared-agents`), **
 
 | Action | Path / command |
 |--------|-----------------|
-| Write learning draft | `$SHARED_AGENTS_HOME/learnings/pending/YYYY-MM-DD-slug.md` |
+| Write learning draft | `sa pending path <slug>` → usually `team/learnings/pending/…` |
 | Publish draft | `sa pending push <file>` |
-| Read team knowledge | `$SHARED_AGENTS_HOME/learnings/approved/` + `index.yaml` |
+| Read team knowledge | `$SHARED_AGENTS_HOME/team/learnings/approved/` + `index.yaml` |
 | Promote to approved | `sa review <file>` (human only) |
 | Resolve path | `sa pending path <slug>` or `scripts/learning-path.sh` |
 

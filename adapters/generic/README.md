@@ -37,5 +37,5 @@ Many agents follow the **AGENTS.md pattern**:
 Every adapter must ensure:
 
 1. **Sync** — `$SHARED_AGENTS_HOME/scripts/sync.sh pull` runs at session start (or `sa sync` manually)
-2. **Read** — agent searches `learnings/approved/` before non-trivial work
-3. **Write** — agent can propose to `learnings/pending/` via `capture-learning` skill
+2. **Read** — agent searches `$SHARED_AGENTS_HOME/team/learnings/approved/` before non-trivial work
+3. **Write** — agent uses `capture-learning` + `sa pending path` (team repo under `team/learnings/pending/`)

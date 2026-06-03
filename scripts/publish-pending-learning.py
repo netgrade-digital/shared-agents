@@ -35,11 +35,21 @@ FM_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 
 
 def shared_home() -> Path:
-    return Path(os.environ.get("SHARED_AGENTS_HOME", Path.home() / ".shared-agents"))
+    from sa_config import core_home
+
+    return core_home()
+
+
+def git_repo_home(home: Path) -> Path:
+    from sa_config import git_data_home
+
+    return git_data_home(home)
 
 
 def pending_dir(home: Path) -> Path:
-    return home / "learnings" / "pending"
+    from sa_config import pending_dir as sa_pending_dir
+
+    return sa_pending_dir(home)
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
@@ -88,11 +98,15 @@ def resolve_pending(path_arg: str | None, home: Path) -> list[Path]:
 
 
 def pending_changes(home: Path) -> list[Path]:
-    if not (home / ".git").is_dir():
+    from sa_config import learnings_prefix_for_git
+
+    repo = git_repo_home(home)
+    prefix = learnings_prefix_for_git(home)
+    if not (repo / ".git").is_dir():
         return []
     result = subprocess.run(
-        ["git", "status", "--porcelain", "learnings/pending/"],
-        cwd=home,
+        ["git", "status", "--porcelain", f"{prefix}/pending/"],
+        cwd=repo,
         capture_output=True,
         text=True,
     )
@@ -104,7 +118,7 @@ def pending_changes(home: Path) -> list[Path]:
         if not line.endswith(".md"):
             continue
         rel = line[3:].strip()
-        path = home / rel
+        path = repo / rel
         if path.is_file():
             paths.append(path)
     return sorted(paths)
@@ -126,6 +140,10 @@ def run_git(
 
 
 def ensure_git_remote(home: Path) -> str | None:
+    from sa_config import is_team_git_repo
+
+    if is_team_git_repo(home):
+        return None
     current = run_git(home, ["remote", "get-url", "origin"], check=False)
     if current.returncode != 0:
         return None
@@ -157,10 +175,11 @@ def publish(
 
     labels: list[str] = []
     rel_paths: list[str] = []
+    repo = git_repo_home(home)
     for path in files:
         fm = parse_frontmatter(path.read_text())
         labels.append(fm.get("id", path.stem))
-        rel_paths.append(str(path.relative_to(home)))
+        rel_paths.append(str(path.relative_to(repo)))
 
     commit_msg = f"docs(learnings): pending {', '.join(labels)}"
 
@@ -168,34 +187,34 @@ def publish(
         git_skip_no_git()
         return 0
 
-    if not (home / ".git").is_dir():
+    if not (repo / ".git").is_dir():
         git_skip_not_repo(extra="Teammates cannot review until committed to remote.")
         return 1
 
     if dry_run:
         git_dry_run(
             [
-                f"git -C {home} add {' '.join(rel_paths)}",
-                f'git -C {home} commit -m "{commit_msg}"',
-                f"git -C {home} push",
+                f"git -C {repo} add {' '.join(rel_paths)}",
+                f'git -C {repo} commit -m "{commit_msg}"',
+                f"git -C {repo} push",
             ]
         )
         return 0
 
-    fixed = ensure_git_remote(home)
+    fixed = ensure_git_remote(repo)
     if fixed:
         git_note(fixed)
 
-    run_git(home, ["add", *rel_paths], check=True)
-    staged = run_git(home, ["diff", "--cached", "--quiet"], check=False)
+    run_git(repo, ["add", *rel_paths], check=True)
+    staged = run_git(repo, ["diff", "--cached", "--quiet"], check=False)
     if staged.returncode == 0:
         git_nothing_staged("Nothing new to commit — pending already published.")
         return 0
 
-    run_git(home, ["commit", "-m", commit_msg], check=True)
+    run_git(repo, ["commit", "-m", commit_msg], check=True)
     git_committed(commit_msg)
 
-    push = run_git(home, ["push"], check=False)
+    push = run_git(repo, ["push"], check=False)
     if push.returncode == 0:
         out = (push.stdout or push.stderr or "").strip()
         if out:

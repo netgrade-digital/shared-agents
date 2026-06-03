@@ -12,6 +12,7 @@ DRY_RUN=0
 CHECK_JSON=0
 NON_INTERACTIVE=0
 FORCE_WIZARD=0
+BOOTSTRAP=0
 TOOLS=""
 
 usage() {
@@ -44,6 +45,7 @@ while [[ $# -gt 0 ]]; do
     --json) CHECK_JSON=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --wizard) FORCE_WIZARD=1; shift ;;
+    --bootstrap) BOOTSTRAP=1; FORCE_WIZARD=1; shift ;;
     --non-interactive) NON_INTERACTIVE=1; shift ;;
     --tools) TOOLS="$2"; shift 2 ;;
     --source) REPO_SOURCE="$2"; shift 2 ;;
@@ -117,6 +119,19 @@ run_check() {
 if [[ "$MODE" == "check" ]]; then
   run_check
   exit $?
+fi
+
+if [[ $BOOTSTRAP -eq 1 && $DRY_RUN -eq 0 ]]; then
+  BW="$(adapters_py)"
+  BW="${BW%/install-adapters.py}/bootstrap_wizard.py"
+  if [[ -f "$BW" ]]; then
+    exec python3 "$BW" \
+      --source "$REPO_SOURCE" \
+      --home "$SHARED_AGENTS_HOME" \
+      --shell-rc "$SHELL_RC" \
+      ${SHARED_AGENTS_CORE_REMOTE:+--core-remote "$SHARED_AGENTS_CORE_REMOTE"} \
+      "$@"
+  fi
 fi
 
 use_wizard=0
@@ -296,18 +311,18 @@ else
 
 Install OK.
 
-CLI:  sa help   (auch: shared-agents help · sharedagents help)
+CLI:  sa help   (also: shared-agents help · sharedagents help)
 
-Wichtig — Shell neu laden:
+Reload your shell:
   source $SHELL_RC
 
-Befehle danach:
-  sa sync              Neueste Learnings pullen
-  sa review            Learning reviewen / approven
-  sa pending push      Pending ans Team pushen
-  sa unapprove         Learning aus approved entfernen
-  sa check             Adapter-Status
-  sa uninstall         Deinstallieren (y/N)
+Next commands:
+  sa sync              Pull Core + team learnings
+  sa review            Review / approve learnings
+  sa pending push      Push pending for team review
+  sa team verify       Validate team repo layout
+  sa check             Adapter status
+  sa uninstall         Uninstall (y/N)
 
 Docs:     $SHARED_AGENTS_HOME/README.md
 Check:    sa check

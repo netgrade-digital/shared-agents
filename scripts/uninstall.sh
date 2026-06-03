@@ -16,7 +16,8 @@ shared-agents uninstall.sh v${VERSION}
 Usage:
   uninstall.sh [options]
 
-Removes IDE/CLI adapters, shell CLI (sa), and optionally deletes the local repo.
+Removes IDE/CLI adapters, shell CLI (sa), and optionally deletes the local install
+(core checkout, team/ learnings repo, config.local.yaml).
 
 Options:
   --home DIR       SHARED_AGENTS_HOME (default: ~/.shared-agents)
@@ -30,7 +31,7 @@ Nach Install (überall im Terminal):  sa uninstall
                                       shared-agents uninstall
 Oder im Repo:                         ./uninstall.sh
 
-After uninstall, re-install with: ./install.sh --wizard
+After uninstall, re-install with: sa bootstrap  (or ./scripts/bootstrap.sh)
 EOF
 }
 
@@ -68,11 +69,11 @@ fi
 _sa --uninstall-intro
 
 if [[ $YES -eq 0 && $DRY_RUN -eq 0 ]]; then
-  _sa --out plain "Entfernt Cursor/Claude-Hooks, Skill-Symlinks, Shell-CLI (sa, shared-agents)" || true
+  _sa --out plain "Entfernt Hooks, Core- + Team-Skill-Symlinks, Shell-CLI (sa)" || true
   if [[ $KEEP_REPO -eq 0 ]]; then
-    _sa --out plain "und löscht $SHARED_AGENTS_HOME vollständig." || true
+    _sa --out plain "und löscht $SHARED_AGENTS_HOME inkl. team/ + config.local.yaml." || true
   else
-    _sa --out plain "— Git-Checkout unter $SHARED_AGENTS_HOME bleibt erhalten (--keep-repo)." || true
+    _sa --out plain "— Core + team/ unter $SHARED_AGENTS_HOME bleiben (--keep-repo)." || true
   fi
   read -r -p "shared-agents deinstallieren? [y/N] " confirm
   if [[ ! "$confirm" =~ ^[yYjJ]([aA][eE]?[sS]?)?$ ]]; then
@@ -121,7 +122,13 @@ else
   if [[ -d "$SHARED_AGENTS_HOME/.git" ]]; then
     dirty="$(git -C "$SHARED_AGENTS_HOME" status --porcelain 2>/dev/null || true)"
     if [[ -n "$dirty" ]]; then
-      _sa --error "  Warning: uncommitted changes in $SHARED_AGENTS_HOME" || true
+      _sa --error "  Warning: uncommitted changes in core checkout" || true
+    fi
+  fi
+  if [[ -d "$SHARED_AGENTS_HOME/team/.git" ]]; then
+    dirty_team="$(git -C "$SHARED_AGENTS_HOME/team" status --porcelain 2>/dev/null || true)"
+    if [[ -n "$dirty_team" ]]; then
+      _sa --error "  Warning: uncommitted changes in team/ (private learnings)" || true
     fi
   fi
   rm -rf "$SHARED_AGENTS_HOME"

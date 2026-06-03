@@ -44,13 +44,21 @@ ID_RE = re.compile(r"^\s+-\s+id:\s+(.+)\s*$")
 
 
 def shared_home() -> Path:
-    import os
+    from sa_config import core_home
 
-    return Path(os.environ.get("SHARED_AGENTS_HOME", Path.home() / ".shared-agents"))
+    return core_home()
+
+
+def git_home(home: Path | None = None) -> Path:
+    from sa_config import git_data_home
+
+    return git_data_home(home)
 
 
 def pending_dir(home: Path) -> Path:
-    return home / "learnings" / "pending"
+    from sa_config import pending_dir as sa_pending_dir
+
+    return sa_pending_dir(home)
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
@@ -280,11 +288,13 @@ def promote(
         frontmatter, f"approved/by-domain/{domain}/{pending_path.name}"
     )
 
-    index_path = home / "learnings" / "index.yaml"
+    from sa_config import approved_dir, index_path as sa_index_path
+
+    index_path = sa_index_path(home)
     if index_has_id(index_path, str(entry["id"])):
         raise SystemExit(f"ID already in index.yaml: {entry['id']}")
 
-    dest_dir = home / "learnings" / "approved" / "by-domain" / domain
+    dest_dir = approved_dir(home) / "by-domain" / domain
     dest = dest_dir / pending_path.name
     if dest.exists():
         raise SystemExit(f"Destination already exists: {dest}")
@@ -324,7 +334,11 @@ def run_git(
 
 
 def ensure_git_remote(home: Path) -> str | None:
-    """Point origin at Bitbucket when it is a local dev checkout path."""
+    """Point origin at Bitbucket when it is a local dev checkout path (core only)."""
+    from sa_config import is_team_git_repo
+
+    if is_team_git_repo(home):
+        return None
     current = run_git(home, ["remote", "get-url", "origin"], check=False)
     if current.returncode != 0:
         return None
@@ -355,56 +369,63 @@ def git_publish(
     dry_run: bool = False,
     no_git: bool = False,
 ) -> int:
+    from sa_config import learnings_label, learnings_prefix_for_git
+
+    repo = git_home(home)
+    prefix = learnings_prefix_for_git(home)
+    label = learnings_label(home)
+
     if no_git:
         git_skip_no_git()
         return 0
 
-    if not (home / ".git").is_dir():
+    if not (repo / ".git").is_dir():
         git_skip_not_repo()
         return 0
 
     learning_id = str(entry["id"])
     commit_msg = f"docs(learnings): approve {learning_id}"
-    rel_dest = dest.relative_to(home)
+    rel_dest = dest.relative_to(repo)
 
     if dry_run:
         git_dry_run(
             [
-                "ensure git remote -> Bitbucket (not local dev checkout)",
-                f"git -C {home} add learnings/index.yaml {rel_dest}",
-                f"git -C {home} add -u learnings/pending/",
-                f'git -C {home} commit -m "{commit_msg}"',
-                f"git -C {home} push",
+                "ensure git remote (core only)",
+                f"git -C {repo} add {prefix}/index.yaml {rel_dest}",
+                f"git -C {repo} add -u {prefix}/pending/",
+                f'git -C {repo} commit -m "{commit_msg}"',
+                f"git -C {repo} push",
             ]
         )
         return 0
 
-    fixed = ensure_git_remote(home)
+    fixed = ensure_git_remote(repo)
     if fixed:
         git_note(fixed)
 
-    ensure_remote = home / "scripts" / "ensure-git-remote.sh"
-    if ensure_remote.is_file():
+    core = shared_home()
+    ensure_remote = core / "scripts" / "ensure-git-remote.sh"
+    if ensure_remote.is_file() and repo.resolve() == core.resolve():
         fix = subprocess.run(
-            ["bash", str(ensure_remote), str(home)],
+            ["bash", str(ensure_remote), str(repo)],
             capture_output=True,
             text=True,
         )
         if fix.stdout.strip():
             git_note(fix.stdout.strip())
 
-    run_git(home, ["add", "learnings/index.yaml", str(rel_dest)], check=True)
-    run_git(home, ["add", "-u", "learnings/pending/"], check=False)
+    run_git(repo, ["add", f"{prefix}/index.yaml", str(rel_dest)], check=True)
+    run_git(repo, ["add", "-u", f"{prefix}/pending/"], check=False)
 
-    staged = run_git(home, ["diff", "--cached", "--quiet"], check=False)
+    staged = run_git(repo, ["diff", "--cached", "--quiet"], check=False)
     if staged.returncode == 0:
-        git_nothing_staged("Nothing staged under learnings/ — skipped commit/push.")
+        git_nothing_staged(f"Nothing staged under {label} — skipped commit/push.")
         return 0
 
-    run_git(home, ["commit", "-m", commit_msg], check=True)
+    run_git(repo, ["commit", "-m", commit_msg], check=True)
     git_committed(commit_msg)
 
-    push = run_git(home, ["push"], check=False)
+    push = run_git(repo, ["push"], check=False)
     if push.returncode == 0:
         out = (push.stdout or push.stderr or "").strip()
         if out:
@@ -486,9 +507,12 @@ def main() -> int:
     versions = parse_versions(frontmatter.get("versions", ""))
     warn_missing_versions(frontmatter, domain, versions)
 
+    from sa_config import approved_dir
+
+    rel_target = approved_dir(home) / "by-domain" / domain / pending_path.name
     preview_header(
         f"Review: {pending_path.name}",
-        Target=f"learnings/approved/by-domain/{domain}/",
+        Target=str(rel_target.relative_to(git_home(home))),
     )
     preview_body(text)
 
@@ -506,7 +530,7 @@ def main() -> int:
 
     if args.dry_run:
         say_warn(f"[dry-run] Would move to: {dest}")
-        say_warn("[dry-run] Would append to learnings/index.yaml:")
+        say_warn("[dry-run] Would append to team learnings index.yaml:")
         say_info(format_index_entry(entry).rstrip())
         git_publish(
             home,

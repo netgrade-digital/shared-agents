@@ -117,7 +117,13 @@ def load_manifest(repo_home: Path) -> dict:
 
 
 def agents_block(home: str, tool_note: str = "") -> str:
+    from sa_config import index_path, learnings_root, pending_dir
+
     extra = f"\n{tool_note.strip()}" if tool_note.strip() else ""
+    root = expand(home)
+    lr = learnings_root(root)
+    pending = pending_dir(root)
+    index = index_path(root)
     return f"""{MARKER_BEGIN}
 ## Team Knowledge (shared-agents)
 
@@ -126,9 +132,9 @@ Repo: {home}
 MANDATORY — first action every new session/thread, without asking:
   {home}/scripts/sync.sh pull
 
-Before non-trivial work: search {home}/learnings/approved/ and index.yaml.
+Before non-trivial work: search {lr}/approved/ and {index.name} ({index.parent}/).
 Use skill `shared-agents-knowledge` for the full workflow.
-After reusable insights: write to {home}/learnings/pending/ only (skill `capture-learning`) — absolute path under SHARED_AGENTS_HOME, never the Cursor workspace. See {home}/docs/canonical-paths.md.
+After reusable insights: write to {pending}/ only (skill `capture-learning`) — absolute path under SHARED_AGENTS_HOME, never the Cursor workspace. See {home}/docs/canonical-paths.md.
 No secrets, tokens, or customer data in learnings.
 
 After non-trivial tasks: ALWAYS ask "Soll ich ein Team-Learning anlegen?" — write pending/ only if user says yes.{extra}
@@ -326,11 +332,20 @@ def check_repo(home: str) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _skill_source_dirs(repo_home: Path) -> list[Path]:
+    from sa_config import skills_dirs
+
+    return skills_dirs(repo_home) or [repo_home / "skills"]
+
+
 def check_skills(repo_home: Path, manifest: dict) -> list[str]:
     issues = []
-    skills = sorted(p for p in repo_home.glob("skills/*/") if p.is_dir())
+    sources = _skill_source_dirs(repo_home)
+    skills: list[Path] = []
+    for src in sources:
+        skills.extend(sorted(p for p in src.glob("*/") if p.is_dir()))
     if not skills:
-        issues.append("No skills/ in repo")
+        issues.append("No skills/ in core or team/")
         return issues
     for entry in manifest["shared"]["skill_dirs"]:
         dest_root = expand(entry["path"])
@@ -351,6 +366,9 @@ def run_check(repo_home: Path, home: str, as_json: bool) -> int:
     manifest = load_manifest(repo_home) if repo_ok else {"tools": [], "shared": {"skill_dirs": []}}
     reports = [check_tool(t, home) for t in manifest.get("tools", [])]
     skill_issues = check_skills(repo_home, manifest) if repo_ok else []
+    from sa_config import check_team_setup
+
+    team_issues = check_team_setup(expand(home)) if repo_ok else []
 
     if as_json:
         payload = {
@@ -359,6 +377,7 @@ def run_check(repo_home: Path, home: str, as_json: bool) -> int:
             "repo_ok": repo_ok,
             "repo_message": repo_msg,
             "skill_issues": skill_issues,
+            "team_issues": team_issues,
             "tools": [asdict(r) for r in reports],
         }
         print(json.dumps(payload, indent=2))
@@ -392,6 +411,12 @@ def run_check(repo_home: Path, home: str, as_json: bool) -> int:
         print(bold("\nSkill links:"))
         for issue in skill_issues:
             print(f"  {yellow('!')} {plain(issue)}")
+
+    if team_issues:
+        print(bold("\nTeam data:"))
+        for issue in team_issues:
+            print(f"  {yellow('!')} {plain(issue)}")
+        print(plain("  → sa team verify · sa team migrate · docs/migration-team-data.md"))
 
     needs_install = any(r.installed and not r.configured for r in reports)
     missing = sum(1 for r in reports if r.status == Status.MISSING_TOOL)
@@ -440,22 +465,30 @@ def merge_agents_md(target: Path, block: str, dry_run: bool = False) -> None:
 
 def symlink_skills(repo_home: Path, skill_dirs: list[dict], dry_run: bool = False) -> list[str]:
     messages = []
-    skills = sorted(p for p in repo_home.glob("skills/*/") if p.is_dir())
+    seen: set[str] = set()
+    skill_pairs: list[tuple[Path, str]] = []
+    for src in _skill_source_dirs(repo_home):
+        for skill in sorted(p for p in src.glob("*/") if p.is_dir()):
+            if skill.name in seen:
+                continue
+            seen.add(skill.name)
+            skill_pairs.append((skill, src.name))
+
     for entry in skill_dirs:
         dest_root = expand(entry["path"])
         if not dry_run:
             dest_root.mkdir(parents=True, exist_ok=True)
-        for skill in skills:
+        for skill, src_label in skill_pairs:
             dest = dest_root / skill.name
             if dry_run:
-                messages.append(f"[dry-run] would link {skill.name} → {dest_root}")
+                messages.append(f"[dry-run] would link {skill.name} ({src_label}) → {dest_root}")
                 continue
             if dest.is_symlink():
                 dest.unlink()
-            elif dest.exists():
+            elif dest.exists() and not dest.is_symlink():
                 continue
             dest.symlink_to(skill.resolve())
-        if not dry_run:
+        if not dry_run and skill_pairs:
             note = entry.get("note", "")
             messages.append(f"Skills → {dest_root}" + (f" ({note})" if note else ""))
     return messages
@@ -485,7 +518,8 @@ def install_cursor(repo_home: Path, tool: dict, dry_run: bool) -> list[str]:
         "The agent session is ending. If this session completed a non-trivial task "
         "(feature, bugfix, refactor, multi-file change, non-obvious fix), you MUST ask "
         "the user in German: 'Soll ich ein Team-Learning in shared-agents anlegen?' "
-        "If they agree, use capture-learning and write to learnings/pending/ only. "
+        "If they agree, use capture-learning and sa pending path — write only under "
+        "$SHARED_AGENTS_HOME/team/learnings/pending/. "
         "If they decline or the task was trivial (typo, formatting, pure Q&A), do nothing."
     )
     stop = data["hooks"].setdefault("stop", [])
@@ -674,7 +708,7 @@ def tool_status_label(report: ToolReport) -> str:
         return green("configured")
     if report.installed:
         return yellow("needs setup")
-        return plain("not installed")
+    return plain("not installed")
 
 
 def configure_shell_rc(shell_rc: Path, home: str, dry_run: bool, repo_home: Path | None = None) -> bool:
@@ -705,7 +739,7 @@ def wizard_select_tools(reports: list[tuple[dict, ToolReport]]) -> set[str]:
         return set()
 
     while True:
-        print(bold("Step 2/4 — Select AI tools"))
+        print(bold("Select AI tools"))
         print(plain("  Toggle with number · all · detected · none · Enter to continue"))
         print()
         for idx, (tool, report) in enumerate(reports, start=1):
@@ -759,6 +793,17 @@ def tool_status_plain(report: ToolReport) -> str:
     return "not installed"
 
 
+def prompt_team_remote() -> str | None:
+    print(bold("Step 2/5 — Team data (private repo)"))
+    print(plain("  Separate git repo for learnings + team skills."))
+    print(plain("  Leave empty for solo (learnings only under core/)."))
+    if not is_tty():
+        return None
+    url = prompt("  Team remote URL (or empty)", "")
+    url = url.strip()
+    return url or None
+
+
 def run_wizard_plain(
     repo_home: Path,
     home: str,
@@ -766,11 +811,14 @@ def run_wizard_plain(
     *,
     dry_run: bool,
     shell_rc: Path | None,
-) -> tuple[str, set[str], bool, bool] | None:
-    """Returns (home, selected, add_shell, run_setup) or None if cancelled."""
-    print_banner()
+    ask_team: bool = True,
+    bootstrap: bool = False,
+) -> tuple[str, str | None, set[str], bool, bool] | None:
+    """Returns (home, team_remote, selected, add_shell, run_setup) or None if cancelled."""
+    subtitle = "Bootstrap Wizard" if bootstrap else f"Setup Wizard — {TAGLINE}"
+    ui_print_banner(subtitle=subtitle)
 
-    print(bold("Step 1/4 — Install location"))
+    print(bold("Step 1/5 — Install location"))
     print(f"  Repo:  {repo_home}")
     default_home = home
     if is_tty():
@@ -780,13 +828,19 @@ def run_wizard_plain(
         home = default_home
     print()
 
+    team_remote: str | None = None
+    if ask_team:
+        team_remote = prompt_team_remote()
+        print()
+
+    print(bold("Step 3/5 — Select AI tools"))
     selected = wizard_select_tools(reports)
     print()
     if not selected:
         print("No tools selected — skills will still be linked.")
     print()
 
-    print(bold(cyan("Step 3/4 — Shell environment")))
+    print(bold(cyan("Step 4/5 — Shell environment")))
     add_shell = True
     shell_rc_path = shell_rc or expand("~/.bashrc")
     rc_text = shell_rc_path.read_text() if shell_rc_path.is_file() else ""
@@ -805,9 +859,13 @@ def run_wizard_plain(
         )
     print()
 
-    print(bold("Step 4/4 — Summary"))
+    print(bold("Step 5/5 — Summary"))
     print(f"  Install path: {home}")
-    print(f"  Skills:       link all team skills")
+    if team_remote:
+        print(f"  Team data:    {team_remote}")
+    else:
+        print("  Team data:    solo (core learnings only)")
+    print(f"  Skills:       link core + team skills")
     if selected:
         print("  Configure:")
         for tool, report in reports:
@@ -818,7 +876,7 @@ def run_wizard_plain(
     print()
     if not confirm("Run setup now?", False):
         return None
-    return home, selected, add_shell, True
+    return home, team_remote, selected, add_shell, True
 
 
 @dataclass
@@ -826,11 +884,13 @@ class SavedWizardChoices:
     home: str
     selected_tools: list[str]
     add_shell: bool
+    team_remote: str | None = None
 
     def to_json(self) -> str:
         return json.dumps(
             {
                 "home": self.home,
+                "team_remote": self.team_remote,
                 "selected_tools": sorted(self.selected_tools),
                 "add_shell": self.add_shell,
             },
@@ -840,10 +900,12 @@ class SavedWizardChoices:
     @classmethod
     def from_json(cls, text: str) -> SavedWizardChoices:
         data = json.loads(text)
+        tr = data.get("team_remote")
         return cls(
             home=data["home"],
             selected_tools=list(data.get("selected_tools", [])),
             add_shell=bool(data.get("add_shell", True)),
+            team_remote=tr if tr else None,
         )
 
 
@@ -861,7 +923,14 @@ def gather_wizard_choices(
     home: str,
     *,
     shell_rc: Path | None,
+    ask_team: bool = False,
+    bootstrap: bool = False,
 ) -> SavedWizardChoices | None:
+    from sa_config import config_path
+
+    if not ask_team and not bootstrap:
+        ask_team = not config_path(expand(home)).is_file()
+
     repo_ok, repo_msg = check_repo(str(repo_home))
     if not repo_ok:
         repo_ok, repo_msg = check_repo(home)
@@ -909,6 +978,8 @@ def gather_wizard_choices(
                 rows=tool_rows,
                 shell_rc=shell_rc_str,
                 shell_state=shell_state,
+                bootstrap=bootstrap,
+                ask_team=ask_team,
             )
         except WizardTuiFailed as exc:
             print(f"  → {exc} — using text prompts.", file=sys.stderr)
@@ -919,11 +990,13 @@ def gather_wizard_choices(
                 reports,
                 dry_run=False,
                 shell_rc=shell_rc_path,
+                ask_team=ask_team,
+                bootstrap=bootstrap,
             )
             if plain is None:
                 return None
-            ph, selected, add_shell, _ = plain
-            return SavedWizardChoices(ph, sorted(selected), add_shell)
+            ph, team_remote, selected, add_shell, _ = plain
+            return SavedWizardChoices(ph, sorted(selected), add_shell, team_remote)
 
         if result is None or not result.run_setup:
             print("Cancelled.")
@@ -932,6 +1005,7 @@ def gather_wizard_choices(
             result.home,
             sorted(result.selected_tools),
             result.add_shell,
+            result.team_remote,
         )
 
     plain = run_wizard_plain(
@@ -940,12 +1014,14 @@ def gather_wizard_choices(
         reports,
         dry_run=False,
         shell_rc=shell_rc_path,
+        ask_team=ask_team,
+        bootstrap=bootstrap,
     )
     if plain is None:
         print("Cancelled.")
         return None
-    ph, selected, add_shell, _ = plain
-    return SavedWizardChoices(ph, sorted(selected), add_shell)
+    ph, team_remote, selected, add_shell, _ = plain
+    return SavedWizardChoices(ph, sorted(selected), add_shell, team_remote)
 
 
 def apply_wizard_choices(
@@ -954,11 +1030,25 @@ def apply_wizard_choices(
     *,
     dry_run: bool,
     shell_rc: Path | None,
+    skip_team_setup: bool = False,
 ) -> int:
     home = os.path.expanduser(os.path.expandvars(choices.home))
     os.environ["SHARED_AGENTS_HOME"] = home
     shell_rc_path = shell_rc or expand("~/.bashrc")
     selected = set(choices.selected_tools)
+
+    if not skip_team_setup and not dry_run:
+        from sa_config import write_config
+        from team_data import setup_team
+
+        write_config(expand(home), team_remote_url=choices.team_remote)
+        if choices.team_remote:
+            try:
+                msg = setup_team(expand(home), choices.team_remote, dry_run=False)
+                print(f"  {green('✓')} {highlight_paths(msg)}")
+            except RuntimeError as exc:
+                print(f"  ! {exc}", file=sys.stderr)
+                return 1
 
     if choices.add_shell:
         if not configure_shell_rc(shell_rc_path, home, dry_run, repo_home=repo_home):
