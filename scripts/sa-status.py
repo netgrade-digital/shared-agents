@@ -12,7 +12,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sa_ui import bold, cyan, green, magenta, plain, print_logo, yellow
+from sa_ui import bold, cyan, green, magenta, plain, print_logo, run_cli_main, yellow
 
 
 @dataclass
@@ -243,4 +243,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)

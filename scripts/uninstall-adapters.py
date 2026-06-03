@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sa_ui import bullet_ok, heading, plain, print_dry_run_line, say_warn
+from sa_ui import bullet_ok, heading, plain, print_dry_run_line, run_cli_main, say_warn
 
 MARKER_BEGIN = "<!-- shared-agents:begin -->"
 MARKER_END = "<!-- shared-agents:end -->"
@@ -278,4 +278,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)

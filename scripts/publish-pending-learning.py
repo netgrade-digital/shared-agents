@@ -28,6 +28,7 @@ from sa_ui import (
     say_success,
     say_warn_stderr,
     say_warn,
+    run_cli_main,
 )
 
 DEFAULT_GIT_REMOTE = "git@bitbucket.org:netgrade/shared-agents.git"
@@ -262,4 +263,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)

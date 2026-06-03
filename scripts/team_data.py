@@ -29,6 +29,7 @@ from sa_ui import (
     say_success,
     say_warn,
     say_warn_stderr,
+    run_cli_main,
     yellow,
 )
 
@@ -563,4 +564,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)

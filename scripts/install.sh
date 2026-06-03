@@ -3,6 +3,13 @@
 # Open-source friendly — no network calls, manifest-driven (adapters/manifest.json).
 set -euo pipefail
 
+_sa_on_cancel() {
+  echo
+  echo "Cancelled."
+  exit 130
+}
+trap _sa_on_cancel INT
+
 VERSION="0.1.0"
 REPO_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"

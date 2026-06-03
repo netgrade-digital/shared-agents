@@ -30,6 +30,10 @@ from sa_ui import (
     plain,
     preview_body,
     preview_header,
+    UserCancelled,
+    prompt_line,
+    prompt_yes_no,
+    run_cli_main,
     say_cancelled,
     say_info,
     say_success,
@@ -169,7 +173,7 @@ def resolve_pending(path_arg: str | None, home: Path) -> Path | None:
     for idx, path in enumerate(files, start=1):
         list_pick_item(idx, path.name)
     while True:
-        choice = input(f"{cyan('Select number (or q)')}: ").strip().lower()
+        choice = prompt_line(f"{cyan('Select number (or q)')}: ").strip().lower()
         if choice in {"q", "quit", ""}:
             return None
         if choice.isdigit():
@@ -318,16 +322,6 @@ def promote(
     shutil.move(str(pending_path), str(dest))
     append_index(index_path, entry)
     return dest, entry
-
-
-def confirm(prompt: str) -> bool:
-    while True:
-        answer = input(f"{prompt} [y/N]: ").strip().lower()
-        if answer in {"", "n", "no"}:
-            return False
-        if answer in {"y", "yes"}:
-            return True
-        say_warn("Please answer y or n.")
 
 
 def run_git(
@@ -529,7 +523,7 @@ def main() -> int:
     preview_body(text)
 
     if not args.yes and not args.dry_run:
-        if not confirm("Approve and promote?"):
+        if not prompt_yes_no("Approve and promote?", default=False):
             say_cancelled()
             return 0
 
@@ -571,4 +565,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)

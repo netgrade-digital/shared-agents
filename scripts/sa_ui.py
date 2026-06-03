@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from collections.abc import Callable
 
 _PATH_RE = re.compile(r"(/[^\s]+|~[^\s]+)")
 
@@ -373,8 +374,55 @@ def preview_body(text: str) -> None:
     divider()
 
 
+EXIT_CANCELLED = 130
+
+
+class UserCancelled(Exception):
+    """User cancelled an interactive flow (Ctrl+C or wizard abort)."""
+
+
 def say_cancelled() -> None:
-    say_warn("Abgebrochen.")
+    say_warn("Cancelled.")
+
+
+def prompt_line(prompt: str) -> str:
+    """Read one line; Ctrl+C raises UserCancelled (no traceback)."""
+    try:
+        return input(prompt)
+    except KeyboardInterrupt:
+        print()
+        raise UserCancelled from None
+
+
+def prompt_yes_no(prompt: str, *, default: bool = False) -> bool:
+    """y/N (or Y/n) prompt; Ctrl+C raises UserCancelled."""
+    hint = "Y/n" if default else "y/N"
+    while True:
+        try:
+            answer = input(f"{prompt} [{hint}]: ").strip().lower()
+        except KeyboardInterrupt:
+            print()
+            raise UserCancelled from None
+        if not answer:
+            return default
+        if answer in {"y", "yes", "j", "ja"}:
+            return True
+        if answer in {"n", "no", "nein"}:
+            return False
+        say_warn("Please answer y or n.")
+
+
+def run_cli_main(main: Callable[[], int]) -> None:
+    """Wrap script __main__ for clean Ctrl+C / UserCancelled exit."""
+    try:
+        raise SystemExit(main())
+    except UserCancelled:
+        say_cancelled()
+        raise SystemExit(EXIT_CANCELLED) from None
+    except KeyboardInterrupt:
+        print()
+        say_cancelled()
+        raise SystemExit(EXIT_CANCELLED) from None
 
 
 def git_skip_no_git() -> None:

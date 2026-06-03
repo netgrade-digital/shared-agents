@@ -31,6 +31,9 @@ from sa_ui import (
     plain,
     preview_body,
     preview_header,
+    UserCancelled,
+    prompt_line,
+    run_cli_main,
     say_cancelled,
     say_info,
     say_success,
@@ -154,7 +157,7 @@ def resolve_target(arg: str | None, home: Path) -> tuple[str, Path] | None:
         for idx, (entry_id, rel) in enumerate(entries, start=1):
             list_pick_item(idx, f"{entry_id}  ({Path(rel).name})")
         while True:
-            choice = input(f"{cyan('Select number (or q)')}: ").strip().lower()
+            choice = prompt_line(f"{cyan('Select number (or q)')}: ").strip().lower()
             if choice in {"q", "quit", ""}:
                 return None
             if choice.isdigit():
@@ -193,16 +196,6 @@ def resolve_target(arg: str | None, home: Path) -> tuple[str, Path] | None:
     return None
 
 
-def confirm(prompt: str) -> bool:
-    while True:
-        answer = input(f"{prompt} [y/N]: ").strip().lower()
-        if answer in {"", "n", "no"}:
-            return False
-        if answer in {"y", "yes", "j", "ja"}:
-            return True
-        say_warn("Please answer y or n.")
-
-
 def ask_disposition() -> str | None:
     """Interactive wizard: delete vs move to pending."""
     print()
@@ -211,7 +204,7 @@ def ask_disposition() -> str | None:
     menu_option("[2]", "Nach pending/ verschieben (Entwurf)")
     menu_option("[q]", "Abbrechen")
     while True:
-        choice = input(f"{cyan('> ')}").strip().lower()
+        choice = prompt_line(f"{cyan('> ')}").strip().lower()
         if choice in {"1", "delete", "löschen", "l", "d"}:
             return "delete"
         if choice in {"2", "pending", "p", "pending/"}:
@@ -457,4 +450,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)

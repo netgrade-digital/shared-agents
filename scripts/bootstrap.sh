@@ -9,6 +9,13 @@
 #   SA_BOOTSTRAP_NON_INTERACTIVE=1 curl … | bash
 set -euo pipefail
 
+_sa_on_cancel() {
+  echo
+  echo "Cancelled."
+  exit 130
+}
+trap _sa_on_cancel INT
+
 DEFAULT_CORE_REMOTE="${SHARED_AGENTS_CORE_REMOTE:-${SHARED_AGENTS_GIT_REMOTE:-git@github.com:netgrade-digital/shared-agents.git}}"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
 SHELL_RC="${SHELL_RC:-$HOME/.bashrc}"

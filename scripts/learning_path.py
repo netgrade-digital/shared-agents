@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sa_config import core_home, pending_dir
-from sa_ui import say_warn_stderr
+from sa_ui import run_cli_main, say_warn_stderr
 
 
 def main() -> int:
@@ -29,4 +29,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)

@@ -33,8 +33,16 @@ class ToolRow:
     installed: bool
 
 
-class WizardCancelled(Exception):
-    pass
+from sa_ui import UserCancelled
+
+WizardCancelled = UserCancelled
+
+
+def _getch(stdscr: curses.window) -> int:
+    try:
+        return stdscr.getch()
+    except KeyboardInterrupt:
+        raise UserCancelled from None
 
 
 class WizardTuiFailed(Exception):
@@ -115,7 +123,7 @@ def _confirm_cancel(stdscr: curses.window, y: int) -> None:
     _safe_addstr(stdscr, y, 4, "Setup abbrechen?  [y/N]  (Enter = nein)", _attr(stdscr, 3, bold=True))
     stdscr.refresh()
     while True:
-        key = stdscr.getch()
+        key = _getch(stdscr)
         if key in (ord("y"), ord("Y")):
             raise WizardCancelled
         if key in (ord("n"), ord("N"), 10, 13, curses.KEY_ENTER, 27):
@@ -130,7 +138,7 @@ def _wait_enter(
     _safe_addstr(stdscr, y, 4, message, _attr(stdscr, 2, bold=True))
     stdscr.refresh()
     while True:
-        key = stdscr.getch()
+        key = _getch(stdscr)
         if key in (10, 13, curses.KEY_ENTER, ord(" "), ord("j"), ord("J"), ord("y"), ord("Y")):
             return
         if key in (27, ord("q"), ord("Q")):
@@ -179,7 +187,7 @@ def _screen_path(stdscr: curses.window, default_home: str) -> str:
         if 8 < height:
             stdscr.move(8, cx)
 
-        key = stdscr.getch()
+        key = _getch(stdscr)
         if key in (10, 13, curses.KEY_ENTER):
             value = "".join(buf).strip()
             return value or default_home
@@ -244,14 +252,14 @@ def _screen_team_remote(stdscr: curses.window) -> str | None:
         if 8 < height:
             stdscr.move(8, cx)
 
-        key = stdscr.getch()
+        key = _getch(stdscr)
         if key in (10, 13, curses.KEY_ENTER):
             value = "".join(buf).strip()
             if value:
                 return value
             _safe_addstr(stdscr, 10, 4, "URL required (or go back and choose Solo).", _attr(stdscr, 3, bold=True))
             stdscr.refresh()
-            stdscr.getch()
+            _getch(stdscr)
             continue
         if key in (27, ord("q")):
             raise WizardCancelled
@@ -310,7 +318,7 @@ def _screen_tools(stdscr: curses.window, rows: list[ToolRow], selected: set[str]
             status_attr = _attr(stdscr, 2 if "configured" in status else 3 if "needs" in status else 5)
             _safe_addstr(stdscr, y, 34, status[: width - 36], status_attr)
 
-        key = stdscr.getch()
+        key = _getch(stdscr)
         if key in (10, 13, curses.KEY_ENTER):
             return selected
         if key in (27, ord("q")):
@@ -367,7 +375,7 @@ def _screen_yes_no(
             attr = curses.color_pair(4) if i == idx else 0
             _safe_addstr(stdscr, y, 6, f"{marker} {label}", attr)
 
-        key = stdscr.getch()
+        key = _getch(stdscr)
         if key in (curses.KEY_LEFT, curses.KEY_UP):
             idx = (idx - 1) % 2
         elif key in (curses.KEY_RIGHT, curses.KEY_DOWN):
@@ -479,7 +487,7 @@ def _screen_summary(
             attr = curses.color_pair(4) if i == run_idx else 0
             _safe_addstr(stdscr, yy, 4, f"{marker} {label}", attr)
 
-        key = stdscr.getch()
+        key = _getch(stdscr)
         if key in (curses.KEY_UP, ord("k")):
             run_idx = (run_idx - 1) % 2
         elif key in (curses.KEY_DOWN, ord("j")):
@@ -555,7 +563,11 @@ def run_wizard_tui(
             bootstrap=bootstrap,
             ask_team=ask_team,
         )
-    except WizardCancelled:
+    except UserCancelled:
+        try:
+            curses.endwin()
+        except Exception:
+            pass
         return None
     except curses.error as exc:
         raise WizardTuiFailed("terminal too small or curses unavailable") from exc

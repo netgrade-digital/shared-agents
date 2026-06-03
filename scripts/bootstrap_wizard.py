@@ -29,7 +29,16 @@ def _load_install_adapters():
 _ia = _load_install_adapters()
 
 from sa_config import config_path, team_remote, write_config  # noqa: E402
-from sa_ui import bold, cyan, green, plain, print_banner, print_install_footer, say_warn_stderr  # noqa: E402
+from sa_ui import (  # noqa: E402
+    bold,
+    cyan,
+    green,
+    plain,
+    print_banner,
+    print_install_footer,
+    run_cli_main,
+    say_warn_stderr,
+)
 from team_data import resolve_team_remote, setup_team  # noqa: E402
 
 DEFAULT_CORE_REMOTE = os.environ.get(
@@ -123,6 +132,10 @@ def apply_bootstrap(
 
 
 def main() -> int:
+    return _main_impl()
+
+
+def _main_impl() -> int:
     parser = argparse.ArgumentParser(description="shared-agents bootstrap wizard")
     parser.add_argument(
         "--source",
@@ -176,7 +189,7 @@ def main() -> int:
             bootstrap=True,
         )
         if choices is None:
-            print(plain("Abgebrochen — nichts installiert."))
+            print(plain("Cancelled — nothing installed."))
             return 1
 
     code = apply_bootstrap(
@@ -193,4 +206,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)

@@ -2,6 +2,13 @@
 # Remove shared-agents from this machine (adapters + optional repo delete).
 set -euo pipefail
 
+_sa_on_cancel() {
+  echo
+  echo "Cancelled."
+  exit 130
+}
+trap _sa_on_cancel INT
+
 VERSION="0.1.0"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
 SHELL_RC="${SHELL_RC:-$HOME/.bashrc}"

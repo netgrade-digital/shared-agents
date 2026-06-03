@@ -26,6 +26,7 @@ from shutil import which
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sa_ui import (
     TAGLINE,
+    UserCancelled,
     bold,
     cyan,
     green,
@@ -34,7 +35,10 @@ from sa_ui import (
     print_banner as ui_print_banner,
     highlight_paths,
     print_dry_run_line,
+    prompt_line,
+    prompt_yes_no,
     red,
+    run_cli_main,
     yellow,
 )
 
@@ -676,8 +680,8 @@ def prompt(text: str, default: str | None = None) -> str:
     suffix = f" [{default}]" if default else ""
     while True:
         try:
-            answer = input(f"{text}{suffix}: ").strip()
-        except (EOFError, KeyboardInterrupt):
+            answer = prompt_line(f"{text}{suffix}: ").strip()
+        except EOFError:
             print()
             raise SystemExit(130)
         if answer:
@@ -688,20 +692,7 @@ def prompt(text: str, default: str | None = None) -> str:
 
 
 def confirm(text: str, default: bool = True) -> bool:
-    hint = "Y/n" if default else "y/N"
-    while True:
-        try:
-            answer = input(f"{text} [{hint}]: ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            raise SystemExit(130)
-        if not answer:
-            return default
-        if answer in {"y", "yes", "j", "ja"}:
-            return True
-        if answer in {"n", "no", "nein"}:
-            return False
-        print("Please answer y or n.")
+    return prompt_yes_no(text, default=default)
 
 
 def print_banner() -> None:
@@ -770,7 +761,7 @@ def wizard_select_tools(reports: list[tuple[dict, ToolReport]]) -> set[str]:
             name = tool["name"]
             print(f"  [{idx}] [{mark}] {name:<24} {status}")
         print()
-        choice = input("> ").strip().lower()
+        choice = prompt_line("> ").strip().lower()
         if choice in {"", "done", "ok", "weiter"}:
             break
         if choice in {"all", "a"}:
@@ -1024,7 +1015,7 @@ def gather_wizard_choices(
             return SavedWizardChoices(ph, sorted(selected), add_shell, team_remote)
 
         if result is None or not result.run_setup:
-            print("Cancelled.")
+            print(plain("Cancelled."))
             return None
         return SavedWizardChoices(
             result.home,
@@ -1033,17 +1024,20 @@ def gather_wizard_choices(
             result.team_remote,
         )
 
-    plain = run_wizard_plain(
-        repo_home,
-        home,
-        reports,
-        dry_run=False,
-        shell_rc=shell_rc_path,
-        ask_team=ask_team,
-        bootstrap=bootstrap,
-    )
+    try:
+        plain = run_wizard_plain(
+            repo_home,
+            home,
+            reports,
+            dry_run=False,
+            shell_rc=shell_rc_path,
+            ask_team=ask_team,
+            bootstrap=bootstrap,
+        )
+    except UserCancelled:
+        return None
     if plain is None:
-        print("Cancelled.")
+        print(plain("Cancelled."))
         return None
     ph, team_remote, selected, add_shell, _ = plain
     return SavedWizardChoices(ph, sorted(selected), add_shell, team_remote)
@@ -1222,4 +1216,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)
