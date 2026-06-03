@@ -57,23 +57,48 @@ def unmerge_agents_md(target: Path, dry_run: bool) -> str | None:
     return f"Removed marker block from {target}"
 
 
+def _skill_source_roots(repo_home: Path) -> list[Path]:
+    """Core skills + team skills (same sources as install-adapters symlink_skills)."""
+    roots: list[Path] = []
+    core = repo_home / "skills"
+    if core.is_dir():
+        roots.append(core.resolve())
+    team = repo_home / "team" / "skills"
+    if team.is_dir():
+        roots.append(team.resolve())
+    return roots
+
+
+def _symlink_points_to_shared_agents(dest: Path, source_roots: list[Path]) -> bool:
+    if not dest.is_symlink():
+        return False
+    try:
+        target = dest.resolve()
+    except OSError:
+        return False
+    for root in source_roots:
+        if target == root or root in target.parents:
+            return True
+    return False
+
+
 def uninstall_skills(repo_home: Path, skill_dirs: list[dict], dry_run: bool) -> list[str]:
     messages: list[str] = []
-    skills_root = repo_home / "skills"
+    source_roots = _skill_source_roots(repo_home)
+    if not source_roots:
+        return messages
+
+    seen_dest: set[Path] = set()
     for entry in skill_dirs:
         dest_root = expand(entry["path"])
         if not dest_root.is_dir():
             continue
-        for skill_dir in sorted(skills_root.glob("*/")):
-            dest = dest_root / skill_dir.name
-            if not dest.is_symlink():
+        for dest in sorted(dest_root.iterdir()):
+            if dest in seen_dest:
                 continue
-            try:
-                target = dest.resolve()
-            except OSError:
-                target = dest
-            if skills_root.resolve() not in target.parents and target != skills_root.resolve():
+            if not _symlink_points_to_shared_agents(dest, source_roots):
                 continue
+            seen_dest.add(dest)
             if dry_run:
                 messages.append(f"[dry-run] would remove skill symlink {dest}")
             else:

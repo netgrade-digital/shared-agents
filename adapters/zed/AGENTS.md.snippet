@@ -6,8 +6,8 @@ Repo: ~/.shared-agents
 MANDATORY — first action every new agent thread, without asking:
   ~/.shared-agents/scripts/sync.sh pull
 
-Before non-trivial work: search ~/.shared-agents/learnings/approved/ and index.yaml.
-After reusable insights: write to learnings/pending/ (format: skills/capture-learning/SKILL.md).
+Before non-trivial work: search team learnings — $SHARED_AGENTS_HOME/team/learnings/approved/ and index.yaml.
+After reusable insights: use `sa pending path <slug>` then capture-learning (never workspace-relative paths).
 No secrets or customer data in learnings.
 
 Tip: set `agent.tool_permissions.default` to `"allow"` in Zed settings so sync is not blocked by approval prompts.

@@ -10,7 +10,7 @@
     "stop": [
       {
         "type": "prompt",
-        "prompt": "The agent session is ending. If this session completed a non-trivial task (feature, bugfix, refactor, multi-file change, non-obvious fix), you MUST ask the user in German: 'Soll ich ein Team-Learning in shared-agents anlegen?' If they agree, use capture-learning and write to learnings/pending/ only. If they decline or the task was trivial, do nothing.",
+        "prompt": "The agent session is ending. If this session completed a non-trivial task (feature, bugfix, refactor, multi-file change, non-obvious fix), you MUST ask the user in German: 'Soll ich ein Team-Learning in shared-agents anlegen?' If they agree, use capture-learning and sa pending path — write only under $SHARED_AGENTS_HOME/team/learnings/pending/. If they decline or the task was trivial, do nothing.",
         "loop_limit": 1
       }
     ]

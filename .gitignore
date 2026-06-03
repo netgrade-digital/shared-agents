@@ -17,3 +17,12 @@
 # Local MCP overrides (machine-specific; see mcps/mcps.local.yaml.example)
 mcps.local.yaml
 **/mcps.local.yaml
+
+# Local install config + private team data (nested git — never commit to core)
+config.local.yaml
+**/config.local.yaml
+team/
+.gitmodules
+
+# Legacy — learnings belong in team/ only (never in Core)
+learnings/

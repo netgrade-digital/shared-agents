@@ -146,11 +146,14 @@ def print_help(*, version: str, home: str) -> None:
     print()
 
     print(f"  {cyan('Setup')}")
+    _cmd("bootstrap", "             Voller Setup (Core + Team-Repo + Adapter)")
     _cmd("install", " [opts]       Setup-Wizard (TTY: TUI ↑↓ Space · Cursor: Text)")
     _cmd("install --non-interactive", "   Ohne Wizard — alle erkannten Tools")
     _cmd("check", "                Tool-Status prüfen")
     _cmd("uninstall", " [opts]     Deinstallieren (Bestätigung: y/N)")
-    _cmd("sync", "                 Neueste Learnings pullen (Bitbucket)")
+    _cmd("sync", "                 Core + Team-Learnings pullen")
+    _cmd("team verify", "           Team-Repo prüfen (index, Ordner, git)")
+    _cmd("team migrate", "          Alt learnings/ → team/learnings/")
     _cmd("status", "               Offene Punkte (Review, Skills, Adapter)")
     print()
 
@@ -170,7 +173,8 @@ def print_help(*, version: str, home: str) -> None:
     print()
 
     print(f"  {bold('Beispiele')}")
-    _example("sa install", "                        Setup-Wizard (alles konfigurieren)")
+    _example("sa bootstrap", "                      Erst-Setup (empfohlen, curl | bash)")
+    _example("sa install", "                        Setup-Wizard (Adapter / Re-Check)")
     _example("sa install --non-interactive", "        Schnell, ohne Prompts")
     _example("sa install --check", "                  Adapter-Status")
     _example("sa sync")
@@ -191,7 +195,7 @@ def print_help(*, version: str, home: str) -> None:
 
     print(
         f"  Erst-Install ohne ~/.shared-agents: "
-        f"{bold('sa install --wizard')} {plain('(klont von Bitbucket)')}"
+        f"{bold('sa bootstrap')} {plain('(Erst-Setup: Core + Team-Repo)')}"
     )
     print(
         f"  Repo-Root: {bold('./install.sh')} · {bold('./sa install')} · {bold('sa help')}"
@@ -412,7 +416,7 @@ def git_push_failed(err: str, *, hints: list[str] | None = None) -> None:
 
 
 def print_sync_ok() -> None:
-    say_success("✓ Learnings synced.")
+    say_success("✓ Core + team learnings synced.")
 
 
 def print_uninstall_intro(*, home: str, shell_rc: str, keep_repo: bool) -> None:
@@ -421,9 +425,11 @@ def print_uninstall_intro(*, home: str, shell_rc: str, keep_repo: bool) -> None:
     label_line("  HOME:      ", home)
     label_line("  Shell rc:  ", shell_rc)
     if keep_repo:
-        print(f"  {plain('Repo:      keep (adapters only)')}")
+        print(f"  {plain('Data:      keep core + team/ + config.local.yaml')}")
+        print(f"  {plain('Remove:    adapters + skill symlinks only')}")
     else:
-        print(f"  {plain('Repo:      ')}{warn('DELETE')} {cyan(home)}")
+        print(f"  {plain('Data:      ')}{warn('DELETE')} {cyan(home)}")
+        print(f"  {plain('           ')}{plain('(core, team/ learnings, config.local.yaml)')}")
     print()
 
 
@@ -438,7 +444,7 @@ def print_uninstall_footer(*, dry_run: bool) -> None:
     else:
         say_success("Uninstall complete.")
         say_info("Neues Terminal öffnen (oder: exec $SHELL) — sa / shared-agents sind dann weg.")
-        print(f"{plain('Re-install: ')}{green('sa install --wizard')}")
+        print(f"{plain('Re-install: ')}{green('sa bootstrap')}")
     print()
 
 

@@ -26,7 +26,7 @@ Cursor also runs `sessionStart` hook — still run sync once at session start if
 
 ## Before tasks
 
-After sync, search `$SHARED_AGENTS_HOME/learnings/approved/` and `$SHARED_AGENTS_HOME/learnings/index.yaml` for matching project/domain. Use skill `shared-agents-knowledge`.
+After sync, search `$SHARED_AGENTS_HOME/team/learnings/approved/` and `$SHARED_AGENTS_HOME/team/learnings/index.yaml` for matching project/domain. Use skill `shared-agents-knowledge`.
 
 ## After tasks (mandatory for non-trivial work)
 

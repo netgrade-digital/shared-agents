@@ -21,6 +21,7 @@ class StatusReport:
     pending_learnings: list[str] = field(default_factory=list)
     pending_unpublished: list[str] = field(default_factory=list)
     skill_issues: list[str] = field(default_factory=list)
+    team_issues: list[str] = field(default_factory=list)
     tools_need_install: list[str] = field(default_factory=list)
 
     @property
@@ -29,26 +30,35 @@ class StatusReport:
             self.pending_learnings
             or self.pending_unpublished
             or self.skill_issues
+            or self.team_issues
             or self.tools_need_install
         )
 
 
 def shared_home() -> Path:
-    return Path(os.environ.get("SHARED_AGENTS_HOME", Path.home() / ".shared-agents")).expanduser()
+    from sa_config import core_home
+
+    return core_home()
 
 
 def pending_files(home: Path) -> list[str]:
-    pending = home / "learnings" / "pending"
+    from sa_config import pending_dir
+
+    pending = pending_dir(home)
     if not pending.is_dir():
         return []
     return sorted(p.name for p in pending.glob("*.md") if p.is_file())
 
 
 def pending_unpublished(home: Path) -> list[str]:
-    if not (home / ".git").is_dir():
+    from sa_config import git_data_home, learnings_prefix_for_git
+
+    repo = git_data_home(home)
+    prefix = learnings_prefix_for_git(home)
+    if not (repo / ".git").is_dir():
         return []
     result = subprocess.run(
-        ["git", "-C", str(home), "status", "--porcelain", "learnings/pending/"],
+        ["git", "-C", str(repo), "status", "--porcelain", f"{prefix}/pending/"],
         capture_output=True,
         text=True,
         check=False,
@@ -93,14 +103,18 @@ def load_check(home: Path) -> tuple[list[str], list[str]]:
 
 
 def collect(home: Path) -> StatusReport:
+    from sa_config import check_team_setup
+
     pending = pending_files(home)
     unpublished = pending_unpublished(home)
     skill_issues, tools = load_check(home)
+    team_issues = check_team_setup(home)
     return StatusReport(
         shared_agents_home=str(home),
         pending_learnings=pending,
         pending_unpublished=unpublished,
         skill_issues=skill_issues,
+        team_issues=team_issues,
         tools_need_install=tools,
     )
 
@@ -132,6 +146,13 @@ def format_human(report: StatusReport) -> str:
             lines.append(plain("  → sa pending push <datei>"))
             lines.append("")
 
+    if report.team_issues:
+        lines.append(magenta(f"Team data ({len(report.team_issues)}):"))
+        for issue in report.team_issues:
+            lines.append(f"  • {yellow(issue)}")
+        lines.append(plain("  → sa bootstrap · sa team migrate · docs/migration-team-data.md"))
+        lines.append("")
+
     if report.skill_issues:
         lines.append(magenta(f"Skills / Symlinks ({len(report.skill_issues)}):"))
         for issue in report.skill_issues:
@@ -159,6 +180,8 @@ def format_brief(report: StatusReport) -> str:
         )
     if report.pending_unpublished:
         parts.append(f"{len(report.pending_unpublished)} pending unpubl.")
+    if report.team_issues:
+        parts.append(f"{len(report.team_issues)} Team-Setup")
     if report.skill_issues:
         parts.append(f"{len(report.skill_issues)} Skill-Link(s)")
     if report.tools_need_install:

@@ -58,6 +58,8 @@ sa check                  # Adapter-Status
 | Setup | `sa check` | Tool installiert vs. konfiguriert |
 | Setup | `sa sync` | `git pull` Learnings (ff-only) |
 | Setup | `sa status` | Offene Punkte: Review, Skills, Adapter |
+| Setup | `sa team verify` | Team-Repo-Struktur prüfen |
+| Setup | `sa team migrate` | Alt-`learnings/` → `team/learnings/` |
 | Setup | `sa uninstall` | Deinstallieren (y/N) |
 | Learnings | `sa review` | Interaktiv: pending → approved |
 | Learnings | `sa review list` | Pending-Liste |
@@ -77,7 +79,7 @@ Zeigt, was leicht vergessen wird:
 
 | Prüfung | Bedeutung | Aktion |
 |---------|-----------|--------|
-| Pending-Learnings | Dateien in `learnings/pending/` | `sa review list` · `sa review` |
+| Pending-Learnings | `team/learnings/pending/` (Team-Repo) | `sa review list` · `sa review` |
 | Noch nicht gepusht | Lokale pending-Änderungen | `sa pending push` |
 | Skill-Symlinks | Neuer Skill im Repo, nicht verlinkt | `sa install` |
 | Adapter | Tool da, nicht konfiguriert | `sa install` |
@@ -199,13 +201,13 @@ sa review 2026-06-02-my-slug.md
 | `--no-git` | Kein commit/push |
 | `-y` / `--yes` | Ohne Bestätigung |
 
-Verschiebt nach `learnings/approved/`, trägt `index.yaml` ein, commit + push (nur `learnings/`).
+Verschiebt nach `team/learnings/approved/`, trägt `index.yaml` ein, commit + push (nur Team-Repo).
 
 ### Pfad auflösen — `sa pending path`
 
 ```bash
 sa pending path 2026-06-02-my-slug
-# → …/learnings/pending/2026-06-02-my-slug.md
+# → …/team/learnings/pending/2026-06-02-my-slug.md
 ```
 
 ### Unapprove — `sa unapprove`
@@ -231,11 +233,36 @@ Alias: **`sa unapprove`** = **`sa rm`** (Learning entfernen, nicht Repo löschen
 ```bash
 sa uninstall                 # Bestätigung: y/N
 sa uninstall -y              # ohne Nachfrage
-sa uninstall --keep-repo     # nur Adapter, Repo behalten
+sa uninstall --keep-repo     # nur Adapter; Core + team/ bleiben
 sa uninstall --dry-run
 ```
 
-Danach: **`source ~/.bashrc`** oder neues Terminal.
+Entfernt Hooks und Skill-Symlinks (Core **und** Team-Skills). Ohne `--keep-repo`: löscht `$SHARED_AGENTS_HOME` inkl. `team/` (privates Learnings-Repo) und `config.local.yaml`.
+
+Danach: **`source ~/.bashrc`** oder neues Terminal. Neu: **`sa bootstrap`**.
+
+## Team-Repo — `sa team verify`
+
+Nach Bootstrap oder wenn das Remote schon voll ist:
+
+```bash
+sa team verify
+sa team verify --json    # CI / Scripts
+sa team verify --strict  # Exit 1 bei Warnungen
+```
+
+Prüft u. a.: `team/.git`, `origin` vs. `config.local.yaml`, `learnings/index.yaml`, `pending/` / `approved/`, Legacy `~/shared-agents/learnings/`.
+
+## Migration — `sa team migrate`
+
+Wenn noch `~/.shared-agents/learnings/` existiert (Setup vor Core/Team-Split):
+
+```bash
+sa team migrate --dry-run
+sa team migrate
+```
+
+Siehe `$SHARED_AGENTS_HOME/docs/migration-team-data.md`.
 
 ---
 

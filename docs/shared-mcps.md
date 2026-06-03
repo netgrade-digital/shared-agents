@@ -3,7 +3,7 @@
 **Status:** Entwurf / geplant — Installer (`install-mcps.py`) noch nicht implementiert.  
 **Ziel:** Team-weite MCP-Server-Konfiguration im gleichen Stil wie Skills und Learnings: Manifest + lokale Overrides + Learnings — **nicht** als kopiertes `mcp.json` mit SSH/Docker-Details im Git.
 
-**Siehe auch:** [README.md](../README.md) · [team-ki-setup.md](team-ki-setup.md) · [mcps/README.md](../mcps/README.md)
+**Siehe auch:** [README.md](../README.md) · [learnings.md](learnings.md) · [mcps/README.md](../mcps/README.md)
 
 ---
 
@@ -71,7 +71,7 @@ shared-agents/
 │   └── mcps.local.yaml.example       ← Vorlage für lokale Werte
 ├── scripts/
 │   └── install-mcps.py               ← geplant (noch nicht da)
-└── learnings/approved/by-domain/…    ← Betriebswissen (wann/wie MCPs nutzen)
+└── team/learnings/approved/by-domain/…    ← Betriebswissen (wann/wie MCPs nutzen)
 ```
 
 | Artefakt | Rolle |
@@ -259,7 +259,7 @@ Team-Manifest: **keine** Kunden-SSH-Hosts. Höchstens generische Templates + Lea
 2. **Manifest-Änderungen = PR** — nicht vom Agent nach `approved/` schreiben (wie Learnings-Workflow, aber Maintainer-Review).
 3. **Repo-Zugriff = Infra-Gate** — wer SF-SSH hat, kann crawlen; MCP-Install ersetzt keine Berechtigungsmatrix.
 4. **Version-Pins** — z. B. `@agentdeskai/browser-tools-mcp@1.2.1` im Manifest, kein blindes `@latest`.
-5. **Datenschutz-Matrix** (Wiki) gilt auch für MCP-Nutzung — siehe [team-ki-setup.md §7](team-ki-setup.md#7-ki--datenschutz-entscheidungsrahmen).
+5. **Datenschutz** — keine Secrets/NDA-Inhalte in Learnings oder Manifest-Args.
 
 ---
 
@@ -315,7 +315,7 @@ Installer entfernt alte Aliases beim nächsten Lauf.
 - [ ] `scripts/install-mcps.py` (stdlib, merge, detect, generator)
 - [ ] Hook in `install.sh` / **`sa install`** (`--mcps-only`, `sa check` JSON-Feld `mcps`)
 - [ ] `.gitignore`-Eintrag für `mcps.local.yaml` am Repo-Root
-- [ ] Learning-Vorlage `learnings/approved/by-domain/seo/screaming-frog-mcp-pool.md` (nach erstem Betrieb)
+- [ ] Learning-Vorlage im Team-Repo: `team/learnings/approved/by-domain/seo/screaming-frog-mcp-pool.md` (nach erstem Betrieb)
 - [ ] Optional: Skill `shared-agents-mcp` für Agent-Workflow vor SEO-Tasks
 
 ---

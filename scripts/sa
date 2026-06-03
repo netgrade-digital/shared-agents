@@ -118,6 +118,20 @@ dispatch() {
     install|setup)
       _sa_run_install "$@"
       ;;
+    bootstrap)
+      local bw="$(_sa_script bootstrap_wizard.py)"
+      if [[ ! -f "$bw" ]]; then
+        _sa_run_install --bootstrap "$@"
+      else
+        if _sa_home_missing; then
+          export SHARED_AGENTS_CORE_REMOTE="${SHARED_AGENTS_CORE_REMOTE:-$DEFAULT_GIT_REMOTE}"
+        fi
+        exec python3 "$bw" \
+          --source "$SA_REPO_ROOT" \
+          --home "$SHARED_AGENTS_HOME" \
+          "$@"
+      fi
+      ;;
     check)
       local install_sh
       install_sh="$(_sa_resolve_install_sh)"
@@ -164,6 +178,29 @@ dispatch() {
           ;;
         *)
           exec "$(_sa_bin review-learning.sh)" "$@"
+          ;;
+      esac
+      ;;
+    team)
+      _sa_require_home
+      local sub="${1:-}"
+      shift || true
+      case "$sub" in
+        migrate)
+          exec python3 "$(_sa_script team_data.py)" migrate "$SHARED_AGENTS_HOME" "$@"
+          ;;
+        verify)
+          exec python3 "$(_sa_script team_data.py)" verify "$SHARED_AGENTS_HOME" "$@"
+          ;;
+        "")
+          echo "Usage: sa team verify [--json] [--strict]" >&2
+          echo "       sa team migrate [--dry-run]" >&2
+          exit 1
+          ;;
+        *)
+          echo "Unknown: sa team $sub" >&2
+          echo "Try: sa team verify | sa team migrate" >&2
+          exit 1
           ;;
       esac
       ;;

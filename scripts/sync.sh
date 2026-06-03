@@ -69,11 +69,22 @@ show_status_reminder() {
   python3 "$py" --quiet 2>/dev/null || true
 }
 
+sync_team_data() {
+  local py="$SHARED_AGENTS_HOME/scripts/team_data.py"
+  [[ -f "$py" ]] || return 0
+  if [[ "$QUIET" -eq 1 ]]; then
+    python3 "$py" sync "$SHARED_AGENTS_HOME" --quiet 2>/dev/null || true
+  else
+    python3 "$py" sync "$SHARED_AGENTS_HOME" 2>/dev/null || true
+  fi
+}
+
 case "$ACTION" in
   pull)
     pull_ff
+    sync_team_data
     if [[ "$QUIET" -eq 0 ]]; then
-      python3 "$(_sa_ui_py)" --sync-ok 2>/dev/null || echo "Learnings synced."
+      python3 "$(_sa_ui_py)" --sync-ok 2>/dev/null || echo "Core + team learnings synced."
       show_status_reminder
     fi
     ;;

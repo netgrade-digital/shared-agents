@@ -46,7 +46,21 @@ ID_RE = re.compile(r"^\s+-\s+id:\s+(.+)\s*$")
 
 
 def shared_home() -> Path:
-    return Path(os.environ.get("SHARED_AGENTS_HOME", Path.home() / ".shared-agents"))
+    from sa_config import core_home
+
+    return core_home()
+
+
+def git_repo_home(home: Path) -> Path:
+    from sa_config import git_data_home
+
+    return git_data_home(home)
+
+
+def learnings_base(home: Path) -> Path:
+    from sa_config import learnings_root
+
+    return learnings_root(home)
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
@@ -108,18 +122,18 @@ def remove_index_entry(index_path: Path, learning_id: str) -> bool:
 
 
 def approved_path(home: Path, rel_file: str) -> Path:
-    rel = rel_file.removeprefix("learnings/").removeprefix("/")
-    return home / "learnings" / rel
+    rel = rel_file.removeprefix("learnings/").lstrip("/")
+    return learnings_base(home) / rel
 
 
 def find_by_id(home: Path, learning_id: str) -> tuple[str, Path] | None:
-    index_path = home / "learnings" / "index.yaml"
+    index_path = learnings_base(home) / "index.yaml"
     for entry_id, rel_file in index_entries(index_path):
         if entry_id == learning_id:
             path = approved_path(home, rel_file)
             if path.is_file():
                 return entry_id, path
-    for path in sorted((home / "learnings" / "approved").glob("**/*.md")):
+    for path in sorted((learnings_base(home) / "approved").glob("**/*.md")):
         fm = parse_frontmatter(path.read_text())
         if fm.get("id", "").strip() == learning_id:
             return learning_id, path
@@ -128,7 +142,7 @@ def find_by_id(home: Path, learning_id: str) -> tuple[str, Path] | None:
 
 def resolve_target(arg: str | None, home: Path) -> tuple[str, Path] | None:
     if not arg:
-        entries = index_entries(home / "learnings" / "index.yaml")
+        entries = index_entries(learnings_base(home) / "index.yaml")
         if not entries:
             say_warn("No approved learnings in index.yaml.")
             return None
@@ -155,14 +169,15 @@ def resolve_target(arg: str | None, home: Path) -> tuple[str, Path] | None:
     if found:
         return found
 
+    lb = learnings_base(home)
     candidates = [
         Path(arg),
         home / arg,
-        home / "learnings" / arg,
-        home / "learnings" / "approved" / arg,
+        lb / arg,
+        lb / "approved" / arg,
     ]
     name = Path(arg).name
-    candidates.extend((home / "learnings" / "approved").glob(f"**/{name}"))
+    candidates.extend((lb / "approved").glob(f"**/{name}"))
 
     seen: set[Path] = set()
     for candidate in candidates:
@@ -222,6 +237,10 @@ def run_git(
 
 
 def ensure_git_remote(home: Path) -> str | None:
+    from sa_config import is_team_git_repo
+
+    if is_team_git_repo(home):
+        return None
     current = run_git(home, ["remote", "get-url", "origin"], check=False)
     if current.returncode != 0:
         return None
@@ -248,10 +267,15 @@ def git_publish(
     dry_run: bool = False,
     no_git: bool = False,
 ) -> int:
+    from sa_config import learnings_prefix_for_git
+
+    repo = git_repo_home(home)
+    prefix = learnings_prefix_for_git(home)
+
     if no_git:
         git_skip_no_git()
         return 0
-    if not (home / ".git").is_dir():
+    if not (repo / ".git").is_dir():
         git_skip_not_repo()
         return 0
 
@@ -259,27 +283,27 @@ def git_publish(
     if dry_run:
         git_dry_run(
             [
-                f"git -C {home} add learnings/",
-                f'git -C {home} commit -m "{commit_msg}"',
-                f"git -C {home} push",
+                f"git -C {repo} add {prefix}/",
+                f'git -C {repo} commit -m "{commit_msg}"',
+                f"git -C {repo} push",
             ]
         )
         return 0
 
-    fixed = ensure_git_remote(home)
+    fixed = ensure_git_remote(repo)
     if fixed:
         git_note(fixed)
 
-    run_git(home, ["add", "learnings/"], check=True)
-    staged = run_git(home, ["diff", "--cached", "--quiet"], check=False)
+    run_git(repo, ["add", f"{prefix}/"], check=True)
+    staged = run_git(repo, ["diff", "--cached", "--quiet"], check=False)
     if staged.returncode == 0:
         git_nothing_staged("Nothing staged under learnings/ — skipped commit/push.")
         return 0
 
-    run_git(home, ["commit", "-m", commit_msg], check=True)
+    run_git(repo, ["commit", "-m", commit_msg], check=True)
     git_committed(commit_msg)
 
-    push = run_git(home, ["push"], check=False)
+    push = run_git(repo, ["push"], check=False)
     if push.returncode == 0:
         out = (push.stdout or push.stderr or "").strip()
         if out:
@@ -300,11 +324,11 @@ def unapprove(
     to_pending: bool = False,
     dry_run: bool = False,
 ) -> Path | None:
-    index_path = home / "learnings" / "index.yaml"
+    index_path = learnings_base(home) / "index.yaml"
     pending_dest: Path | None = None
 
     if to_pending:
-        pending_dest = home / "learnings" / "pending" / approved_file.name
+        pending_dest = learnings_base(home) / "pending" / approved_file.name
         if pending_dest.exists() and not dry_run:
             raise SystemExit(f"Pending file already exists: {pending_dest}")
 
@@ -358,7 +382,7 @@ def main() -> int:
     home = shared_home()
 
     if args.list:
-        entries = index_entries(home / "learnings" / "index.yaml")
+        entries = index_entries(learnings_base(home) / "index.yaml")
         if not entries:
             say_warn("No approved learnings in index.yaml.")
             return 0
@@ -424,7 +448,7 @@ def main() -> int:
     else:
         say_success(f"Removed: {approved_file}")
 
-    say_success(f"Updated: {home / 'learnings' / 'index.yaml'}")
+    say_success(f"Updated: {learnings_base(home) / 'index.yaml'}")
     return git_publish(home, entry_id, dry_run=False, no_git=args.no_git)
 
 

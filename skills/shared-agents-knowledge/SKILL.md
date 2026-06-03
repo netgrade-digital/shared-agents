@@ -27,8 +27,8 @@ IDE hooks also pull on session start (Cursor `sessionStart`, Claude `SessionStar
 ## Retrieve (before non-trivial tasks)
 
 1. Sync (pull) — always first.
-2. Read `learnings/index.yaml` for `project`, `domain`, `tags`, `versions`.
-3. Grep `learnings/approved/` for task keywords.
+2. Read `team/learnings/index.yaml` for `project`, `domain`, `tags`, `versions`.
+3. Grep `team/learnings/approved/` for task keywords.
 4. Prefer learnings whose `versions` match the project's stack (exact patch or same MAJOR.MINOR.PATCH line); treat `experimental` confidence as hints.
 5. Summarize briefly — do not dump the whole repo.
 
@@ -40,7 +40,7 @@ IDE hooks also pull on session start (Cursor `sessionStart`, Claude `SessionStar
 
 | User says | Action |
 |-----------|--------|
-| **Yes** / „ja" / „learning speichern" | Write to `learnings/pending/` (see below) |
+| **Yes** / „ja" / „learning speichern" | Write to team `pending/` (see below) |
 | **No** | Do nothing |
 
 Also capture when user explicitly asks anytime.
@@ -48,7 +48,7 @@ Also capture when user explicitly asks anytime.
 When writing:
 
 1. Activate skill `capture-learning`.
-2. Resolve path: `"${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/learnings/pending/YYYY-MM-DD-short-slug.md"` (see [docs/canonical-paths.md](../../docs/canonical-paths.md) — **never** workspace-relative).
+2. Resolve path: `sa pending path YYYY-MM-DD-short-slug` (see [docs/canonical-paths.md](../../docs/canonical-paths.md) — **never** workspace-relative; not in Core-Repo).
 3. Never write directly to `approved/`.
 4. Remind user: teammate runs **`sa review`** → `approved/` → then all agents can use it.
 
