@@ -6,7 +6,7 @@
 ---
 
 <p align="center">
-  <strong>Team skills and learnings for AI assistants</strong> — one install, Git-synced, IDE-agnostic.
+  <strong>Team skills, rules, and learnings for AI assistants</strong> — one install, Git-synced, IDE-agnostic.
 </p>
 
 <p align="center">
@@ -29,6 +29,7 @@ Teams use many AI tools (Cursor, Claude Code, Zed, Codex, …). Each session sta
 **Shared Agents** gives you one place to:
 
 - **Skills** — how we work (repeatable workflows for agents)
+- **Rules** — shared instructions per tool (Cursor `.mdc`, others via `AGENTS.md` / `CLAUDE.md`)
 - **Learnings** — what we already figured out (bugs, stack quirks, decisions)
 
 Everyone syncs the same content. Agents load it automatically at session start. Sensitive team data stays in a **private** repo, not public.
@@ -40,7 +41,7 @@ Everyone syncs the same content. Agents load it automatically at session start. 
 | Piece | Role |
 |-------|------|
 | **Core** (this repo) | Open-source CLI (`sa`), adapters, shared skills, installer |
-| **Team** (your private Git remote) | Learnings + optional team-only skills under `team/` |
+| **Team** (your private Git remote) | Learnings, team rules, and team-only skills under `team/` |
 | **Local install** | `~/.shared-agents` (or `$SHARED_AGENTS_HOME`) on each machine |
 
 ```
@@ -55,6 +56,7 @@ Everyone syncs the same content. Agents load it automatically at session start. 
 - **Tool-neutral** — Markdown + Git, no vendor lock-in
 - **Manifest-driven adapters** — hooks and global instructions per IDE/CLI
 - **Human-in-the-loop learnings** — agents propose drafts; a person approves via `sa review`
+- **Team rules like skills** — flat `team/rules/*.mdc`; manage with `sa skill` / `sa rule`; teammates `sa sync`
 
 ---
 
@@ -74,12 +76,39 @@ Non-interactive (CI/scripts): `SA_BOOTSTRAP_NON_INTERACTIVE=1 curl -fsSL … | b
 
 | Task | Command |
 |------|---------|
-| Pull latest Core + team data | `sa sync` |
+| Pull latest Core + team; link skills + rules | `sa sync` |
 | Overview / all commands | `sa` or `sa help` |
+| First-time adapter setup (hooks, base blocks) | `sa install` |
 | Adapter health | `sa check` |
 | Review a learning draft | `sa review` |
+| List team skills / rules | `sa skill list` · `sa rule list` |
+| Create team skill / rule (wizard) | `sa skill new` · `sa rule new` |
+| Remove team skill / rule | `sa skill rm [name]` · `sa rule rm [slug]` |
 
-Sync also runs automatically via IDE hooks and agent instructions after install.
+### What `sa sync` does
+
+After pulling Core + team (ff-only):
+
+1. **Skill symlinks** — `skills/` + `team/skills/` → `~/.agents/skills`, `~/.claude/skills`, …
+2. **Rule symlinks** — Cursor: `rules/` + `team/rules/` → `~/.cursor/rules/`
+3. **Team-rules blocks** — Zed, Codex, Claude Code, Gemini, Windsurf, …: `<!-- shared-agents:team-rules:begin/end -->` in each tool's `AGENTS.md` / `CLAUDE.md`
+
+Also runs quietly via IDE session hooks where configured. **`sa install`** is still required once per tool (hooks, base `<!-- shared-agents:begin -->` block).
+
+### Team content (skills & rules)
+
+Lives in your **private team repo** under `team/skills/` and `team/rules/` — not in Core PRs. No pending/review workflow (unlike learnings).
+
+```bash
+sa skill new          # wizard → team/skills/<name>/SKILL.md
+sa rule new           # wizard → team/rules/<slug>.mdc
+sa skill rm [name]    # remove (picker if name omitted)
+sa rule rm [slug]
+```
+
+Create/remove wizards **commit + push by default** (Enter = yes; `--no-git` to skip). Then teammates run **`sa sync`**.
+
+**Dev checkout:** `./sa sync` from this repo uses scripts from the clone (even before `~/.shared-agents` is updated). Shell alias `sa` uses `$SHARED_AGENTS_HOME/scripts/` — refresh with `./sa install` after pulling Core changes.
 
 ---
 
@@ -88,14 +117,17 @@ Sync also runs automatically via IDE hooks and agent instructions after install.
 ```
 shared-agents/
 ├── skills/              # Core skills (synced to ~/.agents/skills, etc.)
+├── rules/               # Core rules (.mdc) — Cursor symlinks + AGENTS.md merge
 ├── adapters/            # Per-tool wiring (manifest.json + docs)
 ├── scripts/             # sa CLI, sync, bootstrap, learning tools
 ├── docs/                # Detailed guides
-├── rules/               # Cursor rule template
 └── team/                # Private team data (gitignored here — separate remote)
+    ├── learnings/       # pending/ + approved/ (review via sa review)
+    ├── rules/           # flat *.mdc (like team/skills/)
+    └── skills/
 ```
 
-Install path defaults to `~/.shared-agents`. Team learnings live at `team/learnings/` inside that directory.
+Install path defaults to `~/.shared-agents`. Team data lives under `team/` inside that directory.
 
 ---
 
@@ -105,15 +137,16 @@ Install path defaults to `~/.shared-agents`. Team learnings live at `team/learni
 |-------|--------|
 | Learnings workflow | [docs/learnings.md](docs/learnings.md) |
 | Paths agents must use | [docs/canonical-paths.md](docs/canonical-paths.md) |
+| Per-tool adapters | [adapters/](adapters/) (Cursor, Claude Code, Zed, …) |
+| Team skills & rules CLI | Skill [sa-cli](skills/sa-cli/SKILL.md) · `sa skill` · `sa rule` |
 | Migrating legacy `learnings/` | [docs/migration-team-data.md](docs/migration-team-data.md) |
-| Supported tools | [adapters/manifest.json](adapters/manifest.json) |
 | CLI reference (full) | Skill `sa-cli` in [skills/sa-cli/SKILL.md](skills/sa-cli/SKILL.md) |
 
 ---
 
 ## Contributing
 
-Contributions to **Core** (adapters, CLI, docs, shared skills) are welcome. Team learnings belong in your **private team repo**, not in pull requests here.
+Contributions to **Core** (adapters, CLI, docs, shared skills, shared rules) are welcome. Team learnings and team rules belong in your **private team repo**, not in pull requests here.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 

@@ -69,8 +69,25 @@ show_status_reminder() {
   python3 "$py" --quiet 2>/dev/null || true
 }
 
+_team_data_py() {
+  if [[ -f "$SYNC_DIR/team_data.py" ]]; then
+    echo "$SYNC_DIR/team_data.py"
+  else
+    echo "$SHARED_AGENTS_HOME/scripts/team_data.py"
+  fi
+}
+
+_install_adapters_py() {
+  if [[ -f "$SYNC_DIR/install-adapters.py" ]]; then
+    echo "$SYNC_DIR/install-adapters.py"
+  else
+    echo "$SHARED_AGENTS_HOME/scripts/install-adapters.py"
+  fi
+}
+
 sync_team_data() {
-  local py="$SHARED_AGENTS_HOME/scripts/team_data.py"
+  local py
+  py="$(_team_data_py)"
   [[ -f "$py" ]] || return 0
   if [[ "$QUIET" -eq 1 ]]; then
     python3 "$py" sync "$SHARED_AGENTS_HOME" --quiet 2>/dev/null || true
@@ -79,12 +96,27 @@ sync_team_data() {
   fi
 }
 
+refresh_skill_rule_links() {
+  local py
+  py="$(_install_adapters_py)"
+  [[ -f "$py" ]] || return 0
+  if ! python3 "$py" sync-links --help >/dev/null 2>&1; then
+    return 0
+  fi
+  if [[ "$QUIET" -eq 1 ]]; then
+    python3 "$py" sync-links "$SHARED_AGENTS_HOME" --quiet 2>/dev/null || true
+  else
+    python3 "$py" sync-links "$SHARED_AGENTS_HOME" 2>/dev/null || true
+  fi
+}
+
 case "$ACTION" in
   pull)
     pull_ff
     sync_team_data
+    refresh_skill_rule_links
     if [[ "$QUIET" -eq 0 ]]; then
-      python3 "$(_sa_ui_py)" --sync-ok 2>/dev/null || echo "Core + team learnings synced."
+      python3 "$(_sa_ui_py)" --sync-ok 2>/dev/null || echo "Core + team data synced; skills + rules updated."
       show_status_reminder
     fi
     ;;

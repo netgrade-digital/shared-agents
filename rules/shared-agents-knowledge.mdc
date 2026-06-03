@@ -45,3 +45,12 @@ No secrets. Agent never writes `approved/`.
 ## Team skills
 
 `$SHARED_AGENTS_HOME/skills/` — symlinked to `~/.agents/skills/`.
+
+## Team rules
+
+Core: `$SHARED_AGENTS_HOME/rules/` · Team: `$SHARED_AGENTS_HOME/team/rules/` (flat, like skills).
+
+- **Cursor:** symlinks on **`sa install`**
+- **Zed / Codex / Claude Code / …:** marker block in `AGENTS.md` or `CLAUDE.md`
+
+Edit in team repo → **`sa sync`**. No pending/review workflow for rules. First-time adapter setup: **`sa install`**.

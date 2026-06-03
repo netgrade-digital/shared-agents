@@ -36,6 +36,18 @@ Many agents follow the **AGENTS.md pattern**:
 
 Every adapter must ensure:
 
-1. **Sync** — `$SHARED_AGENTS_HOME/scripts/sync.sh pull` runs at session start (or `sa sync` manually)
+1. **Sync** — `sa sync` (or `sync.sh pull`) at session start or manually — pulls Core + team, links skills + rules
 2. **Read** — agent searches `$SHARED_AGENTS_HOME/team/learnings/approved/` before non-trivial work
-3. **Write** — agent uses `capture-learning` + `sa pending path` (team repo under `team/learnings/pending/`)
+3. **Write learnings** — skill `capture-learning` + `sa pending path` → `sa review` (team repo only)
+4. **Rules** — on **`sa sync`**: merge `team/rules/*.mdc` into AGENTS.md/CLAUDE.md blocks, or symlinks (Cursor); first-time blocks via **`sa install`**
+
+## Team skills & rules (CLI)
+
+Same for all tools — content lives in the private team repo:
+
+```bash
+sa skill new | sa skill list | sa skill rm [name]
+sa rule new  | sa rule list  | sa rule rm [slug]
+```
+
+Wizards commit/push by default. Teammates run **`sa sync`**.

@@ -70,7 +70,7 @@ source ~/.bashrc
 | Setup | `sa install --non-interactive` | All detected tools, no prompts |
 | Setup | `sa install --wizard` | Wizard explicitly |
 | Setup | `sa check` | Tool installed vs configured (+ team warnings) |
-| Setup | `sa sync` | Pull Core + team repo (ff-only) |
+| Setup | `sa sync` | Pull Core + team; link skills + rules |
 | Setup | `sa status` | Open items: review, skills, adapters, team |
 | Setup | `sa team verify` | Deep team repo validation |
 | Setup | `sa team migrate` | Legacy `learnings/` → `team/learnings/` |
@@ -82,6 +82,12 @@ source ~/.bashrc
 | Learnings | `sa pending path [slug]` | Canonical pending path |
 | Learnings | `sa unapprove [id\|file]` | Remove from approved |
 | Learnings | `sa unapprove list` | Approved list |
+| Team content | `sa skill new` | Wizard: `team/skills/<name>/SKILL.md` |
+| Team content | `sa skill rm [name]` | Remove team skill |
+| Team content | `sa skill list` | List team skills |
+| Team content | `sa rule new` | Wizard: `team/rules/<slug>.mdc` |
+| Team content | `sa rule rm [slug]` | Remove team rule |
+| Team content | `sa rule list` | List team rules |
 
 Alias: **`sa install`** = **`sa setup`**
 
@@ -96,7 +102,8 @@ Shows easy-to-forget work:
 | Pending learnings | `team/learnings/pending/` (team repo) | `sa review list` · `sa review` |
 | Not pushed yet | Local pending changes | `sa pending push` |
 | Team setup | Config / legacy layout | `sa team verify` · `sa team migrate` |
-| Skill symlinks | New skill not linked | `sa install` |
+| Skill symlinks | New skill not linked | `sa sync` (or `sa install` first time) |
+| Rule symlinks | New rule not linked | `sa sync` (or `sa install` first time) |
 | Adapters | Tool present, not configured | `sa install` |
 
 ```bash
@@ -185,13 +192,14 @@ Team warnings appear under **Team data:** when relevant.
 sa sync
 # = scripts/sync.sh pull
 #   1) git pull  ~/.shared-agents        (Core — tools, adapters, OSS skills)
-#   2) git pull  ~/.shared-agents/team/  (Team — learnings, team skills)
+#   2) git pull  ~/.shared-agents/team/  (Team — learnings, team skills, team rules)
+#   3) sync-links — skill symlinks, rule symlinks, team-rules AGENTS.md/CLAUDE.md blocks
 ```
 
 - Both repos **ff-only**
 - Without `team/` / without `team.remote`: Core only (solo fallback under `core/learnings/`)
-- Agents: session start via hook (`session-sync.sh` → `sync.sh pull --quiet`)
-- Manual: after offline, before review, when a teammate pushed
+- Agents: session start via hook (`session-sync.sh` → `sync.sh pull --quiet`; links refresh quietly)
+- Manual: after offline, before review, when a teammate pushed new skills/rules
 
 ---
 
@@ -200,6 +208,45 @@ sa sync
 ```text
 Agent writes pending/  →  sa pending push  →  sa review  →  approved/
 ```
+
+## Rules (like skills — no review CLI)
+
+Team rules: `$SHARED_AGENTS_HOME/team/rules/*.mdc` (flat). Core: `$SHARED_AGENTS_HOME/rules/`.
+
+After edit: commit/push team repo → teammates **`sa sync`** (links skills + rules automatically).
+
+- **Cursor:** symlinks → `~/.cursor/rules/` (local non-symlink files preserved)
+- **Zed, Codex, Claude Code (`~/.claude/CLAUDE.md`), Gemini, Windsurf, …:** merged `<!-- shared-agents:team-rules:begin/end -->` block in each tool's agents file
+
+Optional frontmatter: `targets: [zed, claude-code]` — omit for all adapters.
+
+## Team skills & rules — `sa skill` · `sa rule`
+
+Interactive wizards scaffold files in the **team repo** (private `team/`). No pending/review workflow — commit/push like any team file.
+
+```bash
+sa skill new                 # create: slug, title, description, sections
+sa skill rm [name]           # remove (picker if name omitted)
+sa skill list
+
+sa rule new                  # create: slug, title, description, targets, body
+sa rule rm [slug]            # remove (picker if slug omitted)
+sa rule list
+
+# Aliases: rm = delete = remove · list = ls
+
+# Non-interactive (CI / scripts):
+sa skill new --name my-skill --description "When user asks about …"
+sa skill rm my-skill -y
+sa rule new --name my-rule --description "…" --targets cursor,zed
+sa rule rm my-rule --no-git
+
+# Flags: --dry-run --force (new only) --no-git --push -y
+```
+
+Create/remove ends with commit + push to the team repo (**default: yes** — Enter or `y`). Skip git with `n` on the push prompt or **`--no-git`**.
+
+After push: teammates run **`sa sync`**. Optional **`--push`** / **`-y`**: skip prompts.
 
 ### Publish pending — `sa pending push`
 

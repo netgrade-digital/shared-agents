@@ -2,7 +2,7 @@
 
 No IDE hooks — use the **entrypoint wrapper** so sync never gets skipped.
 
-Install shared-agents first: **`sa install`** (or `./install.sh` from repo root).
+Install shared-agents first: **`sa install`** (or `./install.sh` / `./sa install` from repo root).
 
 ## Every agent run
 
@@ -11,7 +11,7 @@ export SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
 "$SHARED_AGENTS_HOME/scripts/agent-entrypoint.sh" <your-agent-command> [args...]
 ```
 
-This runs `sync.sh pull` then execs your command.
+This runs `sync.sh pull` (Core + team + skill/rule links) then execs your command.
 
 Manual sync before a run: **`sa sync`**
 
@@ -25,9 +25,22 @@ CMD ["node", "agent.js"]
 
 ## During run
 
-- Read skills from `$SHARED_AGENTS_HOME/skills/` and `$SHARED_AGENTS_HOME/team/skills/`
-- Search `$SHARED_AGENTS_HOME/team/learnings/approved/` before non-trivial steps
-- End: `sa pending path <slug>` → `sa pending push` → team review via `sa review`
+Read directly from `$SHARED_AGENTS_HOME` (headless agents do **not** auto-merge AGENTS.md — load or reference these paths in your runner):
+
+| Content | Paths |
+|---------|--------|
+| Skills | `skills/` + `team/skills/` |
+| Rules | `rules/` + `team/rules/*.mdc` |
+| Learnings | `team/learnings/approved/` + `index.yaml` |
+
+Manage team content via CLI:
+
+```bash
+sa skill new | sa skill list | sa skill rm [name]
+sa rule new  | sa rule list  | sa rule rm [slug]
+```
+
+Learnings: `sa pending path` → `sa pending push` → **`sa review`**
 
 ## CI / cron
 

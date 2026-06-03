@@ -27,7 +27,7 @@ sa pending path 2026-06-02-my-slug
 sa pending push <datei>    # Entwurf ans Team
 sa review list
 sa review <datei>          # → approved + push (nur team/)
-sa sync                    # Core + Team pullen
+sa sync                    # Core + Team pullen; Skills + Rules verlinken
 ```
 
 Details: [canonical-paths.md](canonical-paths.md) · Skills `capture-learning`, `shared-agents-knowledge`

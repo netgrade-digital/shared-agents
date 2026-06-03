@@ -10,6 +10,9 @@
       { "path": "~/.codex/skills", "note": "Codex CLI" },
       { "path": "~/.config/opencode/skills", "note": "OpenCode" },
       { "path": "~/.gemini/skills", "note": "Gemini CLI" }
+    ],
+    "rule_dirs": [
+      { "path": "~/.cursor/rules", "note": "Cursor IDE (.mdc)" }
     ]
   },
   "tools": [
@@ -27,12 +30,7 @@
         "hook_command": "./hooks/shared-agents-sync.sh"
       },
       "rules": {
-        "copy": [
-          {
-            "src": "rules/shared-agents-knowledge.mdc",
-            "dest": "~/.cursor/rules/shared-agents-knowledge.mdc"
-          }
-        ]
+        "dest": "~/.cursor/rules/shared-agents-knowledge.mdc"
       }
     },
     {
@@ -41,11 +39,13 @@
       "detect": "~/.claude",
       "detect_bins": ["claude"],
       "docs": "adapters/claude-code/README.md",
+      "agents_md": "~/.claude/CLAUDE.md",
       "sync": {
         "hook": "SessionStart",
         "settings_json": "~/.claude/settings.json",
         "hook_command": "bash \"$SHARED_AGENTS_HOME/adapters/claude-code/session-sync.sh\""
-      }
+      },
+      "note": "SessionStart sync hook. Team knowledge + rules merged into CLAUDE.md."
     },
     {
       "id": "zed",

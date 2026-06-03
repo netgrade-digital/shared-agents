@@ -19,7 +19,7 @@ LOGO_LINES: tuple[str, ...] = (
     "                                            |___/                     ",
 )
 
-TAGLINE = "team skills · learnings · sync"
+TAGLINE = "team skills · rules · learnings · sync"
 
 
 def _stream_colors_enabled(stream) -> bool:
@@ -152,10 +152,19 @@ def print_help(*, version: str, home: str) -> None:
     _cmd("install --non-interactive", "   No wizard — all detected tools")
     _cmd("check", "                Adapter install vs configured")
     _cmd("uninstall", " [opts]     Uninstall (confirm: y/N)")
-    _cmd("sync", "                 Pull Core + team learnings")
+    _cmd("sync", "                 Pull Core + team; link skills + rules")
     _cmd("team verify", "           Validate team repo (git, index, folders)")
     _cmd("team migrate", "          Move legacy learnings/ → team/learnings/")
     _cmd("status", "               Open items (review, skills, adapters)")
+    print()
+
+    print(f"  {cyan('Team content')}")
+    _cmd("skill new", " [opts]       Wizard: team/skills/<name>/SKILL.md")
+    _cmd("skill rm", " [name]       Remove team skill (picker if omitted)")
+    _cmd("skill list", "             List team skills")
+    _cmd("rule new", " [opts]       Wizard: team/rules/<slug>.mdc")
+    _cmd("rule rm", " [slug]       Remove team rule (picker if omitted)")
+    _cmd("rule list", "             List team rules")
     print()
 
     print(f"  {magenta('Learnings')}")
@@ -181,6 +190,10 @@ def print_help(*, version: str, home: str) -> None:
     _example("sa sync")
     _example("sa status")
     _example("sa team verify")
+    _example("sa skill new")
+    _example("sa skill rm my-skill")
+    _example("sa rule new")
+    _example("sa rule list")
     _example("sa review list")
     _example("sa pending push 2026-06-02-my-slug.md")
     _example("sa review 2026-06-02-my-slug.md")
@@ -220,7 +233,9 @@ def print_install_footer(*, home: str, shell_rc: str) -> None:
     print(f"  {cyan(f'source {shell_rc}')}")
     print()
     print(bold("Next commands:"))
-    _cmd_after("sa sync", "Pull Core + team learnings")
+    _cmd_after("sa sync", "Pull Core + team; refresh skill/rule links")
+    _cmd_after("sa skill new", "Wizard: team skill")
+    _cmd_after("sa rule new", "Wizard: team rule")
     _cmd_after("sa review", "Review / approve learnings")
     _cmd_after("sa pending push", "Push pending for team review")
     _cmd_after("sa team verify", "Validate team repo layout")
@@ -465,7 +480,8 @@ def git_push_failed(err: str, *, hints: list[str] | None = None) -> None:
 
 
 def print_sync_ok() -> None:
-    say_success("✓ Core + team learnings synced.")
+    say_success("✓ Core + team data synced.")
+    say_success("✓ Skills + rules linked for detected tools.")
 
 
 def print_uninstall_intro(*, home: str, shell_rc: str, keep_repo: bool) -> None:

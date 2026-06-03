@@ -11,9 +11,12 @@ Thank you for helping improve the **Core** open-source project. This document co
 | `scripts/`, `sa` CLI | `team/learnings/` |
 | `adapters/`, `adapters/manifest.json` | `config.local.yaml` |
 | `skills/` (shared, OSS-safe) | Secrets, customer URLs, internal runbooks |
-| `docs/`, `rules/` | Private team skills with sensitive content |
+| `rules/` (shared core rules, OSS-safe) | `team/rules/` (private team rules) |
+| `docs/` | `config.local.yaml` |
 
-**Learnings** and optional **team-only skills** live in a **separate private Git repository**, mounted at `$SHARED_AGENTS_HOME/team/`. Configure it during `sa bootstrap` or in `config.local.yaml` (`team.remote`).
+**Learnings**, **team rules**, and optional **team-only skills** live in a **separate private Git repository**, mounted at `$SHARED_AGENTS_HOME/team/`. Configure it during `sa bootstrap` or in `config.local.yaml` (`team.remote`).
+
+Team rules use flat `team/rules/*.mdc` (like `team/skills/`) — no pending/review workflow.
 
 ---
 
@@ -90,8 +93,23 @@ For tools without a manifest entry, users can copy [adapters/generic/instruction
 
 - Place skills under `skills/<name>/SKILL.md`.
 - Keep content **safe for a public repo** (no credentials, no client-specific paths).
-- After adding a skill, run `sa install` so symlinks under `~/.agents/skills/` (and tool-specific paths) are updated.
-- If the skill changes agent workflow (paths, sync, learnings), update [rules/shared-agents-knowledge.mdc](rules/shared-agents-knowledge.mdc) and [skills/shared-agents-knowledge/SKILL.md](skills/shared-agents-knowledge/SKILL.md) when relevant.
+- After adding a skill or rule, teammates run **`sa sync`** (auto-links). Use **`sa install`** for first-time adapter setup.
+- If the skill changes agent workflow (paths, sync, learnings, rules), update [rules/shared-agents-knowledge.mdc](rules/shared-agents-knowledge.mdc) and [skills/shared-agents-knowledge/SKILL.md](skills/shared-agents-knowledge/SKILL.md) when relevant.
+
+---
+
+## Team skills and rules (team repo, not Core)
+
+Private team content lives under `team/skills/` and `team/rules/` (flat `.mdc` for rules). Use the wizards:
+
+```bash
+sa skill new    # team/skills/<name>/SKILL.md
+sa skill rm     # remove (picker)
+sa rule new     # team/rules/<slug>.mdc
+sa rule rm      # remove (picker)
+```
+
+Commit/push defaults to **yes** after create/remove (`--no-git` to skip). Teammates run **`sa sync`**. No pending/review workflow (unlike learnings).
 
 ---
 

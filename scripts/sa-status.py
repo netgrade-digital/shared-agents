@@ -21,6 +21,7 @@ class StatusReport:
     pending_learnings: list[str] = field(default_factory=list)
     pending_unpublished: list[str] = field(default_factory=list)
     skill_issues: list[str] = field(default_factory=list)
+    rule_issues: list[str] = field(default_factory=list)
     team_issues: list[str] = field(default_factory=list)
     tools_need_install: list[str] = field(default_factory=list)
 
@@ -30,6 +31,7 @@ class StatusReport:
             self.pending_learnings
             or self.pending_unpublished
             or self.skill_issues
+            or self.rule_issues
             or self.team_issues
             or self.tools_need_install
         )
@@ -76,10 +78,10 @@ def pending_unpublished(home: Path) -> list[str]:
     return sorted(set(names))
 
 
-def load_check(home: Path) -> tuple[list[str], list[str]]:
+def load_check(home: Path) -> tuple[list[str], list[str], list[str]]:
     script = home / "scripts" / "install-adapters.py"
     if not script.is_file():
-        return [], []
+        return [], [], []
     env = {**os.environ, "SHARED_AGENTS_HOME": str(home)}
     result = subprocess.run(
         [sys.executable, str(script), "check", str(home), "--json"],
@@ -89,17 +91,18 @@ def load_check(home: Path) -> tuple[list[str], list[str]]:
         check=False,
     )
     if result.returncode != 0 and not result.stdout.strip():
-        return [], []
+        return [], [], []
     try:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError:
-        return [], []
+        return [], [], []
     skill_issues = list(payload.get("skill_issues") or [])
+    rule_issues = list(payload.get("rule_issues") or [])
     tools: list[str] = []
     for tool in payload.get("tools") or []:
         if tool.get("installed") and tool.get("status") == "not_configured":
             tools.append(f"{tool.get('id', '?')}: {tool.get('message', 'not configured')}")
-    return skill_issues, tools
+    return skill_issues, rule_issues, tools
 
 
 def collect(home: Path) -> StatusReport:
@@ -107,13 +110,14 @@ def collect(home: Path) -> StatusReport:
 
     pending = pending_files(home)
     unpublished = pending_unpublished(home)
-    skill_issues, tools = load_check(home)
+    skill_issues, rule_issues, tools = load_check(home)
     team_issues = check_team_setup(home)
     return StatusReport(
         shared_agents_home=str(home),
         pending_learnings=pending,
         pending_unpublished=unpublished,
         skill_issues=skill_issues,
+        rule_issues=rule_issues,
         team_issues=team_issues,
         tools_need_install=tools,
     )
@@ -159,7 +163,14 @@ def format_human(report: StatusReport) -> str:
         lines.append(magenta(f"Skills / Symlinks ({len(report.skill_issues)}):"))
         for issue in report.skill_issues:
             lines.append(f"  • {issue}")
-        lines.append(plain("  → sa install"))
+        lines.append(plain("  → sa sync (or sa install for first-time adapter setup)"))
+        lines.append("")
+
+    if report.rule_issues:
+        lines.append(magenta(f"Rules / Symlinks ({len(report.rule_issues)}):"))
+        for issue in report.rule_issues:
+            lines.append(f"  • {issue}")
+        lines.append(plain("  → sa sync (or sa install for first-time adapter setup)"))
         lines.append("")
 
     if report.tools_need_install:
@@ -186,6 +197,8 @@ def format_brief(report: StatusReport) -> str:
         parts.append(f"{len(report.team_issues)} Team-Setup")
     if report.skill_issues:
         parts.append(f"{len(report.skill_issues)} Skill-Link(s)")
+    if report.rule_issues:
+        parts.append(f"{len(report.rule_issues)} Rule-Link(s)")
     if report.tools_need_install:
         parts.append(f"{len(report.tools_need_install)} Adapter")
     return yellow("shared-agents: ") + ", ".join(parts) + plain(" — sa status")

@@ -18,6 +18,8 @@ Default: `~/.shared-agents`
 |-----|----------------|--------------|
 | Core-Skills (OSS) | `$SHARED_AGENTS_HOME/skills/` | Upstream (PR ins Core) |
 | Team-Skills | `$SHARED_AGENTS_HOME/team/skills/` | Team-Repo (privat) |
+| Team-Rules | `$SHARED_AGENTS_HOME/team/rules/` | Team-Repo (privat, flat wie skills) |
+| Core-Rules | `$SHARED_AGENTS_HOME/rules/` | Upstream (PR ins Core) |
 | Learnings Index | `$SHARED_AGENTS_HOME/team/learnings/index.yaml` | Mensch / **`sa review`** |
 | Learnings **approved** | `$SHARED_AGENTS_HOME/team/learnings/approved/` | **Nur Mensch** (`sa review`) |
 | Learnings **pending** | `$SHARED_AGENTS_HOME/team/learnings/pending/` | **Agent** (nach explizitem Ja) |
@@ -82,13 +84,35 @@ Vollständige Bedienung: Skill **`sa-cli`** · Live-Referenz: **`sa help`**
 
 Vor nicht-trivialen Tasks:
 
-1. **`sa sync`** (oder `"$SHARED_AGENTS_HOME/scripts/sync.sh" pull`)
+1. **`sa sync`** (oder `"$SHARED_AGENTS_HOME/scripts/sync.sh" pull`) — pullt Core + Team und verlinkt Skills + Rules automatisch
 2. `$SHARED_AGENTS_HOME/team/learnings/index.yaml`
 3. Grep in `$SHARED_AGENTS_HOME/team/learnings/approved/`
 
 Nicht nur im Workspace suchen.
 
 ---
+
+## Regel: Rules — wie Skills (kein Review-Workflow)
+
+Team-Rules liegen flach in `$SHARED_AGENTS_HOME/team/rules/*.mdc` — **kein** `pending/` / `approved/` (nur Learnings haben das).
+
+Bei **`sa sync`** (täglich) bzw. **`sa install`** (Erst-Setup):
+
+| Adapter-Typ | Installation |
+|-------------|--------------|
+| **Cursor** | Symlinks → `~/.cursor/rules/*.mdc` |
+| **AGENTS.md / CLAUDE.md** (Zed, Codex, **Claude Code**, Gemini, Windsurf, …) | Marker-Block `<!-- shared-agents:team-rules:begin/end -->` |
+| **Eigene Datei am Ziel** (kein Symlink, Cursor) | **Nicht überschrieben** |
+
+Quellen: `$SHARED_AGENTS_HOME/rules/` (Core) + `$SHARED_AGENTS_HOME/team/rules/` (Team).
+
+`shared-agents-knowledge.mdc` wird in AGENTS.md/CLAUDE.md-Tools **nicht** doppelt eingefügt — dort gilt `<!-- shared-agents:begin -->` (Sync/Learnings).
+
+Optional: `targets: [zed, claude-code, cursor]` im Frontmatter — leer = alle Adapter.
+
+Workflow: Datei in `team/rules/` → commit/push → Kollegen **`sa sync`** (verlinkt Skills + Rules automatisch).
+
+**`sa install`** weiterhin nötig für Erst-Setup (Hooks, AGENTS.md/CLAUDE.md Basis-Blöcke, neues Tool).
 
 ## Regel: Skills symlinks
 

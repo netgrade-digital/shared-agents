@@ -237,6 +237,54 @@ dispatch() {
           ;;
       esac
       ;;
+    skill)
+      _sa_require_home
+      local sub="${1:-new}"
+      shift || true
+      case "$sub" in
+        new)
+          exec python3 "$(_sa_script team_content_wizard.py)" skill new \
+            --home "$SHARED_AGENTS_HOME" "$@"
+          ;;
+        rm|delete|remove)
+          exec python3 "$(_sa_script team_content_wizard.py)" skill rm \
+            --home "$SHARED_AGENTS_HOME" "$@"
+          ;;
+        list|ls)
+          exec python3 "$(_sa_script team_content_wizard.py)" skill list \
+            --home "$SHARED_AGENTS_HOME" "$@"
+          ;;
+        *)
+          echo "Usage: sa skill new|rm|list [opts]" >&2
+          echo "Try: sa skill new --help" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    rule)
+      _sa_require_home
+      local sub="${1:-new}"
+      shift || true
+      case "$sub" in
+        new)
+          exec python3 "$(_sa_script team_content_wizard.py)" rule new \
+            --home "$SHARED_AGENTS_HOME" "$@"
+          ;;
+        rm|delete|remove)
+          exec python3 "$(_sa_script team_content_wizard.py)" rule rm \
+            --home "$SHARED_AGENTS_HOME" "$@"
+          ;;
+        list|ls)
+          exec python3 "$(_sa_script team_content_wizard.py)" rule list \
+            --home "$SHARED_AGENTS_HOME" "$@"
+          ;;
+        *)
+          echo "Usage: sa rule new|rm|list [opts]" >&2
+          echo "Try: sa rule new --help" >&2
+          exit 1
+          ;;
+      esac
+      ;;
     *)
       _sa_ui_py --error "Unknown command: sa $cmd" "Run: sa help" >&2 || {
         echo "Unknown command: sa $cmd" >&2

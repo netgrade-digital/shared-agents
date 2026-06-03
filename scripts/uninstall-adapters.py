@@ -57,6 +57,12 @@ def unmerge_agents_md(target: Path, dry_run: bool) -> str | None:
     return f"Removed marker block from {target}"
 
 
+def uninstall_rules(repo_home: Path, rule_dirs: list[dict], dry_run: bool) -> list[str]:
+    from rules_install import uninstall_rule_symlinks
+
+    return uninstall_rule_symlinks(repo_home, rule_dirs, dry_run=dry_run)
+
+
 def _skill_source_roots(repo_home: Path) -> list[Path]:
     """Core skills + team skills (same sources as install-adapters symlink_skills)."""
     roots: list[Path] = []
@@ -112,15 +118,6 @@ def uninstall_cursor(repo_home: Path, tool: dict, dry_run: bool) -> list[str]:
     sync = tool["sync"]
     hook_path = expand(sync["script_dest"])
     hooks_path = expand(sync["hooks_json"])
-
-    for rule in tool.get("rules", {}).get("copy", []):
-        dest = expand(rule["dest"])
-        if dest.is_file():
-            if dry_run:
-                messages.append(f"[dry-run] would remove {dest}")
-            else:
-                dest.unlink()
-                messages.append(f"Removed {dest}")
 
     if hook_path.is_file():
         if dry_run:
@@ -197,25 +194,20 @@ def uninstall_claude(home: str, tool: dict, dry_run: bool) -> list[str]:
     return messages
 
 
-def uninstall_agents_md_tool(tool: dict, dry_run: bool) -> list[str]:
+def uninstall_agents_md_tool(repo_home: Path, tool: dict, dry_run: bool) -> list[str]:
+    from rules_install import agents_md_paths, uninstall_team_rules_from_tool
+
     messages: list[str] = []
-    paths: list[Path] = []
-    for key in ("agents_md", "alt_agents_md"):
-        if tool.get(key):
-            paths.append(expand(tool[key]))
-    for alt in tool.get("alt_rules") or []:
-        paths.append(expand(alt))
-    env_home = tool.get("env_home")
-    if env_home and os.environ.get(env_home):
-        paths.append(expand(os.path.join(os.environ[env_home], "AGENTS.md")))
+    home = str(repo_home)
     seen: set[Path] = set()
-    for path in paths:
+    for path in agents_md_paths(tool, home):
         if path in seen:
             continue
         seen.add(path)
         msg = unmerge_agents_md(path, dry_run)
         if msg:
             messages.append(msg)
+    messages.extend(uninstall_team_rules_from_tool(tool, repo_home, dry_run=dry_run))
     return messages
 
 
@@ -224,9 +216,12 @@ def uninstall_tool(repo_home: Path, home: str, tool: dict, dry_run: bool) -> lis
     if tid == "cursor":
         return uninstall_cursor(repo_home, tool, dry_run)
     if tid == "claude-code":
-        return uninstall_claude(home, tool, dry_run)
+        messages = uninstall_claude(home, tool, dry_run)
+        if tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules"):
+            messages.extend(uninstall_agents_md_tool(repo_home, tool, dry_run))
+        return messages
     if tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules"):
-        return uninstall_agents_md_tool(tool, dry_run)
+        return uninstall_agents_md_tool(repo_home, tool, dry_run)
     return []
 
 
@@ -235,6 +230,9 @@ def run_uninstall(repo_home: Path, home: str, dry_run: bool) -> int:
     messages: list[str] = []
     messages.extend(
         uninstall_skills(repo_home, manifest["shared"]["skill_dirs"], dry_run=dry_run)
+    )
+    messages.extend(
+        uninstall_rules(repo_home, manifest["shared"].get("rule_dirs", []), dry_run=dry_run)
     )
     for tool in installable_tools(manifest):
         if not tool_is_installed(tool):

@@ -100,6 +100,26 @@ def skills_dirs(core: Path | None = None) -> list[Path]:
     return dirs
 
 
+def rules_root(core: Path | None = None) -> Path:
+    root = core or core_home()
+    if uses_team_data(root):
+        return team_dir(root) / "rules"
+    return root / "rules"
+
+
+def rules_source_dirs(core: Path | None = None) -> list[Path]:
+    """Core rules/ + team/rules/ — same layout as skills (flat dirs, no review workflow)."""
+    root = core or core_home()
+    dirs: list[Path] = []
+    core_rules = root / "rules"
+    if core_rules.is_dir():
+        dirs.append(core_rules)
+    team_rules = team_dir(root) / "rules"
+    if team_rules.is_dir():
+        dirs.append(team_rules)
+    return dirs
+
+
 def git_data_home(core: Path | None = None) -> Path:
     """Git repo root for learnings commit/push."""
     root = core or core_home()

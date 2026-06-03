@@ -159,6 +159,9 @@ def tool_config_paths(tool: dict, home: str) -> list[Path]:
             paths.append(expand(tool[key]))
     for rule in (tool.get("rules") or {}).get("copy", []):
         paths.append(expand(rule["dest"]))
+    rules_block = tool.get("rules") or {}
+    if rules_block.get("dest"):
+        paths.append(expand(rules_block["dest"]))
     if sync.get("script_dest"):
         paths.append(expand(sync["script_dest"]))
     env_home = tool.get("env_home")
@@ -191,18 +194,26 @@ def tool_is_installed(tool: dict) -> tuple[bool, list[str], list[str]]:
     return installed, detect_bins, bins_found
 
 
-def check_cursor_configured(tool: dict) -> tuple[bool, str]:
+def check_cursor_configured(tool: dict, repo_home: Path) -> tuple[bool, str]:
+    from rules_install import check_rules
     sync = tool["sync"]
     hook = expand(sync["script_dest"])
     hooks_json = expand(sync["hooks_json"])
-    rule_dest = expand(tool["rules"]["copy"][0]["dest"])
     hook_ok = hook.is_file() and os.access(hook, os.X_OK)
     json_ok = False
     if hooks_json.is_file():
         data = json.loads(hooks_json.read_text())
         session = data.get("hooks", {}).get("sessionStart", [])
         json_ok = any(h.get("command") == sync["hook_command"] for h in session)
-    rule_ok = rule_dest.is_file()
+
+    rule_ok = True
+    rule_parts: list[str] = []
+    rule_issues = check_rules(repo_home, {"shared": {"rule_dirs": [{"path": "~/.cursor/rules"}]}})
+    blocking = [i for i in rule_issues if "regular file" not in i]
+    if blocking:
+        rule_ok = False
+        rule_parts.append("rule symlinks missing or stale")
+
     ok = hook_ok and json_ok and rule_ok
     parts = []
     if not hook_ok:
@@ -210,7 +221,7 @@ def check_cursor_configured(tool: dict) -> tuple[bool, str]:
     if not json_ok:
         parts.append("sessionStart hook not registered")
     if not rule_ok:
-        parts.append("rule missing")
+        parts.extend(rule_parts)
     return ok, "; ".join(parts) if parts else "ok"
 
 
@@ -243,7 +254,7 @@ def check_agents_md_configured(tool: dict, home: str) -> tuple[bool, str]:
     return False, f"marker missing in {paths[0]}"
 
 
-def check_tool(tool: dict, home: str) -> ToolReport:
+def check_tool(tool: dict, home: str, repo_home: Path | None = None) -> ToolReport:
     tid = tool["id"]
     detect_path = tool.get("detect")
     installed, detect_bins, bins_found = tool_is_installed(tool)
@@ -298,9 +309,14 @@ def check_tool(tool: dict, home: str) -> ToolReport:
         )
 
     if tid == "cursor":
-        configured, msg = check_cursor_configured(tool)
+        root = repo_home or expand(home)
+        configured, msg = check_cursor_configured(tool, root)
     elif tid == "claude-code":
         configured, msg = check_claude_configured(tool, home)
+        if configured and (tool.get("agents_md") or tool.get("alt_agents_md")):
+            md_ok, md_msg = check_agents_md_configured(tool, home)
+            if not md_ok:
+                configured, msg = md_ok, md_msg
     elif tool.get("agents_md") or tool.get("alt_agents_md"):
         configured, msg = check_agents_md_configured(tool, home)
     else:
@@ -365,10 +381,13 @@ def check_skills(repo_home: Path, manifest: dict) -> list[str]:
 
 
 def run_check(repo_home: Path, home: str, as_json: bool) -> int:
+    from rules_install import check_rules
+
     repo_ok, repo_msg = check_repo(home)
-    manifest = load_manifest(repo_home) if repo_ok else {"tools": [], "shared": {"skill_dirs": []}}
-    reports = [check_tool(t, home) for t in manifest.get("tools", [])]
+    manifest = load_manifest(repo_home) if repo_ok else {"tools": [], "shared": {"skill_dirs": [], "rule_dirs": []}}
+    reports = [check_tool(t, home, repo_home) for t in manifest.get("tools", [])]
     skill_issues = check_skills(repo_home, manifest) if repo_ok else []
+    rule_issues = check_rules(repo_home, manifest) if repo_ok else []
     from sa_config import check_team_setup
 
     team_issues = check_team_setup(expand(home)) if repo_ok else []
@@ -380,6 +399,7 @@ def run_check(repo_home: Path, home: str, as_json: bool) -> int:
             "repo_ok": repo_ok,
             "repo_message": repo_msg,
             "skill_issues": skill_issues,
+            "rule_issues": rule_issues,
             "team_issues": team_issues,
             "tools": [asdict(r) for r in reports],
         }
@@ -413,6 +433,11 @@ def run_check(repo_home: Path, home: str, as_json: bool) -> int:
     if skill_issues:
         print(bold("\nSkill links:"))
         for issue in skill_issues:
+            print(f"  {yellow('!')} {plain(issue)}")
+
+    if rule_issues:
+        print(bold("\nRule links:"))
+        for issue in rule_issues:
             print(f"  {yellow('!')} {plain(issue)}")
 
     if team_issues:
@@ -499,16 +524,12 @@ def symlink_skills(repo_home: Path, skill_dirs: list[dict], dry_run: bool = Fals
 
 def install_cursor(repo_home: Path, tool: dict, dry_run: bool) -> list[str]:
     if dry_run:
-        return ["[dry-run] would configure Cursor (rule + sessionStart hook)"]
+        return ["[dry-run] would configure Cursor (sessionStart hook)"]
     sync = tool["sync"]
     dest_hook = expand(sync["script_dest"])
     dest_hook.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(repo_home / sync["script_src"], dest_hook)
     dest_hook.chmod(0o755)
-    for rule in tool.get("rules", {}).get("copy", []):
-        dest = expand(rule["dest"])
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(repo_home / rule["src"], dest)
     hooks_path = expand(sync["hooks_json"])
     entry = {"command": sync["hook_command"], "timeout": 30}
     data = {"version": 1, "hooks": {}}
@@ -531,7 +552,7 @@ def install_cursor(repo_home: Path, tool: dict, dry_run: bool) -> list[str]:
     hooks_path.parent.mkdir(parents=True, exist_ok=True)
     hooks_path.write_text(json.dumps(data, indent=2) + "\n")
     return [
-        f"Cursor: rule + sessionStart hook ({dest_hook})",
+        f"Cursor: sessionStart hook ({dest_hook})",
         "Cursor: stop hook (ask for learning after big tasks)",
     ]
 
@@ -554,17 +575,13 @@ def install_claude(home: str, tool: dict, dry_run: bool) -> list[str]:
     return [f"Claude Code: SessionStart hook in {settings_path}"]
 
 
-def install_agents_md_tool(home: str, tool: dict, dry_run: bool) -> list[str]:
+def install_agents_md_tool(
+    repo_home: Path, home: str, tool: dict, dry_run: bool
+) -> list[str]:
+    from rules_install import agents_md_paths, install_team_rules_to_path
+
     block = agents_block(home, tool.get("note", ""))
-    paths: list[Path] = []
-    for key in ("agents_md", "alt_agents_md"):
-        if tool.get(key):
-            paths.append(expand(tool[key]))
-    for alt in tool.get("alt_rules") or []:
-        paths.append(expand(alt))
-    env_home = tool.get("env_home")
-    if env_home and os.environ.get(env_home):
-        paths.append(expand(os.path.join(os.environ[env_home], "AGENTS.md")))
+    paths = agents_md_paths(tool, home)
     messages = []
     seen: set[Path] = set()
     for path in paths:
@@ -573,9 +590,19 @@ def install_agents_md_tool(home: str, tool: dict, dry_run: bool) -> list[str]:
         seen.add(path)
         if dry_run:
             messages.append(f"[dry-run] would merge block into {path}")
+            extra = install_team_rules_to_path(
+                path, repo_home, tool["id"], dry_run=True
+            )
+            if extra:
+                messages.append(extra)
         else:
             merge_agents_md(path, block)
             messages.append(f"{tool['name']}: merged block into {path}")
+            extra = install_team_rules_to_path(
+                path, repo_home, tool["id"], dry_run=False
+            )
+            if extra:
+                messages.append(f"{tool['name']}: {extra}")
     return messages
 
 
@@ -584,9 +611,12 @@ def install_tool(repo_home: Path, home: str, tool: dict, dry_run: bool) -> list[
     if tid == "cursor":
         return install_cursor(repo_home, tool, dry_run)
     if tid == "claude-code":
-        return install_claude(home, tool, dry_run)
+        messages = install_claude(home, tool, dry_run)
+        if tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules"):
+            messages.extend(install_agents_md_tool(repo_home, home, tool, dry_run))
+        return messages
     if tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules"):
-        return install_agents_md_tool(home, tool, dry_run)
+        return install_agents_md_tool(repo_home, home, tool, dry_run)
     return []
 
 
@@ -611,6 +641,8 @@ def run_install(
     *,
     tool_ids: set[str] | None = None,
 ) -> int:
+    from rules_install import symlink_rules
+
     os.environ["SHARED_AGENTS_HOME"] = home
     manifest = load_manifest(repo_home)
     print(f"{bold('Installing adapters')} {green(f'v{VERSION}')} ({cyan(home)})")
@@ -618,6 +650,9 @@ def run_install(
         print(yellow("DRY RUN — no files will be modified\n"))
 
     messages = symlink_skills(repo_home, manifest["shared"]["skill_dirs"], dry_run=dry_run)
+    messages.extend(
+        symlink_rules(repo_home, manifest["shared"].get("rule_dirs", []), dry_run=dry_run)
+    )
     configured: list[str] = []
     skipped: list[str] = []
     missing: list[str] = []
@@ -660,6 +695,64 @@ def run_install(
             print(f"  {yellow('○')} {plain(name)}")
 
     print(f"\n{plain('Verify:')} {green('./install.sh --check')}")
+    return 0
+
+
+def run_sync_links(
+    repo_home: Path,
+    home: str,
+    *,
+    quiet: bool = False,
+    dry_run: bool = False,
+) -> int:
+    """After sa sync pull: refresh skill symlinks, rule symlinks, and AGENTS.md team-rules blocks."""
+    from rules_install import agents_md_paths, install_team_rules_to_path, symlink_rules
+
+    os.environ["SHARED_AGENTS_HOME"] = home
+    if not (repo_home / "adapters" / "manifest.json").is_file():
+        return 0
+
+    manifest = load_manifest(repo_home)
+    messages: list[str] = []
+    messages.extend(
+        symlink_skills(repo_home, manifest["shared"]["skill_dirs"], dry_run=dry_run)
+    )
+    messages.extend(
+        symlink_rules(repo_home, manifest["shared"].get("rule_dirs", []), dry_run=dry_run)
+    )
+
+    seen_paths: set[Path] = set()
+    for tool in installable_tools(manifest):
+        installed, _, _ = tool_is_installed(tool)
+        if not installed:
+            continue
+        if tool["id"] == "cursor":
+            continue
+        if not (tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules")):
+            continue
+        for path in agents_md_paths(tool, home):
+            if path in seen_paths:
+                continue
+            seen_paths.add(path)
+            extra = install_team_rules_to_path(
+                path, repo_home, tool["id"], dry_run=dry_run
+            )
+            if extra:
+                messages.append(f"{tool['name']}: {extra}")
+
+    if not messages:
+        return 0
+
+    if quiet and not dry_run:
+        return 0
+
+    if dry_run:
+        print(bold("Sync links (dry run):"))
+    elif not quiet:
+        print(bold("Skills + rules:"))
+
+    for msg in messages:
+        _print_action(msg)
     return 0
 
 
@@ -956,7 +1049,7 @@ def gather_wizard_choices(
     manifest_repo = resolve_manifest_repo(repo_home, home)
     manifest = load_manifest(manifest_repo)
     reports = [
-        (tool, check_tool(tool, home))
+        (tool, check_tool(tool, home, manifest_repo))
         for tool in installable_tools(manifest)
     ]
 
@@ -1183,6 +1276,14 @@ def main() -> int:
     p_check.add_argument("repo_home", type=Path, help="Path to shared-agents repo")
     p_check.add_argument("--json", action="store_true", help="Machine-readable output")
 
+    p_sync_links = sub.add_parser(
+        "sync-links",
+        help="Refresh skill/rule symlinks after sa sync (no full adapter install)",
+    )
+    p_sync_links.add_argument("repo_home", type=Path, help="Path to shared-agents repo")
+    p_sync_links.add_argument("--quiet", action="store_true", help="No output when successful")
+    p_sync_links.add_argument("--dry-run", action="store_true", help="Preview only")
+
     args = parser.parse_args()
     repo_home = args.repo_home.resolve()
     default_home = os.environ.get("SHARED_AGENTS_HOME", str(expand("~/.shared-agents")))
@@ -1190,6 +1291,15 @@ def main() -> int:
     if args.command == "check":
         home = default_home
         return run_check(repo_home, home, args.json)
+
+    if args.command == "sync-links":
+        home = default_home
+        return run_sync_links(
+            repo_home,
+            home,
+            quiet=args.quiet,
+            dry_run=args.dry_run,
+        )
 
     if args.command == "wizard":
         home = args.home or default_home

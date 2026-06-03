@@ -47,10 +47,31 @@ LEARNINGS_README = """# Team learnings
 Agents read `approved/` + `index.yaml`. Never commit secrets.
 """
 
+RULES_README = """# Team rules
+
+Flat directory — like `team/skills/`. Add `.mdc` files here; teammates get them after `sa sync` (links rules automatically).
+
+- Cursor → symlinks in `~/.cursor/rules/`
+- Zed, Codex, Claude Code (`CLAUDE.md`), Gemini, Windsurf, … → marker block in each tool's agents file
+
+Optional frontmatter: `targets: [zed, claude-code, cursor]` (default: all). Never commit secrets.
+
+Create new rules: **`sa rule new`** (wizard).
+"""
+
+SKILLS_README = """# Team skills
+
+One directory per skill with `SKILL.md` — like Core `skills/`, but private to the team repo.
+
+Teammates get symlinks after **`sa sync`**. Never commit secrets.
+
+Create new skills: **`sa skill new`** (wizard).
+"""
+
 TEAM_README = """# Team data (private)
 
 This directory is its own git repository (not part of the public core remote).
-Learnings and team-specific skills live here.
+Learnings, team rules, and team-specific skills live here.
 """
 
 
@@ -119,6 +140,12 @@ def scaffold_team_tree(root: Path) -> None:
     _ensure_dir_gitkeep(learnings / "approved")
     (root / "skills").mkdir(parents=True, exist_ok=True)
 
+    rules = root / "rules"
+    rules.mkdir(parents=True, exist_ok=True)
+    rules_keep = rules / ".gitkeep"
+    if not rules_keep.is_file():
+        rules_keep.touch()
+
     index = root / "learnings" / "index.yaml"
     if not index.is_file():
         index.write_text(INDEX_TEMPLATE, encoding="utf-8")
@@ -129,6 +156,10 @@ def scaffold_team_tree(root: Path) -> None:
     if not readme_learn.is_file():
         readme_learn.write_text(LEARNINGS_README, encoding="utf-8")
 
+    readme_rules = rules / "README.md"
+    if not readme_rules.is_file():
+        readme_rules.write_text(RULES_README, encoding="utf-8")
+
     readme_team = root / "README.md"
     if not readme_team.is_file():
         readme_team.write_text(TEAM_README, encoding="utf-8")
@@ -136,6 +167,10 @@ def scaffold_team_tree(root: Path) -> None:
     keep = root / "skills" / ".gitkeep"
     if not keep.is_file():
         keep.touch()
+
+    readme_skills = root / "skills" / "README.md"
+    if not readme_skills.is_file():
+        readme_skills.write_text(SKILLS_README, encoding="utf-8")
 
 
 def _has_commits(repo: Path) -> bool:
@@ -438,6 +473,22 @@ def verify_team(home: Path | None = None) -> TeamVerifyReport:
             report.ok.append("team/skills/ (empty — optional)")
     else:
         report.warnings.append("team/skills/ missing (optional for team-only skills)")
+
+    rules = td / "rules"
+    if rules.is_dir():
+        n_rules = len(list(rules.glob("*.mdc")))
+        report.stats["team_rules"] = n_rules
+        if n_rules:
+            report.ok.append(f"team/rules/: {n_rules} rule(s)")
+        else:
+            report.ok.append("team/rules/ (empty — optional)")
+        legacy_approved = rules / "approved"
+        if legacy_approved.is_dir() and list(legacy_approved.glob("*.mdc")):
+            report.warnings.append(
+                "Legacy team/rules/approved/ — move *.mdc to team/rules/ (flat, like skills)"
+            )
+    else:
+        report.warnings.append("team/rules/ missing (optional for team rules)")
 
     return report
 

@@ -324,7 +324,9 @@ Reload your shell:
   source $SHELL_RC
 
 Next commands:
-  sa sync              Pull Core + team learnings
+  sa sync              Pull Core + team; link skills + rules
+  sa skill new         Wizard: team skill
+  sa rule new          Wizard: team rule
   sa review            Review / approve learnings
   sa pending push      Push pending for team review
   sa team verify       Validate team repo layout

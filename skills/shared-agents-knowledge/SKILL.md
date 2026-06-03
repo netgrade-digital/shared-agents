@@ -1,7 +1,7 @@
 ---
 name: shared-agents-knowledge
 description: >-
-  Sync and use the shared-agents repo (team skills + learnings).
+  Sync and use the shared-agents repo (team skills, rules + learnings).
   Use at session start, when loading team knowledge, searching learnings,
   or when the user mentions shared-agents, shared learnings, or team knowledge.
 ---

@@ -1,20 +1,28 @@
-# GitHub Copilot
+# GitHub Copilot (CLI)
 
-Auto-configured by **`sa install`** when `~/.copilot` exists (or `./install.sh` from repo root).
+Auto-configured by **`sa install`** when `~/.copilot` exists (or `./install.sh` / `./sa install` from repo root).
 
-Status: **`sa check`**
+Re-run **`sa sync`** after team changes (skills + rules) · First-time: **`sa install`** · Status: **`sa check`**
 
 ## Global instructions
 
 `sa install` merges into (first existing path wins):
 
-- `~/.config/github-copilot/AGENTS.md`
 - `~/.copilot/AGENTS.md`
+- `~/.config/copilot/AGENTS.md`
 
-## Project instructions
+| Marker block | Content |
+|--------------|---------|
+| `<!-- shared-agents:begin/end -->` | Sync + learnings workflow |
+| `<!-- shared-agents:team-rules:begin/end -->` | Core + team rules from `$SHARED_AGENTS_HOME/rules/` and `team/rules/*.mdc` |
 
-Repos can use `.github/copilot-instructions.md` for project-specific rules.
+Your own content **outside** these markers is preserved. Team-rules block refreshed on every **`sa sync`**.
 
-## Sync
+## Team skills & rules
 
-Agent runs sync at session start via merged instruction block.
+```bash
+sa skill new | sa skill list | sa skill rm [name]
+sa rule new  | sa rule list  | sa rule rm [slug]
+```
+
+Wizards commit/push by default (`--no-git` to skip). Teammates run **`sa sync`**.
