@@ -146,11 +146,25 @@ def main() -> int:
 
     print_banner(subtitle="Bootstrap — core + team data + adapters")
 
-    if args.non_interactive:
+    if args.non_interactive or not sys.stdin.isatty():
+        repo_ok, _ = _ia.check_repo(str(repo_source))
+        manifest_repo = _ia.resolve_manifest_repo(repo_source, home) if repo_ok else repo_source
+        manifest = _ia.load_manifest(manifest_repo) if repo_ok else {"tools": []}
+        reports = [
+            (tool, _ia.check_tool(tool, home))
+            for tool in _ia.installable_tools(manifest)
+        ] if repo_ok else []
+        detected = sorted(_ia.default_detected_tool_ids(reports))
+        if not sys.stdin.isatty() and not args.non_interactive:
+            print(
+                _ia.plain(
+                    "stdin is not interactive (e.g. curl | bash) — using detected tools."
+                )
+            )
         choices = _ia.SavedWizardChoices(
             home=home,
             team_remote=None,
-            selected_tools=[],
+            selected_tools=detected,
             add_shell=True,
         )
     else:

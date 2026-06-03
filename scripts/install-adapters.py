@@ -667,6 +667,11 @@ def is_tty() -> bool:
     return ui_is_tty()
 
 
+def stdin_interactive() -> bool:
+    """True when prompts can read from the user (not curl | bash)."""
+    return sys.stdin.isatty()
+
+
 def prompt(text: str, default: str | None = None) -> str:
     suffix = f" [{default}]" if default else ""
     while True:
@@ -733,10 +738,27 @@ def configure_shell_rc(shell_rc: Path, home: str, dry_run: bool, repo_home: Path
     return result.returncode == 0
 
 
+def default_detected_tool_ids(reports: list[tuple[dict, ToolReport]]) -> set[str]:
+    return {tool["id"] for tool, report in reports if report.installed}
+
+
 def wizard_select_tools(reports: list[tuple[dict, ToolReport]]) -> set[str]:
-    selected = {tool["id"] for tool, report in reports if report.installed}
+    selected = default_detected_tool_ids(reports)
     if not reports:
         return set()
+
+    if not stdin_interactive():
+        print(
+            plain(
+                f"  Non-interactive stdin: configuring {len(selected)} detected tool(s) "
+                "(run ./scripts/bootstrap.sh or sa bootstrap in a terminal for the full wizard)."
+            )
+        )
+        for tool, report in reports:
+            if tool["id"] in selected:
+                print(f"    • {tool['name']} ({tool_status_plain(report)})")
+        print()
+        return selected
 
     while True:
         print(bold("Select AI tools"))
@@ -797,7 +819,7 @@ def prompt_team_remote() -> str | None:
     print(bold("Step 2/5 — Team data (private repo)"))
     print(plain("  Separate git repo for learnings + team skills."))
     print(plain("  Leave empty for solo (learnings only under core/)."))
-    if not is_tty():
+    if not stdin_interactive():
         return None
     url = prompt("  Team remote URL (or empty)", "")
     url = url.strip()
@@ -821,7 +843,7 @@ def run_wizard_plain(
     print(bold("Step 1/5 — Install location"))
     print(f"  Repo:  {repo_home}")
     default_home = home
-    if is_tty():
+    if stdin_interactive():
         home_input = prompt("  SHARED_AGENTS_HOME", default_home)
         home = os.path.expanduser(os.path.expandvars(home_input))
     else:
@@ -852,7 +874,7 @@ def run_wizard_plain(
     elif has_home and not has_cli:
         print(f"  → {shell_rc_path} has SHARED_AGENTS_HOME — will add CLI (sa)")
         add_shell = True
-    elif is_tty():
+    elif stdin_interactive():
         add_shell = confirm(
             f"  Add SHARED_AGENTS_HOME + sa CLI to {shell_rc_path}?",
             True,
@@ -874,6 +896,9 @@ def run_wizard_plain(
     else:
         print("  Configure:    (none)")
     print()
+    if not stdin_interactive():
+        print(plain("  Non-interactive stdin: running setup."))
+        return home, team_remote, selected, add_shell, True
     if not confirm("Run setup now?", False):
         return None
     return home, team_remote, selected, add_shell, True

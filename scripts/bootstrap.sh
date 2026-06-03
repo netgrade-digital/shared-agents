@@ -57,9 +57,15 @@ if [[ -z "${SA_WIZARD_PLAIN:-}" ]]; then
   esac
 fi
 
+BOOTSTRAP_EXTRA=()
+if [[ ! -t 0 ]]; then
+  BOOTSTRAP_EXTRA+=(--non-interactive)
+fi
+
 exec python3 "$SCRIPT_DIR/bootstrap_wizard.py" \
   --source "$(dirname "$SCRIPT_DIR")" \
   --home "$SHARED_AGENTS_HOME" \
   --shell-rc "$SHELL_RC" \
   --core-remote "$SHARED_AGENTS_CORE_REMOTE" \
+  "${BOOTSTRAP_EXTRA[@]}" \
   "$@"
