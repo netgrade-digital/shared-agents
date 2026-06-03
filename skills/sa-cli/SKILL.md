@@ -35,7 +35,7 @@ Env: **`SHARED_AGENTS_HOME`** (default `~/.shared-agents`) · Version: **`sa ver
 **Recommended (Core + private team repo + adapters):**
 
 ```bash
-curl -fsSL https://bitbucket.org/netgrade/shared-agents/raw/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/netgrade-digital/shared-agents/refs/heads/main/scripts/bootstrap.sh | bash
 # or after clone: ./scripts/bootstrap.sh  ·  sa bootstrap
 source ~/.bashrc
 sa check

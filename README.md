@@ -65,7 +65,7 @@ Solo mode (no team remote): learnings stay under `core/learnings/` until you run
 
 ```bash
 # Recommended — one command (bootstrap wizard: Core + team repo + adapters)
-curl -fsSL https://raw.githubusercontent.com/netgrade-digital/shared-agents/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/netgrade-digital/shared-agents/refs/heads/main/scripts/bootstrap.sh | bash
 # Or after clone:
 ./scripts/bootstrap.sh
 # or: sa bootstrap
