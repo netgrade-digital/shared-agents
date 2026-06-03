@@ -223,6 +223,17 @@ def append_index(index_path: Path, entry: dict[str, str | list[str]]) -> None:
         content = index_path.read_text()
         if not content.endswith("\n"):
             content += "\n"
+        # Scaffold uses "learnings: []" — replace before appending first entry.
+        if re.search(r"^learnings:\s*\[\]\s*$", content, re.MULTILINE):
+            content = re.sub(
+                r"^learnings:\s*\[\]\s*$",
+                "learnings:",
+                content,
+                count=1,
+                flags=re.MULTILINE,
+            )
+        elif "learnings:" not in content:
+            content = content.rstrip() + "\nlearnings:\n"
         index_path.write_text(content + block)
         return
 

@@ -1064,12 +1064,13 @@ def apply_wizard_choices(
 
     if not skip_team_setup and not dry_run:
         from sa_config import write_config
-        from team_data import setup_team
+        from team_data import resolve_team_remote, setup_team
 
-        write_config(expand(home), team_remote_url=choices.team_remote)
-        if choices.team_remote:
+        team_url = resolve_team_remote(expand(home), choices.team_remote)
+        write_config(expand(home), team_remote_url=team_url)
+        if team_url:
             try:
-                msg = setup_team(expand(home), choices.team_remote, dry_run=False)
+                msg = setup_team(expand(home), team_url, dry_run=False)
                 print(f"  {green('✓')} {highlight_paths(msg)}")
             except RuntimeError as exc:
                 print(f"  ! {exc}", file=sys.stderr)

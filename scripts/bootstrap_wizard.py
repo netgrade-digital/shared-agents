@@ -30,7 +30,7 @@ _ia = _load_install_adapters()
 
 from sa_config import config_path, team_remote, write_config  # noqa: E402
 from sa_ui import bold, cyan, green, plain, print_banner, print_install_footer, say_warn_stderr  # noqa: E402
-from team_data import setup_team  # noqa: E402
+from team_data import resolve_team_remote, setup_team  # noqa: E402
 
 DEFAULT_CORE_REMOTE = os.environ.get(
     "SHARED_AGENTS_CORE_REMOTE",
@@ -92,25 +92,22 @@ def apply_bootstrap(
     repo_home = home if (home / "adapters" / "manifest.json").is_file() else repo_source
 
     if not dry_run:
+        team_url = resolve_team_remote(home, choices.team_remote)
         write_config(
             home,
-            team_remote_url=choices.team_remote,
+            team_remote_url=team_url,
             core_remote=core_remote,
         )
-        if choices.team_remote:
-            print()
-            print(bold("Team data"))
-            try:
-                msg = setup_team(home, choices.team_remote, dry_run=False)
-                print(f"  {green('✓')} {plain(msg)}")
-            except RuntimeError as exc:
-                say_warn_stderr(str(exc))
-                return 1
-        else:
-            setup_team(home, None, dry_run=False)
-            print(f"  {green('✓')} {plain('Solo mode — learnings under core/')}")
+        print()
+        print(bold("Team data"))
+        try:
+            msg = setup_team(home, team_url, dry_run=False)
+            print(f"  {green('✓')} {plain(msg)}")
+        except RuntimeError as exc:
+            say_warn_stderr(str(exc))
+            return 1
 
-        if choices.team_remote:
+        if team_url:
             from team_data import print_verify_report, verify_team
 
             print()
@@ -162,7 +159,7 @@ def main() -> int:
                 )
             )
         home_path = _ia.expand(home)
-        existing_team = team_remote(home_path)
+        existing_team = resolve_team_remote(home_path, team_remote(home_path))
         choices = _ia.SavedWizardChoices(
             home=home,
             team_remote=existing_team,

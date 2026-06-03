@@ -35,7 +35,7 @@ from sa_ui import (
 ID_RE = re.compile(r"^\s+-\s+id:\s+(.+)\s*$", re.MULTILINE)
 
 INDEX_TEMPLATE = """version: 1
-learnings: []
+learnings:
 """
 
 LEARNINGS_README = """# Team learnings
@@ -66,6 +66,44 @@ def run_git(cwd: Path, args: list[str], *, check: bool = True) -> subprocess.Com
     return result
 
 
+def git_origin_url(repo: Path) -> str | None:
+    result = run_git(repo, ["remote", "get-url", "origin"], check=False)
+    if result.returncode != 0:
+        return None
+    url = (result.stdout or "").strip()
+    return url or None
+
+
+def repair_index_yaml(index: Path) -> bool:
+    """Fix legacy scaffold `learnings: []` so sa review can append entries."""
+    if not index.is_file():
+        return False
+    text = index.read_text(encoding="utf-8")
+    if not re.search(r"^learnings:\s*\[\]\s*$", text, re.MULTILINE):
+        return False
+    index.write_text(
+        re.sub(
+            r"^learnings:\s*\[\]\s*$",
+            "learnings:",
+            text,
+            count=1,
+            flags=re.MULTILINE,
+        ),
+        encoding="utf-8",
+    )
+    return True
+
+
+def resolve_team_remote(core_home: Path, chosen: str | None = None) -> str | None:
+    """Wizard/config value, or git origin when team/ already exists."""
+    if chosen and str(chosen).strip():
+        return str(chosen).strip()
+    td = team_dir(core_home)
+    if (td / ".git").is_dir():
+        return git_origin_url(td)
+    return team_remote(core_home)
+
+
 def scaffold_team_tree(root: Path) -> None:
     (root / "learnings" / "pending").mkdir(parents=True, exist_ok=True)
     (root / "learnings" / "approved").mkdir(parents=True, exist_ok=True)
@@ -74,6 +112,8 @@ def scaffold_team_tree(root: Path) -> None:
     index = root / "learnings" / "index.yaml"
     if not index.is_file():
         index.write_text(INDEX_TEMPLATE, encoding="utf-8")
+    else:
+        repair_index_yaml(index)
 
     readme_learn = root / "learnings" / "README.md"
     if not readme_learn.is_file():
@@ -105,12 +145,23 @@ def setup_team(
     dry_run: bool = False,
 ) -> str:
     """Clone or init team/ and optionally push scaffold. Returns status line."""
+    td = team_dir(core_home)
+
     if not remote:
+        origin = git_origin_url(td) if (td / ".git").is_dir() else None
+        if origin:
+            write_config(core_home, team_remote_url=origin)
+            scaffold_team_tree(td)
+            maybe_commit_push(
+                td,
+                message="chore(team): sync config scaffold and index.yaml",
+                initial=False,
+            )
+            return f"Synced team.remote from existing team/ ({origin})"
         write_config(core_home, team_remote_url=None)
         return "Solo mode — learnings under core (no team remote)"
 
     remote = remote.strip()
-    td = team_dir(core_home)
     write_config(core_home, team_remote_url=remote)
 
     if dry_run:
@@ -125,6 +176,13 @@ def setup_team(
         merge = run_git(td, ["merge", "--ff-only", f"origin/{br}"], check=False)
         if merge.returncode != 0:
             run_git(td, ["pull", "--ff-only", "origin", br], check=False)
+        scaffold_team_tree(td)
+        maybe_commit_push(
+            td,
+            message="chore(team): ensure learnings scaffold and index.yaml",
+            initial=False,
+        )
+        write_config(core_home, team_remote_url=git_origin_url(td) or remote)
         return f"Team repo updated: {td}"
 
     if td.exists() and any(td.iterdir()) and not (td / ".git").is_dir():
@@ -297,7 +355,12 @@ def verify_team(home: Path | None = None) -> TeamVerifyReport:
         report.ok.append(f"git origin: {report.git_origin}")
         if remote and report.git_origin != remote:
             report.warnings.append(
-                f"config team.remote differs from origin ({remote})"
+                f"config team.remote ({remote}) differs from git origin ({report.git_origin})"
+            )
+        elif report.git_origin and not remote:
+            report.warnings.append(
+                f"team.remote unset in config.local.yaml but team/ origin is {report.git_origin} "
+                "— set team.remote to match"
             )
     else:
         report.warnings.append("team/ has no git origin remote")
@@ -345,7 +408,11 @@ def verify_team(home: Path | None = None) -> TeamVerifyReport:
             )
 
     # Legacy layout inside team repo (learnings/*.md at root without pending/)
-    loose = [p for p in learnings.glob("*.md") if p.is_file()]
+    loose = [
+        p
+        for p in learnings.glob("*.md")
+        if p.is_file() and p.name.lower() not in {"readme.md"}
+    ]
     if loose:
         report.warnings.append(
             f"Markdown directly in team/learnings/ ({len(loose)} file(s)) — prefer pending/ or approved/"
