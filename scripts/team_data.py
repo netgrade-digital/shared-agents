@@ -104,9 +104,18 @@ def resolve_team_remote(core_home: Path, chosen: str | None = None) -> str | Non
     return team_remote(core_home)
 
 
+def _ensure_dir_gitkeep(directory: Path) -> None:
+    """Track empty learnings folders in git (clone/pull keeps pending/ and approved/)."""
+    directory.mkdir(parents=True, exist_ok=True)
+    marker = directory / ".gitkeep"
+    if not marker.is_file():
+        marker.write_text("", encoding="utf-8")
+
+
 def scaffold_team_tree(root: Path) -> None:
-    (root / "learnings" / "pending").mkdir(parents=True, exist_ok=True)
-    (root / "learnings" / "approved").mkdir(parents=True, exist_ok=True)
+    learnings = root / "learnings"
+    _ensure_dir_gitkeep(learnings / "pending")
+    _ensure_dir_gitkeep(learnings / "approved")
     (root / "skills").mkdir(parents=True, exist_ok=True)
 
     index = root / "learnings" / "index.yaml"
