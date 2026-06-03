@@ -32,6 +32,7 @@ from sa_ui import (
     preview_header,
     say_cancelled,
     say_info,
+    say_success,
     say_warn_stderr,
     say_warn,
 )
@@ -542,9 +543,11 @@ def main() -> int:
         )
         return 0
 
+    from sa_config import index_path
+
     print()
     say_success(f"Promoted: {dest}")
-    say_success(f"Indexed:  {home / 'learnings' / 'index.yaml'}")
+    say_success(f"Indexed:  {index_path(home)}")
 
     return git_publish(
         home,
