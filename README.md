@@ -24,7 +24,7 @@
 
 ## Why this exists
 
-Teams use many AI tools (Cursor, Claude Code, Zed, Codex, …). Each session starts cold: no shared workflows, no institutional memory, and knowledge trapped in chats or private notes.
+Teams use many AI tools (Cursor, Claude Code, Zed, Codex, Kimi, …). Each session starts cold: no shared workflows, no institutional memory, and knowledge trapped in chats or private notes.
 
 **Shared Agents** gives you one place to:
 
@@ -92,7 +92,7 @@ After pulling Core + team (ff-only):
 
 1. **Skill symlinks** — `skills/` + `team/skills/` → `~/.agents/skills`, `~/.claude/skills`, …
 2. **Rule symlinks** — Cursor: `rules/` + `team/rules/` → `~/.cursor/rules/`
-3. **Team-rules blocks** — Zed, Codex, Claude Code, Gemini, Windsurf, …: `<!-- shared-agents:team-rules:begin/end -->` in each tool's `AGENTS.md` / `CLAUDE.md`
+3. **Team-rules blocks** — Zed, Codex, Claude Code, Gemini, Windsurf, Kimi (best-effort), …: `<!-- shared-agents:team-rules:begin/end -->` in each tool's `AGENTS.md` / `CLAUDE.md`
 
 Also runs quietly via IDE session hooks where configured. **`sa install`** is still required once per tool (hooks, base `<!-- shared-agents:begin -->` block).
 
@@ -138,7 +138,7 @@ Install path defaults to `~/.shared-agents`. Team data lives under `team/` insid
 |-------|--------|
 | Learnings workflow | [docs/learnings.md](docs/learnings.md) |
 | Paths agents must use | [docs/canonical-paths.md](docs/canonical-paths.md) |
-| Per-tool adapters | [adapters/](adapters/) (Cursor, Claude Code, Zed, …) |
+| Per-tool adapters | [adapters/](adapters/) (Cursor, Claude Code, Zed, Kimi, …) |
 | Team skills & rules CLI | Skill [sa-cli](skills/sa-cli/SKILL.md) · `sa skill` · `sa rule` |
 | Migrating legacy `learnings/` | [docs/migration-team-data.md](docs/migration-team-data.md) |
 | CLI reference (full) | Skill `sa-cli` in [skills/sa-cli/SKILL.md](skills/sa-cli/SKILL.md) |

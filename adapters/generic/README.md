@@ -23,6 +23,7 @@ Many agents follow the **AGENTS.md pattern**:
 | OpenCode | `~/.config/opencode/AGENTS.md` |
 | Claude Code | `~/.claude/CLAUDE.md` or project `CLAUDE.md` |
 | Gemini CLI | `~/.gemini/GEMINI.md` |
+| Kimi Code CLI | `~/.kimi/AGENTS.md` (best-effort — not auto-loaded) |
 | Project-level | `./AGENTS.md`, `./CLAUDE.md`, `.cursorrules` |
 
 ## Add first-class support

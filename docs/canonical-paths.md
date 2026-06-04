@@ -101,7 +101,7 @@ Bei **`sa sync`** (täglich) bzw. **`sa install`** (Erst-Setup):
 | Adapter-Typ | Installation |
 |-------------|--------------|
 | **Cursor** | Symlinks → `~/.cursor/rules/*.mdc` |
-| **AGENTS.md / CLAUDE.md** (Zed, Codex, **Claude Code**, Gemini, Windsurf, …) | Marker-Block `<!-- shared-agents:team-rules:begin/end -->` |
+| **AGENTS.md / CLAUDE.md** (Zed, Codex, **Claude Code**, Gemini, Windsurf, Kimi best-effort, …) | Marker-Block `<!-- shared-agents:team-rules:begin/end -->` |
 | **Eigene Datei am Ziel** (kein Symlink, Cursor) | **Nicht überschrieben** |
 
 Quellen: `$SHARED_AGENTS_HOME/rules/` (Core) + `$SHARED_AGENTS_HOME/team/rules/` (Team).
