@@ -1,120 +1,118 @@
-# Shared MCPs — Design & Rollout (Entwurf)
+# Shared MCPs — design & rollout
 
-**Status:** Entwurf / geplant — Installer (`install-mcps.py`) noch nicht implementiert.  
-**Ziel:** Team-weite MCP-Server-Konfiguration im gleichen Stil wie Skills und Learnings: Manifest + lokale Overrides + Learnings — **nicht** als kopiertes `mcp.json` mit SSH/Docker-Details im Git.
+**Status:** Draft / planned — installer (`install-mcps.py`) not implemented yet.  
+**Goal:** Team-wide MCP server configuration in the same spirit as skills and learnings: manifest + local overrides + learnings — **not** a copied `mcp.json` with SSH/Docker details in Git.
 
-**Siehe auch:** [README.md](../README.md) · [learnings.md](learnings.md) · [mcps/README.md](../mcps/README.md)
+**See also:** [Repository README](https://github.com/netgrade-digital/shared-agents/blob/main/README.md) · [Learnings](/docs/learnings) · [mcps/README](https://github.com/netgrade-digital/shared-agents/blob/main/mcps/README.md)
 
 ---
 
 ## 1. Problem
 
-MCP-Konfiguration liegt heute typischerweise pro Person in `~/.cursor/mcp.json` (oder äquivalent in anderen IDEs). Das führt zu:
+MCP configuration usually lives per person in `~/.cursor/mcp.json` (or the equivalent in other IDEs). That leads to:
 
-| Problem | Beispiel |
-|---------|----------|
-| Copy-Paste-Explosion | 15× derselbe Screaming-Frog-Block, nur Container-Name ändert sich |
-| Maschinenabhängigkeit | `ssh alte-infra`, Docker-Namen, feste Pfade — nicht 1:1 übertragbar |
-| Secrets-Risiko | API-Keys oder Tokens landen im Team-Repo |
-| Kein „configured?“ | Unklar, wer welchen MCP wirklich nutzen kann |
-| Tool-Fragmentierung | Cursor, Claude Code, Zed — unterschiedliche Config-Pfade |
+| Problem | Example |
+|---------|---------|
+| Copy-paste explosion | Same Screaming Frog block 15×, only the container name changes |
+| Machine-specific config | `ssh old-infra`, Docker names, fixed paths — not portable |
+| Secret leakage risk | API keys or tokens in the team repo |
+| No “configured?” signal | Unclear who can actually use which MCP |
+| Tool fragmentation | Cursor, Claude Code, Zed — different config paths |
 
-**Skills/Learnings funktionieren**, weil sie textuell und maschinenunabhängig sind. MCP-Config ist **Runtime-Wiring** — gehört in Installer + lokale Datei, nicht als Roh-JSON ins Remote.
+**Skills and learnings work** because they are text and machine-independent. MCP config is **runtime wiring** — it belongs in an installer + local file, not raw JSON in the remote.
 
 ---
 
-## 2. Drei Ebenen (analog zu Team / Projekt / Session)
+## 2. Three layers (like team / project / session)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ EBENE 1 — Team ($SHARED_AGENTS_HOME/mcps/)                  │
-│ Manifest: Was es gibt, Version, Template, Detect, Generator │
-│ Installer schreibt markierte Einträge in IDE-Config         │
+│ LAYER 1 — Team ($SHARED_AGENTS_HOME/mcps/)                  │
+│ Manifest: what exists, version, template, detect, generator │
+│ Installer writes marked entries into IDE config             │
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│ EBENE 1b — User lokal (~/.shared-agents/mcps.local.yaml)    │
-│ SSH-Host, Spider-Count, Pfade — gitignored, nie im Remote     │
+│ LAYER 1b — User local (~/.shared-agents/mcps.local.yaml)    │
+│ SSH host, spider count, paths — gitignored, never in remote   │
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│ EBENE 2 — Projekt (optional .cursor/mcp.json im Kundenrepo) │
-│ Nur projekt-spezifische Server                                │
+│ LAYER 2 — Project (optional .cursor/mcp.json in client repo)│
+│ Project-specific servers only                               │
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│ EBENE 3 — Session                                           │
-│ Agent wählt z. B. spider3 für parallelen Crawl — kein Persist │
+│ LAYER 3 — Session                                           │
+│ Agent picks e.g. spider3 for parallel crawl — no persist      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-| Ebene | Ort | Wer pflegt | Inhalt |
-|-------|-----|------------|--------|
-| Team | `mcps/manifest.json` | PR / Maintainer | Server-Definitionen, Templates, Versionen |
-| User lokal | `mcps.local.yaml` | Jede Person | Hosts, Counts, SSH-Alias — **gitignored** |
-| Projekt | `projekt/.cursor/mcp.json` | Projekt-Team | Kundenspezifische MCPs ohne Secrets |
-| Session | IDE-Chat | — | Welcher Spider, welcher crawl_id |
+| Layer | Location | Maintainer | Content |
+|-------|----------|------------|---------|
+| Team | `mcps/manifest.json` | PR / maintainer | Server defs, templates, versions |
+| User local | `mcps.local.yaml` | Each person | Hosts, counts, SSH alias — **gitignored** |
+| Project | `project/.cursor/mcp.json` | Project team | Client MCPs without secrets |
+| Session | IDE chat | — | Which spider, which `crawl_id` |
 
-**Regel:** Team-Manifest enthält **keine** Secrets, keine festen SSH-Hosts, keine Kundennamen.
+**Rule:** The team manifest contains **no** secrets, fixed SSH hosts, or client names.
 
 ---
 
-## 3. Artefakte im Repo
+## 3. Repository artifacts
 
 ```
 shared-agents/
-├── docs/
-│   └── shared-mcps.md              ← dieses Dokument
+├── docs/shared-mcps.md           ← this document
 ├── mcps/
-│   ├── README.md                     ← Kurzreferenz + Status
-│   ├── manifest.example.json         ← Schema-Referenz (Beispiel)
-│   └── mcps.local.yaml.example       ← Vorlage für lokale Werte
-├── scripts/
-│   └── install-mcps.py               ← geplant (noch nicht da)
-└── team/learnings/approved/by-domain/…    ← Betriebswissen (wann/wie MCPs nutzen)
+│   ├── README.md
+│   ├── manifest.example.json
+│   └── mcps.local.yaml.example
+├── scripts/install-mcps.py       ← planned
+└── team/learnings/approved/…     ← operational knowledge (when/how to use MCPs)
 ```
 
-| Artefakt | Rolle |
-|----------|--------|
-| **Manifest** | Deklarativ: Server-ID, Template, Generator, Detect, `tier` |
-| **mcps.local.yaml** | Maschinenspezifische Variablen — **nie committen** |
-| **Installer** | Idempotent merge in IDE-Config; `--check` wie `install-adapters.py` |
-| **Learning** | Parallelität, Speicher, Fallstricke — **keine** Args-Listen |
+| Artifact | Role |
+|----------|------|
+| **Manifest** | Declarative: server ID, template, generator, detect, `tier` |
+| **mcps.local.yaml** | Machine-specific values — **never commit** |
+| **Installer** | Idempotent merge into IDE config; `--check` like adapters |
+| **Learning** | Parallelism, disk, pitfalls — **not** long arg lists |
 
 ---
 
-## 4. Manifest-Schema (Entwurf)
+## 4. Manifest schema (draft)
 
-Referenz: [`mcps/manifest.example.json`](../mcps/manifest.example.json)
+Reference: [`mcps/manifest.example.json`](https://github.com/netgrade-digital/shared-agents/blob/main/mcps/manifest.example.json)
 
-### Top-Level
+### Top level
 
-| Feld | Zweck |
-|------|--------|
-| `version` | Manifest-Version |
-| `shared.marker_*` | Optional für dokumentierte Blöcke |
-| `shared.local_config` | Pfad zur gitignored lokalen Datei |
-| `shared.managed_prefix` | Prefix für vom Team verwaltete Server-Keys (Default: `sa-`) |
-| `hosts` | Pro IDE: Config-Pfad und Format |
-| `servers[]` | MCP-Server-Definitionen |
+| Field | Purpose |
+|-------|---------|
+| `version` | Manifest version |
+| `shared.marker_*` | Optional documented blocks |
+| `shared.local_config` | Path to gitignored local file |
+| `shared.managed_prefix` | Prefix for team-managed server keys (default: `sa-`) |
+| `hosts` | Per IDE: config path and format |
+| `servers[]` | MCP server definitions |
 
-### Server-Eintrag
+### Server entry
 
-| Feld | Zweck |
-|------|--------|
-| `id` | Stabile ID (z. B. `browser-tools-mcp`) |
-| `name` | Menschenlesbar für `--check` |
-| `tier` | `team` \| `optional` \| `infra` — wer bekommt es standardmäßig |
-| `domain` | Tags für Doku / Learnings (`seo`, `frontend`, …) |
-| `detect` | Pre-Install-Check (Binary, SSH, …) |
-| `template` | Statischer MCP-Block mit `{{variablen}}` |
-| `generator` | Wiederholte Blöcke (z. B. N Spider-Instanzen) |
-| `requires_local` | Pflichtfelder in `mcps.local.yaml` |
+| Field | Purpose |
+|-------|---------|
+| `id` | Stable ID (e.g. `browser-tools-mcp`) |
+| `name` | Human label for `--check` |
+| `tier` | `team` \| `optional` \| `infra` |
+| `domain` | Tags for docs / learnings (`seo`, `frontend`, …) |
+| `detect` | Pre-install check (binary, SSH, …) |
+| `template` | Static MCP block with `{{variables}}` |
+| `generator` | Repeated blocks (e.g. N spider instances) |
+| `requires_local` | Required fields in `mcps.local.yaml` |
 | `vars` | Defaults + optional `from_local` |
 
 ### Generator (`type: repeat`)
 
-Ersetzt Copy-Paste wie `screaming-frog-spider1` … `spider15`:
+Replaces copy-paste like `screaming-frog-spider1` … `spider15`:
 
 ```json
 "generator": {
@@ -125,171 +123,152 @@ Ersetzt Copy-Paste wie `screaming-frog-spider1` … `spider15`:
 }
 ```
 
-Lokal: `spider_count: 6` → Installer erzeugt 6 Einträge. Wer 15 Container hat, setzt 15 — **ohne** 15× JSON im Git.
+Local: `spider_count: 6` → installer creates 6 entries. Someone with 15 containers sets 15 — **without** 15× JSON in Git.
 
 ---
 
-## 5. Lokale Config
+## 5. Local config
 
-Vorlage: [`mcps/mcps.local.yaml.example`](../mcps/mcps.local.yaml.example)
+Template: [`mcps/mcps.local.yaml.example`](https://github.com/netgrade-digital/shared-agents/blob/main/mcps/mcps.local.yaml.example)
 
 ```yaml
-# ~/.shared-agents/mcps.local.yaml — NIE ins Git committen
-ssh_host: alte-infra
+# ~/.shared-agents/mcps.local.yaml — NEVER commit
+ssh_host: infra-host
 docker_user: abc
 spider_count: 6
 ```
 
-Optional Profile (VPN vs. Laptop ohne Infra):
+Optional profiles (VPN vs laptop without infra):
 
 ```yaml
-profile: default   # oder: laptop
+profile: default
 
 profiles:
   default:
-    ssh_host: alte-infra
+    ssh_host: infra-host
     spider_count: 15
   laptop:
-    ssh_host: null   # SF-MCP wird nicht installiert
+    ssh_host: null   # SF MCP not installed
 ```
 
-**Onboarding (geplant):**
+**Onboarding (planned):**
 
 ```bash
 cp "$SHARED_AGENTS_HOME/mcps/mcps.local.yaml.example" \
    "$SHARED_AGENTS_HOME/mcps.local.yaml"
-# editieren
-sa install              # Adapter + MCPs (wenn implementiert)
-# Low-level: "$SHARED_AGENTS_HOME/install.sh"
+# edit
+sa install
 ```
 
-`mcps.local.yaml` gehört in `.gitignore` des Repos (Root oder Hinweis in README).
+Keep `mcps.local.yaml` in `.gitignore`.
 
 ---
 
-## 6. Installer-Verhalten (geplant)
+## 6. Installer behavior (planned)
 
-Philosophie wie [`scripts/install-adapters.py`](../scripts/install-adapters.py): Python-Stdlib, idempotent, kein Netzwerk.
+Same philosophy as `install-adapters.py`: Python stdlib, idempotent, no network.
 
-### Merge-Strategie (Cursor)
+### Merge strategy (Cursor)
 
-Cursor-`mcp.json` hat keine Kommentar-Marker. Deshalb **Namespacing**:
+Cursor `mcp.json` has no comment markers. Use **namespacing**:
 
-1. Alle Team-Server nutzen Prefix `sa-` (konfigurierbar in Manifest).
-2. Installer liest `~/.cursor/mcp.json`.
-3. Entfernt nur Keys mit `sa-`-Prefix, die im Manifest verwaltet werden.
-4. Fügt neu generierte Einträge ein.
-5. **Alle anderen Keys bleiben unberührt** (private Experimente des Users).
+1. All team servers use prefix `sa-` (configurable in manifest).
+2. Read `~/.cursor/mcp.json`.
+3. Remove only managed keys with the `sa-` prefix.
+4. Insert newly generated entries.
+5. **Leave all other keys untouched** (private experiments).
 
-### Befehle (geplant)
+### Commands (planned)
 
-| Befehl | Beschreibung |
-|--------|--------------|
-| `sa install` | Adapter + MCPs (wenn Manifest + local ok) |
-| `sa install --mcps-only` | Nur MCP-Block neu schreiben (geplant) |
-| `sa check` | Zeigt pro MCP: `ok` / `missing_local` / `detect_fail` (geplant) |
-| `sa install --dry-run` | Diff der `mcp.json` ohne Schreiben (geplant) |
+| Command | Description |
+|---------|-------------|
+| `sa install` | Adapters + MCPs (when manifest + local ok) |
+| `sa install --mcps-only` | Rewrite MCP block only |
+| `sa check` | Per MCP: `ok` / `missing_local` / `detect_fail` |
+| `sa install --dry-run` | Diff `mcp.json` without writing |
 
-Low-level: `./install.sh` — gleiche Flags, wenn an Installer angebunden.
-
-### Check-Ausgabe (Beispiel)
+### Check output (example)
 
 ```text
 MCP                         HOST    CONFIGURED   STATUS
 browser-tools-mcp           cursor  yes          ok
-screaming-frog-spider       cursor  partial      detect_fail (ssh alte-infra)
+screaming-frog-spider       cursor  partial      detect_fail (ssh infra-host)
 my-private-server           cursor  n/a          user_managed
 ```
 
-`detect_fail` bei optionalem Server = kein Fehler für Leute ohne VPN/Infra.
-
-### Detect-Beispiele
-
-| Typ | Prüfung |
-|-----|---------|
-| `command` | Binary auf `$PATH` (`npx`, `node`, …) |
-| `ssh_exec` | `ssh -o BatchMode=yes HOST docker ps …` |
-| `file` | Pfad existiert |
-
-Schlägt Detect fehl → Server wird **nicht** eingetragen (optional) oder Check = `not_available`.
+`detect_fail` on an optional server is not an error for people without VPN/infra.
 
 ---
 
-## 7. Learnings vs. Manifest
+## 7. Learnings vs manifest
 
-| Inhalt | Wo |
-|--------|-----|
-| `command`, `args`, Version-Pin | Manifest |
-| SSH-Host, Spider-Count | `mcps.local.yaml` |
-| Wann parallele Crawls, Speicher-Limits, `delete_crawl` | Learning in `approved/` |
-| Agent-Workflow („max 1 crawl pro Spider“) | Skill oder Learning |
+| Content | Where |
+|---------|-------|
+| `command`, `args`, version pin | Manifest |
+| SSH host, spider count | `mcps.local.yaml` |
+| When to run parallel crawls, disk limits, `delete_crawl` | Learning in `approved/` |
+| Agent workflow (“max 1 crawl per spider”) | Skill or learning |
 
-**Gutes Learning** (Beispiel-Themen):
+**Good learning topics:** max parallel crawls = `spider_count`, run `storage_summary` before large crawls, NDA clients need approval.
 
-- Max. parallele Crawls = `spider_count`
-- Vor großen Crawls: `storage_summary` auf Infra-Host
-- Kein SF-Crawl bei Kunden mit NDA ohne Freigabe
-
-**Schlechtes Learning:** 20 Zeilen `args`-Array — das ist Generator/Manifest.
+**Bad learning:** 20-line `args` array — that belongs in generator/manifest.
 
 ---
 
-## 8. Projekt-Ebene (Kundenrepo)
-
-Für kundenspezifische MCPs:
+## 8. Project layer (client repos)
 
 ```
-projekt/
-  .cursor/mcp.json          # nur dieser Kunde
-  .cursor/mcp.json.example  # ohne Secrets, env-Platzhalter
+project/
+  .cursor/mcp.json
+  .cursor/mcp.json.example   # no secrets, env placeholders
 ```
 
-| Prefix | Bedeutung |
-|--------|-----------|
-| `sa-*` | Von shared-agents verwaltet — nicht im Projekt duplizieren |
-| `projekt-*` oder ohne Prefix | Projekt-spezifisch, im Kundenrepo |
+| Prefix | Meaning |
+|--------|---------|
+| `sa-*` | Managed by Shared Agents — do not duplicate in project |
+| `project-*` or unprefixed | Client-specific, in client repo |
 
-Team-Manifest: **keine** Kunden-SSH-Hosts. Höchstens generische Templates + Learning „Setup auf Anfrage beim Lead“.
-
----
-
-## 9. Sicherheit & Governance
-
-1. **Keine Secrets** in Manifest oder Learnings — nur `env_from_local: ["API_KEY"]` als Dokumentation, Werte in `mcps.local.yaml` oder OS-Keychain.
-2. **Manifest-Änderungen = PR** — nicht vom Agent nach `approved/` schreiben (wie Learnings-Workflow, aber Maintainer-Review).
-3. **Repo-Zugriff = Infra-Gate** — wer SF-SSH hat, kann crawlen; MCP-Install ersetzt keine Berechtigungsmatrix.
-4. **Version-Pins** — z. B. `@agentdeskai/browser-tools-mcp@1.2.1` im Manifest, kein blindes `@latest`.
-5. **Datenschutz** — keine Secrets/NDA-Inhalte in Learnings oder Manifest-Args.
+Team manifest: **no** client SSH hosts. Use generic templates + a learning “ask lead for setup”.
 
 ---
 
-## 10. Beispiel: Screaming Frog Spider-Pool
+## 9. Security & governance
 
-**Ausgangslage:** Remote-Docker auf Infra-Host, N Container `seo-spider-1` … `seo-spider-N`, MCP pro Container für parallele Crawls.
-
-| Ansatz | Pro | Contra |
-|--------|-----|--------|
-| N× MCP-Einträge (heute) | Echter Parallelismus, einfaches Agent-Modell | Wartung, viele Prozesse beim IDE-Start |
-| Generator + `spider_count` | DRY, skaliert lokal | Count muss zu Infra passen |
-| 1 MCP + Queue im Server | Ein Prozess | MCP müsste Queue implementieren |
-| Serialisierung durch Agent | Minimal | Langsam |
-
-**Empfehlung:** Generator im Manifest, Team-Default z. B. `spider_count: 6`, Learning dokumentiert Limits und Speicher.
-
-**Agent-Hinweis (Skill/Learning):** `screaming-frog-spider3` = **Instanz 3**, nicht „dritter Versuch“. Max. ein aktiver `crawl_site` pro Spider.
+1. **No secrets** in manifest or learnings — document `env_from_local: ["API_KEY"]`, values in `mcps.local.yaml` or OS keychain.
+2. **Manifest changes = PR** — not agent-written to `approved/`.
+3. **Repo access ≠ infra access** — MCP install does not replace permission boundaries.
+4. **Version pins** — e.g. `@agentdeskai/browser-tools-mcp@1.2.1`, not blind `@latest`.
+5. **Privacy** — no secrets or NDA content in learnings or manifest args.
 
 ---
 
-## 11. Migration (wenn Installer da ist)
+## 10. Example: Screaming Frog spider pool
 
-| Phase | Inhalt |
-|-------|--------|
-| **1 — Doku** | Dieses Dokument + `manifest.example.json` + `mcps.local.yaml.example` |
-| **2 — Installer** | `install-mcps.py`, Integration in **`sa check`** / `install.sh --check` |
-| **3 — Lokal** | Alte Keys `screaming-frog-spider*` entfernen oder via `aliases` im Manifest mappen → `sa-*` |
-| **4 — Team** | Onboarding-Checkliste erweitern; Pilot 2 Personen |
+**Setup:** Remote Docker on infra host, N containers `seo-spider-1` … `seo-spider-N`, one MCP per container for parallel crawls.
 
-**Alias-Map (Übergang):**
+| Approach | Pros | Cons |
+|----------|------|------|
+| N× MCP entries (today) | True parallelism, simple agent model | Maintenance, many IDE processes at start |
+| Generator + `spider_count` | DRY, scales locally | Count must match infra |
+| 1 MCP + queue in server | One process | Server must implement queue |
+| Agent serializes | Minimal config | Slow |
+
+**Recommendation:** Generator in manifest, team default e.g. `spider_count: 6`, learning documents limits and disk.
+
+**Agent note:** `screaming-frog-spider3` = **instance 3**, not “third attempt”. At most one active `crawl_site` per spider.
+
+---
+
+## 11. Migration (when installer exists)
+
+| Phase | Content |
+|-------|---------|
+| **1 — Docs** | This doc + `manifest.example.json` + `mcps.local.yaml.example` |
+| **2 — Installer** | `install-mcps.py`, integrate into **`sa check`** |
+| **3 — Local** | Remove old `screaming-frog-spider*` keys or map via manifest `aliases` → `sa-*` |
+| **4 — Team** | Extend onboarding checklist; pilot with 2 people |
+
+**Alias map (transition):**
 
 ```json
 "aliases": {
@@ -297,39 +276,36 @@ Team-Manifest: **keine** Kunden-SSH-Hosts. Höchstens generische Templates + Lea
 }
 ```
 
-Installer entfernt alte Aliases beim nächsten Lauf.
+Installer removes old aliases on the next run.
 
 ---
 
-## 12. Was bewusst nicht im Scope ist
+## 12. Out of scope (for now)
 
-- Zentraler Cloud-MCP-Host (widerspricht lokal + Bitbucket)
-- Auto-Update ohne PR (`npx -y` ohne Pin)
-- Ersatz für SSH-Keys (`~/.ssh/config` bleibt beim User)
-- Einheitliches MCP-Format über alle IDEs in v1 — Cursor zuerst, Claude/Zed folgen im Manifest unter `hosts`
+- Central cloud MCP host (conflicts with local + private Git)
+- Auto-update without PR (`npx -y` without pin)
+- Replacing SSH keys (`~/.ssh/config` stays with the user)
+- One MCP format for all IDEs in v1 — Cursor first, others follow under `hosts`
 
 ---
 
-## 13. Nächste Schritte (Implementierung)
+## 13. Next implementation steps
 
 - [ ] `scripts/install-mcps.py` (stdlib, merge, detect, generator)
-- [ ] Hook in `install.sh` / **`sa install`** (`--mcps-only`, `sa check` JSON-Feld `mcps`)
-- [ ] `.gitignore`-Eintrag für `mcps.local.yaml` am Repo-Root
-- [ ] Learning-Vorlage im Team-Repo: `team/learnings/approved/by-domain/seo/screaming-frog-mcp-pool.md` (nach erstem Betrieb)
-- [ ] Optional: Skill `shared-agents-mcp` für Agent-Workflow vor SEO-Tasks
+- [ ] Hook in `install.sh` / **`sa install`** (`--mcps-only`, `sa check` JSON field `mcps`)
+- [ ] `.gitignore` entry for `mcps.local.yaml`
+- [ ] Team learning template after first production use
+- [ ] Optional skill `shared-agents-mcp` for agents before SEO tasks
 
 ---
 
-## Anhang: Befehle (Soll-Zustand)
+## Appendix: commands (target state)
 
 ```bash
-# Lokale Config anlegen
 cp "$SHARED_AGENTS_HOME/mcps/mcps.local.yaml.example" \
    "$SHARED_AGENTS_HOME/mcps.local.yaml"
 
-# Install / Check (wenn implementiert)
 sa install
 sa check
 sa install --mcps-only --dry-run
-# Low-level: "$SHARED_AGENTS_HOME/install.sh" …
 ```

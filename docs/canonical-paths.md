@@ -1,8 +1,8 @@
-# Canonical Paths (Pflicht für Agenten)
+# Canonical paths
 
-**Single Source of Truth für Dateipfade** in shared-agents. Agenten und Skripte müssen diese Pfade verwenden — nicht den Cursor-Workspace, nicht das Kunden-Projekt.
+**Single source of truth** for file paths in Shared Agents. Agents and scripts must use these paths — not the Cursor workspace, not a client project root.
 
-Env-Variable:
+Environment variable:
 
 ```bash
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
@@ -12,118 +12,114 @@ Default: `~/.shared-agents`
 
 ---
 
-## Pflicht-Pfade
+## Required paths
 
-| Was | Absoluter Pfad | Wer schreibt |
-|-----|----------------|--------------|
-| Core-Skills (OSS) | `$SHARED_AGENTS_HOME/skills/` | Upstream (PR ins Core) |
-| Team-Skills | `$SHARED_AGENTS_HOME/team/skills/` | Team-Repo (privat) |
-| Team-Rules | `$SHARED_AGENTS_HOME/team/rules/` | Team-Repo (privat, flat wie skills) |
-| Core-Rules | `$SHARED_AGENTS_HOME/rules/` | Upstream (PR ins Core) |
-| Learnings Index | `$SHARED_AGENTS_HOME/team/learnings/index.yaml` | Mensch / **`sa review`** |
-| Learnings **approved** | `$SHARED_AGENTS_HOME/team/learnings/approved/` | **Nur Mensch** (`sa review`) |
-| Learnings **pending** | `$SHARED_AGENTS_HOME/team/learnings/pending/` | **Agent** (nach explizitem Ja) |
-| Lokale Config | `$SHARED_AGENTS_HOME/config.local.yaml` | Installer / **`sa bootstrap`** (gitignored) |
-| Team-Daten (privat) | `$SHARED_AGENTS_HOME/team/` | Eigenes Git-Remote — **nie** ins Core-Remote committen |
-| Sync | `$SHARED_AGENTS_HOME/scripts/sync.sh` | Hook / Agent / **`sa sync`** |
-| Adapter-Manifest | `$SHARED_AGENTS_HOME/adapters/manifest.json` | Mensch (PR) |
-| MCP-Manifest (Entwurf) | `$SHARED_AGENTS_HOME/mcps/manifest.example.json` | Mensch (PR) |
-| MCP lokal (gitignored) | `$SHARED_AGENTS_HOME/mcps.local.yaml` | User |
+| What | Absolute path | Who writes |
+|------|---------------|------------|
+| Core skills (OSS) | `$SHARED_AGENTS_HOME/skills/` | Upstream (PR to Core) |
+| Team skills | `$SHARED_AGENTS_HOME/team/skills/` | Private team repo |
+| Team rules | `$SHARED_AGENTS_HOME/team/rules/` | Private team repo (flat, like skills) |
+| Core rules | `$SHARED_AGENTS_HOME/rules/` | Upstream (PR to Core) |
+| Learnings index | `$SHARED_AGENTS_HOME/team/learnings/index.yaml` | Human / **`sa review`** |
+| Learnings **approved** | `$SHARED_AGENTS_HOME/team/learnings/approved/` | **Humans only** (`sa review`) |
+| Learnings **pending** | `$SHARED_AGENTS_HOME/team/learnings/pending/` | **Agents** (after explicit yes) |
+| Local config | `$SHARED_AGENTS_HOME/config.local.yaml` | Installer / **`sa bootstrap`** (gitignored) |
+| Team data (private) | `$SHARED_AGENTS_HOME/team/` | Separate Git remote — **never** push to Core |
+| Sync script | `$SHARED_AGENTS_HOME/scripts/sync.sh` | Hook / agent / **`sa sync`** |
+| Adapter manifest | `$SHARED_AGENTS_HOME/adapters/manifest.json` | Maintainers (PR) |
+| MCP manifest (draft) | `$SHARED_AGENTS_HOME/mcps/manifest.example.json` | Maintainers (PR) |
+| MCP local (gitignored) | `$SHARED_AGENTS_HOME/mcps.local.yaml` | User |
 
 ---
 
-## Regel: Learnings — immer `$SHARED_AGENTS_HOME`
+## Rule: learnings always use `$SHARED_AGENTS_HOME`
 
-Agenten **müssen** Learnings-Entwürfe hier ablegen:
+Agents **must** place learning drafts here:
 
 ```text
 ${SHARED_AGENTS_HOME}/team/learnings/pending/YYYY-MM-DD-short-slug.md
 ```
 
-Auflösung per CLI: `sa pending path <slug>` (nutzt `config.local.yaml` / Solo-Fallback).
+Resolve via CLI: `sa pending path <slug>` (uses `config.local.yaml` or solo fallback).
 
-**Nicht im Core-Repo:** Learnings liegen nur im privaten Team-Clone unter `team/` — siehe [learnings.md](learnings.md).
+Learnings are **not** in the Core repo — only in the private team clone under `team/`. See [Learnings](/docs/learnings).
 
-### Verboten
+### Do not
 
-- Learnings in den **Cursor-Workspace** oder ins **Core-Repo** committen
-- Learnings in den Dev-Checkout `Development/…/shared-agents/` schreiben, **wenn** das nicht `$SHARED_AGENTS_HOME` ist
-- Learnings im **Kunden-Projekt** (`.cursor/`, `docs/`, Projekt-Root)
-- Relative Pfade wie `learnings/pending/foo.md` ohne aufgelöstes `$SHARED_AGENTS_HOME`
-- Direkt nach `learnings/approved/` schreiben
+- Commit learnings to the **Cursor workspace** or the **Core repo**
+- Write learnings into a dev checkout `Development/…/shared-agents/` when that is **not** `$SHARED_AGENTS_HOME`
+- Store learnings in a **client project** (`.cursor/`, `docs/`, project root)
+- Use relative paths like `learnings/pending/foo.md` without resolving `$SHARED_AGENTS_HOME`
+- Write directly to `learnings/approved/`
 
-### Pflicht vor dem Schreiben
+### Before writing
 
-1. Pfad explizit auflösen: `sa pending path <slug>` oder `"${SHARED_AGENTS_HOME}/team/learnings/pending/…"`
-2. Optional prüfen: Zielverzeichnis existiert (sonst anlegen)
-3. **Nicht** annehmen, dass Workspace-Root = `$SHARED_AGENTS_HOME`
+1. Resolve the path: `sa pending path <slug>` or `"${SHARED_AGENTS_HOME}/team/learnings/pending/…"`
+2. Optionally ensure the target directory exists
+3. **Do not** assume workspace root equals `$SHARED_AGENTS_HOME`
 
-### Zwei Klone (typisches Setup)
+### Two clones (typical setup)
 
-| Pfad | Rolle |
-|------|--------|
-| `~/.shared-agents/` | **Laufzeit** — Sync, Hooks, Agent schreibt Learnings **hierher** |
-| `~/Development/…/shared-agents/` | **Dev-Checkout** — Repo-Entwicklung (README, Skripte, Doku) |
+| Path | Role |
+|------|------|
+| `~/.shared-agents/` | **Runtime** — sync, hooks, agents write learnings **here** |
+| `~/Development/…/shared-agents/` | **Dev checkout** — Core development (README, scripts, docs) |
 
-Git-Commit für ein Learning: aus dem Clone, in dem die Datei liegt (meist `~/.shared-agents`), oder nach `git pull` im Dev-Checkout — **Schreibort bleibt immer `$SHARED_AGENTS_HOME`**.
-
-Hilfsskript:
+Git commits for a learning usually happen in the clone where the file lives (often `~/.shared-agents`). The **write location** is always `$SHARED_AGENTS_HOME`.
 
 ```bash
 sa pending path 2026-06-02-my-slug
-# oder: "$SHARED_AGENTS_HOME/scripts/learning-path.sh" 2026-06-02-my-slug
 # → /home/you/.shared-agents/team/learnings/pending/2026-06-02-my-slug.md
 ```
 
-Shell-CLI (nach **`sa install`** in `~/.bashrc`): **`sa`** · `shared-agents` · `sharedagents` — **`sa` ohne Argument = `sa help`**.  
-Vollständige Bedienung: Skill **`sa-cli`** · Live-Referenz: **`sa help`**
+Shell CLI (after **`sa install`**): **`sa`** · `shared-agents` · `sharedagents` — bare **`sa`** runs **`sa help`**.  
+Full reference: skill **`sa-cli`** · live help: **`sa help`**
 
 ---
 
-## Regel: Lesen (Retrieve)
+## Rule: reading (retrieve)
 
-Vor nicht-trivialen Tasks:
+Before non-trivial tasks:
 
-1. **`sa sync`** (oder `"$SHARED_AGENTS_HOME/scripts/sync.sh" pull`) — pullt Core + Team und verlinkt Skills + Rules automatisch
-2. `$SHARED_AGENTS_HOME/team/learnings/index.yaml`
-3. Grep in `$SHARED_AGENTS_HOME/team/learnings/approved/`
+1. **`sa sync`** — pulls Core + team and links skills & rules
+2. Read `$SHARED_AGENTS_HOME/team/learnings/index.yaml`
+3. Search `$SHARED_AGENTS_HOME/team/learnings/approved/`
 
-Nicht nur im Workspace suchen.
+Do not search only inside the IDE workspace.
 
 ---
 
-## Regel: Rules — wie Skills (kein Review-Workflow)
+## Rule: rules work like skills (no review workflow)
 
-Team-Rules liegen flach in `$SHARED_AGENTS_HOME/team/rules/*.mdc` — **kein** `pending/` / `approved/` (nur Learnings haben das).
+Team rules live flat in `$SHARED_AGENTS_HOME/team/rules/*.mdc` — **no** `pending/` / `approved/` (only learnings use that).
 
-Bei **`sa sync`** (täglich) bzw. **`sa install`** (Erst-Setup):
+On **`sa sync`** (daily) or **`sa install`** (first setup):
 
-| Adapter-Typ | Installation |
-|-------------|--------------|
+| Adapter type | Installation |
+|--------------|--------------|
 | **Cursor** | Symlinks → `~/.cursor/rules/*.mdc` |
-| **AGENTS.md / CLAUDE.md** (Zed, Codex, **Claude Code**, Gemini, Windsurf, …) | Marker-Block `<!-- shared-agents:team-rules:begin/end -->` |
-| **Eigene Datei am Ziel** (kein Symlink, Cursor) | **Nicht überschrieben** |
+| **AGENTS.md / CLAUDE.md** (Zed, Codex, Claude Code, Gemini, Windsurf, …) | Marker block `<!-- shared-agents:team-rules:begin/end -->` |
+| **Dedicated target file** (no symlink, Cursor) | **Not overwritten** |
 
-Quellen: `$SHARED_AGENTS_HOME/rules/` (Core) + `$SHARED_AGENTS_HOME/team/rules/` (Team).
+Sources: `$SHARED_AGENTS_HOME/rules/` (Core) + `$SHARED_AGENTS_HOME/team/rules/` (team).
 
-`shared-agents-knowledge.mdc` wird in AGENTS.md/CLAUDE.md-Tools **nicht** doppelt eingefügt — dort gilt `<!-- shared-agents:begin -->` (Sync/Learnings).
+`shared-agents-knowledge.mdc` is **not** duplicated in AGENTS.md/CLAUDE.md tools — those use `<!-- shared-agents:begin -->` (sync/learnings).
 
-Optional: `targets: [zed, claude-code, cursor]` im Frontmatter — leer = alle Adapter.
+Optional frontmatter: `targets: [zed, claude-code, cursor]` — empty means all adapters.
 
-Workflow: Datei in `team/rules/` → commit/push → Kollegen **`sa sync`** (verlinkt Skills + Rules automatisch).
+Workflow: add file under `team/rules/` → commit/push → teammates run **`sa sync`**.
 
-**`sa install`** weiterhin nötig für Erst-Setup (Hooks, AGENTS.md/CLAUDE.md Basis-Blöcke, neues Tool).
+**`sa install`** is still required for first-time setup (hooks, base AGENTS.md/CLAUDE.md blocks, new tools).
 
-## Regel: Skills symlinks
+## Rule: skill symlinks
 
-Installierte Skills liegen unter `~/.agents/skills/` etc. und zeigen auf `$SHARED_AGENTS_HOME/skills/`. Quelle bearbeiten = Dateien unter `$SHARED_AGENTS_HOME/skills/` (bzw. Dev-Checkout, der nach Pull synchron ist).
+Installed skills under `~/.agents/skills/` etc. point at `$SHARED_AGENTS_HOME/skills/`. Edit the source under `$SHARED_AGENTS_HOME/skills/` (or a dev checkout synced via pull).
 
 ---
 
-## Siehe auch
+## See also
 
-- [learnings.md](learnings.md) — Workflow (Team-Repo)
-- [README.md](../README.md) — Übersicht
-- [skills/sa-cli/SKILL.md](../skills/sa-cli/SKILL.md) — CLI-Bedienung
-- [skills/capture-learning/SKILL.md](../skills/capture-learning/SKILL.md)
-- [rules/shared-agents-knowledge.mdc](../rules/shared-agents-knowledge.mdc)
+- [Learnings](/docs/learnings) — workflow
+- [Repository README](https://github.com/netgrade-digital/shared-agents/blob/main/README.md) — overview
+- [sa-cli skill](https://github.com/netgrade-digital/shared-agents/blob/main/skills/sa-cli/SKILL.md) — CLI guide
+- [capture-learning skill](https://github.com/netgrade-digital/shared-agents/blob/main/skills/capture-learning/SKILL.md)

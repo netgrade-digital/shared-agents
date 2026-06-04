@@ -136,12 +136,18 @@ Install path defaults to `~/.shared-agents`. Team data lives under `team/` insid
 
 | Topic | Guide |
 |-------|--------|
+| Overview | [docs/overview.md](docs/overview.md) |
+| Installation | [docs/installation.md](docs/installation.md) |
+| CLI reference | [docs/cli-reference.md](docs/cli-reference.md) · `sa help` |
+| Skills & rules | [docs/skills-and-rules.md](docs/skills-and-rules.md) |
 | Learnings workflow | [docs/learnings.md](docs/learnings.md) |
-| Paths agents must use | [docs/canonical-paths.md](docs/canonical-paths.md) |
-| Per-tool adapters | [adapters/](adapters/) (Cursor, Claude Code, Zed, …) |
-| Team skills & rules CLI | Skill [sa-cli](skills/sa-cli/SKILL.md) · `sa skill` · `sa rule` |
-| Migrating legacy `learnings/` | [docs/migration-team-data.md](docs/migration-team-data.md) |
-| CLI reference (full) | Skill `sa-cli` in [skills/sa-cli/SKILL.md](skills/sa-cli/SKILL.md) |
+| Canonical paths | [docs/canonical-paths.md](docs/canonical-paths.md) |
+| Adapters | [docs/adapters.md](docs/adapters.md) |
+| Team setup | [docs/team-setup.md](docs/team-setup.md) |
+| Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) · [docs on website](docs/) |
+| Shared MCPs (draft) | [docs/shared-mcps.md](docs/shared-mcps.md) |
+| Migrate legacy `learnings/` | [docs/migration-team-data.md](docs/migration-team-data.md) |
 
 ---
 

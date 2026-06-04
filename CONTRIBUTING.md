@@ -2,6 +2,8 @@
 
 Thank you for helping improve the **Core** open-source project. This document covers what belongs here, how to develop locally, and how to submit changes.
 
+**Website:** [shared-agents docs — Contributing](/docs/contributing) (when served from the project website).
+
 ---
 
 ## Core vs team data
@@ -12,7 +14,7 @@ Thank you for helping improve the **Core** open-source project. This document co
 | `adapters/`, `adapters/manifest.json` | `config.local.yaml` |
 | `skills/` (shared, OSS-safe) | Secrets, customer URLs, internal runbooks |
 | `rules/` (shared core rules, OSS-safe) | `team/rules/` (private team rules) |
-| `docs/` | `config.local.yaml` |
+| `docs/` | Private team content |
 
 **Learnings**, **team rules**, and optional **team-only skills** live in a **separate private Git repository**, mounted at `$SHARED_AGENTS_HOME/team/`. Configure it during `sa bootstrap` or in `config.local.yaml` (`team.remote`).
 
@@ -87,6 +89,8 @@ We use fast-forward merges on `main`. Keep PRs small and reviewable.
 
 For tools without a manifest entry, users can copy [adapters/generic/instructions.md](adapters/generic/instructions.md) into their global agent config.
 
+See also [docs/adapters.md](docs/adapters.md).
+
 ---
 
 ## Adding or changing Core skills
@@ -111,6 +115,8 @@ sa rule rm      # remove (picker)
 
 Commit/push defaults to **yes** after create/remove (`--no-git` to skip). Teammates run **`sa sync`**. No pending/review workflow (unlike learnings).
 
+See [docs/skills-and-rules.md](docs/skills-and-rules.md).
+
 ---
 
 ## Learnings (team repo, not Core)
@@ -118,6 +124,18 @@ Commit/push defaults to **yes** after create/remove (`--no-git` to skip). Teamma
 Agents draft learnings in `team/learnings/pending/` after explicit user approval. Humans promote them with `sa review` into `team/learnings/approved/`.
 
 Contributors documenting this flow should edit [docs/learnings.md](docs/learnings.md) and [docs/canonical-paths.md](docs/canonical-paths.md), not put learning files in Core PRs.
+
+---
+
+## Documentation (website + repo)
+
+Guides live under `docs/` and render on the project website at `/docs/<slug>`. When adding topics:
+
+- Write in **English**
+- Use clear H1 titles (become page titles)
+- Cross-link with `docs/other-topic.md` or `/docs/other-topic`
+
+`CONTRIBUTING.md` (this file) is also published as `/docs/contributing`.
 
 ---
 
@@ -148,4 +166,4 @@ Reference: [mcps/manifest.example.json](mcps/manifest.example.json)
 
 ## Questions
 
-Open a [GitHub issue](https://github.com/netgrade-digital/shared-agents/issues) for bugs or design questions. For day-to-day CLI usage, run `sa help` or read the `sa-cli` skill.
+Open a [GitHub issue](https://github.com/netgrade-digital/shared-agents/issues) for bugs or design questions. For day-to-day CLI usage, run `sa help` or read the [CLI reference](docs/cli-reference.md) and `sa-cli` skill.

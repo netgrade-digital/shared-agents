@@ -1,0 +1,485 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted: #9ca3af;
+  --accent: #00ddfa;
+  --accent-dim: #00e5ff33;
+  --surface: #0a0a0a;
+  --border: #1f2937;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Shared layout — mobile-first spacing */
+.site-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 640px) {
+  .site-container {
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+.site-header {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.site-section {
+  padding-block: 3.5rem;
+}
+
+@media (min-width: 640px) {
+  .site-section {
+    padding-block: 5rem;
+  }
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--foreground);
+}
+
+.glow-accent {
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--accent) 25%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.text-glow {
+  text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.7s ease-out both;
+}
+
+.animate-fade-up-delay-1 {
+  animation-delay: 0.1s;
+}
+
+.animate-fade-up-delay-2 {
+  animation-delay: 0.2s;
+}
+
+.animate-fade-up-delay-3 {
+  animation-delay: 0.3s;
+}
+
+.install-terminal {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 6%, #050508) 0%,
+    #030306 100%
+  );
+}
+
+/* Logo animations */
+@keyframes logo-ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes logo-flow-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.logo-ring-spin {
+  animation: logo-ring-spin 8s linear infinite;
+}
+
+
+/* Preloader — Field.io motion + hero ring continuity */
+.preloader-root {
+  animation: preloader-root-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes preloader-root-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.preloader-root--exit {
+  pointer-events: none;
+  animation: preloader-root-out 0.68s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes preloader-root-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.preloader-field-rings {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(140vw, 920px);
+  height: min(140vw, 920px);
+  transform: translate(-50%, -50%);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800' fill='none'%3E%3Ccircle cx='400' cy='400' r='120' stroke='%2300ddfa' stroke-width='0.6' opacity='0.12'/%3E%3Ccircle cx='400' cy='400' r='200' stroke='%2300ddfa' stroke-width='0.55' opacity='0.1'/%3E%3Ccircle cx='400' cy='400' r='280' stroke='%2300ddfa' stroke-width='0.5' opacity='0.08'/%3E%3Ccircle cx='400' cy='400' r='360' stroke='%2300ddfa' stroke-width='0.45' opacity='0.06'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  animation: preloader-rings-drift 28s linear infinite;
+}
+
+@keyframes preloader-rings-drift {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.preloader-field-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 45%, black 20%, transparent 75%);
+}
+
+.preloader-field-glow {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: min(80vw, 520px);
+  height: min(50vh, 380px);
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse 55% 50% at 50% 50%,
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    transparent 72%
+  );
+  animation: preloader-glow-breathe 4.2s ease-in-out infinite;
+}
+
+@keyframes preloader-glow-breathe {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+.preloader-stage {
+  padding-inline: 1.25rem;
+  max-width: 100%;
+  animation: preloader-stage-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+@keyframes preloader-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.preloader-stage--exit {
+  animation: preloader-stage-out 0.68s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes preloader-stage-out {
+  to {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: blur(6px);
+  }
+}
+
+.preloader-logo-stage {
+  width: 108px;
+  height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .preloader-logo-stage {
+    width: 148px;
+    height: 148px;
+  }
+}
+
+.preloader-copy {
+  max-width: min(100%, 20rem);
+}
+
+.preloader-status {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+@media (min-width: 640px) {
+  .preloader-status {
+    font-size: 0.875rem;
+    white-space: nowrap;
+    word-break: normal;
+  }
+}
+
+.preloader-logo {
+  animation: preloader-logo-breathe 3.6s ease-in-out infinite;
+  filter: drop-shadow(
+    0 0 32px color-mix(in srgb, var(--accent) 50%, transparent)
+  );
+}
+
+@keyframes preloader-logo-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(
+      0 0 24px color-mix(in srgb, var(--accent) 40%, transparent)
+    );
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(
+      0 0 44px color-mix(in srgb, var(--accent) 65%, transparent)
+    );
+  }
+}
+
+.preloader-halo {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  animation: preloader-halo-pulse 3.6s ease-in-out infinite;
+}
+
+@keyframes preloader-halo-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+}
+
+.preloader-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  border-right-color: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.preloader-ring--a {
+  inset: -18px;
+  animation: preloader-ring-spin 14s linear infinite;
+}
+
+.preloader-ring--b {
+  inset: -32px;
+  opacity: 0.5;
+  animation: preloader-ring-spin 22s linear infinite reverse;
+}
+
+@keyframes preloader-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.preloader-status {
+  min-height: 1.25rem;
+  animation: preloader-status-fade 0.42s ease-out;
+}
+
+@keyframes preloader-status-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.preloader-track {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.preloader-tick {
+  width: 20px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+  transition:
+    background 0.35s ease,
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.preloader-tick--on {
+  background: var(--accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+  transform: scaleX(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preloader-field-rings,
+  .preloader-field-glow,
+  .preloader-logo,
+  .preloader-halo,
+  .preloader-ring,
+  .preloader-status {
+    animation: none !important;
+  }
+
+  .preloader-root--exit {
+    animation: preloader-fade-simple 0.35s ease forwards;
+  }
+
+  @keyframes preloader-fade-simple {
+    to {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
+
+  .preloader-stage--exit {
+    animation: preloader-fade-simple 0.35s ease forwards;
+  }
+}
+
+/* Docs — prose tuned to site theme */
+.prose-sa {
+  --tw-prose-body: var(--muted);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-code: var(--accent);
+  --tw-prose-pre-bg: var(--surface);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+}
+
+.prose-sa :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  display: none;
+}
+
+.prose-sa :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+}
+
+.prose-sa
+  :where(table):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prose-sa :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 640px) {
+  .prose-sa :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .prose-sa {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+  }
+
+  .prose-sa :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    font-size: 1.25rem;
+    margin-top: 2rem;
+  }
+
+  .prose-sa :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    font-size: 1.0625rem;
+  }
+
+  .prose-sa :where(li):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 0.35em;
+    margin-bottom: 0.35em;
+  }
+}

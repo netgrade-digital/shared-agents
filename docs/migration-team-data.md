@@ -1,45 +1,45 @@
-# Migration: `learnings/` → `team/`
+# Migrate team data
 
-Wenn ihr **vor** dem Core/Team-Split Learnings unter `~/.shared-agents/learnings/` hattet, liegen sie am falschen Ort. Team-Wissen gehört ins **private Team-Repo** unter `team/`.
+If you used Shared Agents **before** the Core/team split and still have learnings under `~/.shared-agents/learnings/`, they are in the wrong place. Team knowledge belongs in your **private team repo** under `team/`.
 
-## Voraussetzungen
+## Prerequisites
 
-1. `config.local.yaml` mit `team.remote` (oder erneut **`sa bootstrap`**)
-2. Leeres oder neues Team-Remote (oder bereit zum Merge)
+1. `config.local.yaml` with `team.remote` (or run **`sa bootstrap`** again)
+2. An empty or new team remote (or be ready to merge)
 
-## Automatisch (empfohlen)
+## Automatic (recommended)
 
 ```bash
-sa team migrate --dry-run    # Vorschau
-sa team migrate              # verschiebt learnings/ → team/learnings/
+sa team migrate --dry-run    # preview
+sa team migrate              # moves learnings/ → team/learnings/
 cd ~/.shared-agents/team && git status
-git push                     # falls noch nicht gepusht
+git push                     # if not pushed yet
 ```
 
-`sa check` / **`sa team verify`** melden Legacy-`learnings/` und Struktur-Probleme.
+`sa check` and **`sa team verify`** report legacy `learnings/` paths and structure issues.
 
-## Manuell
+## Manual
 
 ```bash
-# 1) Team-Repo klonen/init (falls noch nicht)
-sa bootstrap   # oder Team-URL in config.local.yaml
+# 1) Clone or init team repo (if needed)
+sa bootstrap   # or set team URL in config.local.yaml
 
-# 2) Inhalt verschieben
+# 2) Move content
 mv ~/.shared-agents/learnings ~/.shared-agents/team/learnings
 
-# 3) Im Team-Repo committen
+# 3) Commit in team repo
 cd ~/.shared-agents/team
 git add learnings/
 git commit -m "chore(team): migrate learnings from core home"
 git push
 ```
 
-## Danach
+## After migration
 
-- **`sa sync`** — Core + Team
-- Pfade nur noch über **`sa pending path <slug>`** (zeigt `team/learnings/pending/…`)
-- Core-Dev-Checkout (`Development/…/shared-agents`) enthält **keine** Learnings mehr
+- Run **`sa sync`** — Core + team
+- Use only **`sa pending path <slug>`** (resolves to `team/learnings/pending/…`)
+- The Core dev checkout (`Development/…/shared-agents`) should **not** hold team learnings
 
-## Solo-Modus (ohne Team-Remote)
+## Solo mode (no team remote)
 
-Ohne `team.remote` kann der Code weiter `core/learnings/` nutzen (Fallback). Für Teams mit privatem Wissen: immer **`team.remote`** setzen.
+Without `team.remote`, the CLI may still use `core/learnings/` as a fallback. For teams with private knowledge, always set **`team.remote`**.
