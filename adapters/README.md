@@ -15,6 +15,7 @@ Per-tool wiring is defined in [`manifest.json`](manifest.json). **`sa install`**
 | [Copilot](copilot/README.md) | `~/.copilot/AGENTS.md` | Marker block |
 | [Aider](aider/README.md) | `~/.aider/AGENTS.md` | Marker block |
 | [OpenClaw](openclaw/README.md) | Entrypoint wrapper (headless) | Read paths under `$SHARED_AGENTS_HOME` |
+| [Kimi Code CLI](kimi/README.md) | `~/.kimi/AGENTS.md` | Marker block (best-effort) |
 | [Generic](generic/README.md) | Copy-paste instructions | Manual |
 
 Team content (all tools): `sa skill new|list|rm` · `sa rule new|list|rm` — see root [README.md](../README.md).

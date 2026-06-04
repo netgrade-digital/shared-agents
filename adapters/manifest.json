@@ -129,6 +129,15 @@
       "name": "Any AGENTS.md / CLAUDE.md CLI",
       "detect": null,
       "docs": "adapters/generic/README.md"
+    },
+    {
+      "id": "kimi",
+      "name": "Kimi Code CLI",
+      "detect": "~/.kimi",
+      "detect_bins": ["kimi"],
+      "docs": "adapters/kimi/README.md",
+      "agents_md": "~/.kimi/AGENTS.md",
+      "note": "Best-effort workaround — Kimi has no native global instructions loader. AGENTS.md is not read automatically; copy content manually or use a wrapper."
     }
   ]
 }

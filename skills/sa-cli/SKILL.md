@@ -231,7 +231,7 @@ Team rules: `$SHARED_AGENTS_HOME/team/rules/*.mdc` (flat). Core: `$SHARED_AGENTS
 After edit: commit/push team repo → teammates **`sa sync`** (links skills + rules automatically).
 
 - **Cursor:** symlinks → `~/.cursor/rules/` (local non-symlink files preserved)
-- **Zed, Codex, Claude Code (`~/.claude/CLAUDE.md`), Gemini, Windsurf, …:** merged `<!-- shared-agents:team-rules:begin/end -->` block in each tool's agents file
+- **Zed, Codex, Claude Code (`~/.claude/CLAUDE.md`), Gemini, Windsurf, Kimi (best-effort), …:** merged `<!-- shared-agents:team-rules:begin/end -->` block in each tool's agents file
 
 Optional frontmatter: `targets: [zed, claude-code]` — omit for all adapters.
 
