@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -118,7 +119,9 @@ def assert_under_team_skills(core: Path, path: Path) -> None:
     try:
         path.resolve().relative_to(base)
     except ValueError as exc:
-        raise SystemExit("Only team skills can be removed (team/skills/) — not Core skills.") from exc
+        raise SystemExit(
+            "Only team skills can be removed (team/skills/) — not Core skills."
+        ) from exc
 
 
 def assert_under_team_rules(core: Path, path: Path) -> None:
@@ -126,10 +129,14 @@ def assert_under_team_rules(core: Path, path: Path) -> None:
     try:
         path.resolve().relative_to(rules)
     except ValueError as exc:
-        raise SystemExit("Only team rules can be removed (team/rules/) — not Core rules.") from exc
+        raise SystemExit(
+            "Only team rules can be removed (team/rules/) — not Core rules."
+        ) from exc
 
 
-def pick_from_list(label: str, items: list[tuple[str, Path]]) -> tuple[str, Path] | None:
+def pick_from_list(
+    label: str, items: list[tuple[str, Path]]
+) -> tuple[str, Path] | None:
     if not items:
         say_warn(f"No team {label} found.")
         return None
@@ -222,7 +229,9 @@ def existing_rule_slugs(core: Path) -> set[str]:
     return slugs
 
 
-def prompt_slug(label: str, *, default: str | None = None, taken: set[str] | None = None) -> str:
+def prompt_slug(
+    label: str, *, default: str | None = None, taken: set[str] | None = None
+) -> str:
     while True:
         answer = prompt_line(f"{label}{f' [{default}]' if default else ''}: ").strip()
         slug = slug_from_name(answer) if answer else (default or "")
@@ -253,7 +262,9 @@ def prompt_multiline(title: str, *, hint: str | None = None) -> str:
     return "\n".join(lines).strip()
 
 
-def parse_targets(raw: str | None, valid: set[str]) -> tuple[tuple[str, ...] | None, str | None]:
+def parse_targets(
+    raw: str | None, valid: set[str]
+) -> tuple[tuple[str, ...] | None, str | None]:
     if not raw or not raw.strip():
         return (), None
     parts = [p.strip().lower() for p in raw.split(",") if p.strip()]
@@ -281,7 +292,9 @@ def prompt_targets(valid_ids: list[str]) -> tuple[str, ...]:
         return targets or ()
 
 
-def build_skill_markdown(*, name: str, title: str, description: str, when_to_use: str, workflow: str) -> str:
+def build_skill_markdown(
+    *, name: str, title: str, description: str, when_to_use: str, workflow: str
+) -> str:
     when_block = when_to_use or "- Describe when agents should load this skill.\n"
     workflow_block = workflow or "1. …\n"
     return f"""---
@@ -352,7 +365,23 @@ def run_git_publish(
     dry_run: bool,
     no_git: bool,
 ) -> int:
-    return run_git_commit(core, rel_paths, commit_msg, action="add", dry_run=dry_run, no_git=no_git)
+    return run_git_commit(
+        core, rel_paths, commit_msg, action="add", dry_run=dry_run, no_git=no_git
+    )
+
+
+def open_in_editor(path: Path) -> int:
+    """Open path in $EDITOR (fallback nano → vim → vi). Returns subprocess return code."""
+    editor = os.environ.get("EDITOR", "")
+    if not editor:
+        for fallback in ("nano", "vim", "vi"):
+            if shutil.which(fallback):
+                editor = fallback
+                break
+    if not editor:
+        say_warn_stderr("No editor found. Set $EDITOR or install nano/vim.")
+        return 1
+    return subprocess.run([editor, str(path)]).returncode
 
 
 def remove_path(path: Path, repo: Path, rel: str, *, dry_run: bool) -> None:
@@ -395,8 +424,12 @@ def run_git_delete(
             return 0
         git_dry_run(
             [
-                *(f"git -C {repo} rm -r {rel}" if path.is_dir() else f"git -C {repo} rm {rel}"
-                  for path, rel in zip(paths, rel_paths, strict=True)),
+                *(
+                    f"git -C {repo} rm -r {rel}"
+                    if path.is_dir()
+                    else f"git -C {repo} rm {rel}"
+                    for path, rel in zip(paths, rel_paths, strict=True)
+                ),
                 f'git -C {repo} commit -m "{commit_msg}"',
                 f"git -C {repo} push",
             ]
@@ -432,8 +465,20 @@ def run_git_delete(
             if unstaged.returncode == 0:
                 say_warn("Nothing to commit — file may already be removed.")
                 return 0
-            subprocess.run(["git", "add", "-u", *rel_paths], cwd=repo, check=True, capture_output=True, text=True)
-        subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo, check=True, capture_output=True, text=True)
+            subprocess.run(
+                ["git", "add", "-u", *rel_paths],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        subprocess.run(
+            ["git", "commit", "-m", commit_msg],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
         git_committed(commit_msg)
         push = subprocess.run(["git", "push"], cwd=repo, capture_output=True, text=True)
         if push.returncode != 0:
@@ -476,7 +521,13 @@ def run_git_commit(
         return 0
 
     try:
-        subprocess.run(["git", "add", *rel_paths], cwd=repo, check=True, capture_output=True, text=True)
+        subprocess.run(
+            ["git", "add", *rel_paths],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
         staged = subprocess.run(
             ["git", "diff", "--cached", "--quiet"],
             cwd=repo,
@@ -485,7 +536,13 @@ def run_git_commit(
         if staged.returncode == 0:
             say_warn("Nothing staged — file may already be committed.")
             return 0
-        subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo, check=True, capture_output=True, text=True)
+        subprocess.run(
+            ["git", "commit", "-m", commit_msg],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
         git_committed(commit_msg)
         push = subprocess.run(["git", "push"], cwd=repo, capture_output=True, text=True)
         if push.returncode != 0:
@@ -543,7 +600,9 @@ def wizard_skill_new(core: Path, args: argparse.Namespace) -> int:
             "When to use (optional)",
             hint="Trigger phrases, projects, or situations.",
         )
-        workflow = prompt_multiline("Workflow (optional)", hint="Numbered steps for agents.")
+        workflow = prompt_multiline(
+            "Workflow (optional)", hint="Numbered steps for agents."
+        )
 
     content = build_skill_markdown(
         name=name,
@@ -595,7 +654,9 @@ def wizard_rule_new(core: Path, args: argparse.Namespace) -> int:
             say_warn_stderr("--description is required with --name")
             return 1
         title = (args.title or title_from_slug(slug)).strip()
-        targets, err = parse_targets(args.targets, set(valid_ids)) if args.targets else ((), None)
+        targets, err = (
+            parse_targets(args.targets, set(valid_ids)) if args.targets else ((), None)
+        )
         if err:
             say_warn_stderr(err)
             return 1
@@ -613,7 +674,9 @@ def wizard_rule_new(core: Path, args: argparse.Namespace) -> int:
                 break
             say_warn("Description is required.")
         targets = prompt_targets(valid_ids) if valid_ids else ()
-        body = prompt_multiline("Rule body (optional)", hint="Markdown content after the title.")
+        body = prompt_multiline(
+            "Rule body (optional)", hint="Markdown content after the title."
+        )
 
     content = build_rule_markdown(
         title=title,
@@ -661,6 +724,81 @@ def confirm_delete(label: str, slug: str, args: argparse.Namespace) -> bool:
     if args.dry_run:
         return True
     return prompt_yes_no(f"Delete team {label} '{slug}'?", default=True)
+
+
+def wizard_skill_edit(core: Path, args: argparse.Namespace) -> int:
+    ensure_team_tree(core)
+    resolved = resolve_team_skill(core, args.name)
+    if not resolved:
+        return 1
+    slug, skill_dir = resolved
+    assert_under_team_skills(core, skill_dir)
+
+    target = skill_dir / "SKILL.md"
+    before = target.read_text(encoding="utf-8")
+
+    rc = open_in_editor(target)
+    if rc != 0:
+        say_warn_stderr(f"Editor exited with code {rc}")
+        return rc
+
+    after = target.read_text(encoding="utf-8")
+    if before == after:
+        say_info("No changes made.")
+        return 0
+
+    say_success(f"Updated skill: {slug}")
+
+    rel = target.relative_to(git_data_home(core)).as_posix()
+    if should_git_publish(args):
+        return run_git_publish(
+            core,
+            [rel],
+            f"feat(skills): update team skill {slug}",
+            dry_run=args.dry_run,
+            no_git=args.no_git,
+        )
+
+    if not args.dry_run:
+        print(plain(f"Next: commit in team repo, teammates run sa sync"))
+    return 0
+
+
+def wizard_rule_edit(core: Path, args: argparse.Namespace) -> int:
+    ensure_team_tree(core)
+    resolved = resolve_team_rule(core, args.name)
+    if not resolved:
+        return 1
+    slug, rule_path = resolved
+    assert_under_team_rules(core, rule_path)
+
+    before = rule_path.read_text(encoding="utf-8")
+
+    rc = open_in_editor(rule_path)
+    if rc != 0:
+        say_warn_stderr(f"Editor exited with code {rc}")
+        return rc
+
+    after = rule_path.read_text(encoding="utf-8")
+    if before == after:
+        say_info("No changes made.")
+        return 0
+
+    say_success(f"Updated rule: {slug}")
+
+    rel = rule_path.relative_to(git_data_home(core)).as_posix()
+    if should_git_publish(args):
+        return run_git_publish(
+            core,
+            [rel],
+            f"feat(rules): update team rule {slug}",
+            dry_run=args.dry_run,
+            no_git=args.no_git,
+        )
+
+    if not args.dry_run:
+        print(plain(f"Next: commit in team repo, teammates run sa sync"))
+    return 0
 
 
 def cmd_skill_list(core: Path, args: argparse.Namespace) -> int:
@@ -757,7 +895,9 @@ def add_git_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--home", type=Path, default=None, help="SHARED_AGENTS_HOME")
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
     parser.add_argument("--no-git", action="store_true", help="Skip commit/push")
-    parser.add_argument("--push", action="store_true", help="Commit and push without prompting")
+    parser.add_argument(
+        "--push", action="store_true", help="Commit and push without prompting"
+    )
     parser.add_argument("-y", "--yes", action="store_true", help="Skip confirm prompts")
 
 
@@ -786,6 +926,10 @@ def build_parser() -> argparse.ArgumentParser:
     add_git_flags(p_skill_rm)
     p_skill_rm.add_argument("name", nargs="?", help="Skill slug (picker if omitted)")
 
+    p_skill_edit = skill_sub.add_parser("edit", help="Edit a team skill")
+    add_git_flags(p_skill_edit)
+    p_skill_edit.add_argument("name", nargs="?", help="Skill slug (picker if omitted)")
+
     p_skill_list = skill_sub.add_parser("list", help="List team skills")
     add_git_flags(p_skill_list)
 
@@ -796,12 +940,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_rule_new.add_argument("--name", help="Rule slug (non-interactive)")
     p_rule_new.add_argument("--title", help="Display title")
     p_rule_new.add_argument("--description", help="Frontmatter description")
-    p_rule_new.add_argument("--targets", help="Comma-separated adapter ids (empty = all)")
+    p_rule_new.add_argument(
+        "--targets", help="Comma-separated adapter ids (empty = all)"
+    )
     p_rule_new.add_argument("--body", help="Markdown body (non-interactive)")
 
     p_rule_rm = rule_sub.add_parser("rm", help="Remove a team rule")
     add_git_flags(p_rule_rm)
     p_rule_rm.add_argument("name", nargs="?", help="Rule slug (picker if omitted)")
+
+    p_rule_edit = rule_sub.add_parser("edit", help="Edit a team rule")
+    add_git_flags(p_rule_edit)
+    p_rule_edit.add_argument("name", nargs="?", help="Rule slug (picker if omitted)")
 
     p_rule_list = rule_sub.add_parser("list", help="List team rules")
     add_git_flags(p_rule_list)
@@ -822,9 +972,11 @@ def main() -> int:
         ("skill", "new"): wizard_skill_new,
         ("skill", "rm"): wizard_skill_rm,
         ("skill", "list"): cmd_skill_list,
+        ("skill", "edit"): wizard_skill_edit,
         ("rule", "new"): wizard_rule_new,
         ("rule", "rm"): wizard_rule_rm,
         ("rule", "list"): cmd_rule_list,
+        ("rule", "edit"): wizard_rule_edit,
     }
     handler = handlers.get((args.kind, args.command))
     if handler:

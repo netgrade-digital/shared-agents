@@ -258,8 +258,12 @@ dispatch() {
           exec python3 "$(_sa_script team_content_wizard.py)" skill list \
             --home "$SHARED_AGENTS_HOME" "$@"
           ;;
+        edit)
+          exec python3 "$(_sa_script team_content_wizard.py)" skill edit \
+            --home "$SHARED_AGENTS_HOME" "$@"
+          ;;
         *)
-          echo "Usage: sa skill new|rm|list [opts]" >&2
+          echo "Usage: sa skill new|rm|list|edit [opts]" >&2
           echo "Try: sa skill new --help" >&2
           exit 1
           ;;
@@ -282,8 +286,12 @@ dispatch() {
           exec python3 "$(_sa_script team_content_wizard.py)" rule list \
             --home "$SHARED_AGENTS_HOME" "$@"
           ;;
+        edit)
+          exec python3 "$(_sa_script team_content_wizard.py)" rule edit \
+            --home "$SHARED_AGENTS_HOME" "$@"
+          ;;
         *)
-          echo "Usage: sa rule new|rm|list [opts]" >&2
+          echo "Usage: sa rule new|rm|list|edit [opts]" >&2
           echo "Try: sa rule new --help" >&2
           exit 1
           ;;

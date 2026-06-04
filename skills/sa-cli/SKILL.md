@@ -87,9 +87,11 @@ source ~/.bashrc
 | Team content | `sa skill new` | Wizard: `team/skills/<name>/SKILL.md` |
 | Team content | `sa skill rm [name]` | Remove team skill |
 | Team content | `sa skill list` | List team skills |
+| Team content | `sa skill edit [name]` | Edit team skill (opens $EDITOR) |
 | Team content | `sa rule new` | Wizard: `team/rules/<slug>.mdc` |
 | Team content | `sa rule rm [slug]` | Remove team rule |
 | Team content | `sa rule list` | List team rules |
+| Team content | `sa rule edit [slug]` | Edit team rule (opens $EDITOR) |
 
 Alias: **`sa install`** = **`sa setup`**
 
@@ -243,18 +245,22 @@ Interactive wizards scaffold files in the **team repo** (private `team/`). No pe
 sa skill new                 # create: slug, title, description, sections
 sa skill rm [name]           # remove (picker if name omitted)
 sa skill list
+sa skill edit [name]         # edit in $EDITOR (picker if name omitted)
 
 sa rule new                  # create: slug, title, description, targets, body
 sa rule rm [slug]            # remove (picker if slug omitted)
 sa rule list
+sa rule edit [slug]          # edit in $EDITOR (picker if slug omitted)
 
 # Aliases: rm = delete = remove · list = ls
 
 # Non-interactive (CI / scripts):
 sa skill new --name my-skill --description "When user asks about …"
 sa skill rm my-skill -y
+sa skill edit my-skill --push
 sa rule new --name my-rule --description "…" --targets cursor,zed
 sa rule rm my-rule --no-git
+sa rule edit my-rule --push
 
 # Flags: --dry-run --force (new only) --no-git --push -y
 ```
