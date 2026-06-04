@@ -163,9 +163,11 @@ def print_help(*, version: str, home: str) -> None:
     _cmd("skill new", " [opts]       Wizard: team/skills/<name>/SKILL.md")
     _cmd("skill rm", " [name]       Remove team skill (picker if omitted)")
     _cmd("skill list", "             List team skills")
+    _cmd("skill edit", " [name]      Edit team skill (picker if omitted)")
     _cmd("rule new", " [opts]       Wizard: team/rules/<slug>.mdc")
     _cmd("rule rm", " [slug]       Remove team rule (picker if omitted)")
     _cmd("rule list", "             List team rules")
+    _cmd("rule edit", " [slug]      Edit team rule (picker if omitted)")
     print()
 
     print(f"  {magenta('Learnings')}")
@@ -195,14 +197,18 @@ def print_help(*, version: str, home: str) -> None:
     _example("sa team verify")
     _example("sa skill new")
     _example("sa skill rm my-skill")
+    _example("sa skill edit my-skill")
     _example("sa rule new")
     _example("sa rule list")
+    _example("sa rule edit my-rule")
     _example("sa review list")
     _example("sa pending push 2026-06-02-my-slug.md")
     _example("sa review 2026-06-02-my-slug.md")
     print()
 
-    print(f"  {bold('Common flags')}{plain(' (install / review / unapprove / pending)')}")
+    print(
+        f"  {bold('Common flags')}{plain(' (install / review / unapprove / pending)')}"
+    )
     _cmd("--wizard", "             Interactive setup wizard (install)")
     _cmd("--non-interactive", "    All detected tools (install)")
     _cmd("--dry-run", "            Preview only")
@@ -230,7 +236,11 @@ def print_install_footer(*, home: str, shell_rc: str) -> None:
     print()
     print(green(bold("Install OK.")))
     print()
-    print(plain("CLI:  ") + green("sa help") + plain("   (also: shared-agents help · sharedagents help)"))
+    print(
+        plain("CLI:  ")
+        + green("sa help")
+        + plain("   (also: shared-agents help · sharedagents help)")
+    )
     print()
     print(bold("Reload your shell:"))
     print(f"  {cyan(f'source {shell_rc}')}")
@@ -238,7 +248,9 @@ def print_install_footer(*, home: str, shell_rc: str) -> None:
     print(bold("Next commands:"))
     _cmd_after("sa sync", "Pull Core + team; refresh skill/rule links")
     _cmd_after("sa skill new", "Wizard: team skill")
+    _cmd_after("sa skill edit", "Edit team skill")
     _cmd_after("sa rule new", "Wizard: team rule")
+    _cmd_after("sa rule edit", "Edit team rule")
     _cmd_after("sa review", "Review / approve learnings")
     _cmd_after("sa pending push", "Push pending for team review")
     _cmd_after("sa team verify", "Validate team repo layout")
@@ -497,7 +509,9 @@ def print_uninstall_intro(*, home: str, shell_rc: str, keep_repo: bool) -> None:
         print(f"  {plain('Remove:    adapters + skill symlinks only')}")
     else:
         print(f"  {plain('Data:      ')}{warn('DELETE')} {cyan(home)}")
-        print(f"  {plain('           ')}{plain('(core, team/ learnings, config.local.yaml)')}")
+        print(
+            f"  {plain('           ')}{plain('(core, team/ learnings, config.local.yaml)')}"
+        )
     print()
 
 
@@ -511,7 +525,9 @@ def print_uninstall_footer(*, dry_run: bool) -> None:
         say_warn("Dry run complete — no changes made.")
     else:
         say_success("Uninstall complete.")
-        say_info("Neues Terminal öffnen (oder: exec $SHELL) — sa / shared-agents sind dann weg.")
+        say_info(
+            "Neues Terminal öffnen (oder: exec $SHELL) — sa / shared-agents sind dann weg."
+        )
         print(f"{plain('Re-install: ')}{green('sa bootstrap')}")
     print()
 
