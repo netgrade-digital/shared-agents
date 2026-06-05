@@ -28,7 +28,7 @@ def _load_install_adapters():
 
 _ia = _load_install_adapters()
 
-from sa_config import config_path, team_remote, write_config  # noqa: E402
+from sa_config import config_path, default_shell_rc, team_remote, write_config  # noqa: E402
 from sa_ui import (  # noqa: E402
     bold,
     cyan,
@@ -144,7 +144,7 @@ def _main_impl() -> int:
         help="Core repo source (dev checkout or after clone)",
     )
     parser.add_argument("--home", default=os.environ.get("SHARED_AGENTS_HOME", "~/.shared-agents"))
-    parser.add_argument("--shell-rc", default=os.environ.get("SHELL_RC", "~/.bashrc"))
+    parser.add_argument("--shell-rc", default=os.environ.get("SHELL_RC"))
     parser.add_argument("--core-remote", default=DEFAULT_CORE_REMOTE)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--non-interactive", action="store_true")
@@ -152,7 +152,7 @@ def _main_impl() -> int:
 
     repo_source = _ia.expand(str(args.source))
     home = os.path.expanduser(os.path.expandvars(args.home))
-    shell_rc = _ia.expand(args.shell_rc)
+    shell_rc = _ia.expand(args.shell_rc) if args.shell_rc else default_shell_rc()
 
     print_banner(subtitle="Bootstrap — core + team data + adapters")
 

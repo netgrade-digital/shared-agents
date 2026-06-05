@@ -3,9 +3,9 @@
 set -euo pipefail
 
 SHARED_AGENTS_HOME="${1:?usage: configure-shell-rc.sh HOME [SHELL_RC]}"
-SHELL_RC="${2:-${SHELL_RC:-$HOME/.bashrc}}"
-DRY_RUN="${DRY_RUN:-0}"
 CFG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHELL_RC="${2:-${SHELL_RC:-$("$CFG_DIR/detect-shell-rc.sh")}}"
+DRY_RUN="${DRY_RUN:-0}"
 
 _sa_ui_out() {
   local kind="$1"

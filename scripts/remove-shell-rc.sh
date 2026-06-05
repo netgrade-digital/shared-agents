@@ -2,11 +2,11 @@
 # Remove shared-agents block from shell rc (inverse of configure-shell-rc.sh).
 set -euo pipefail
 
-SHELL_RC="${1:-${SHELL_RC:-$HOME/.bashrc}}"
+RC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHELL_RC="${1:-${SHELL_RC:-$("$RC_DIR/detect-shell-rc.sh")}}"
 DRY_RUN="${DRY_RUN:-0}"
 MARKER_BEGIN="# shared-agents team knowledge"
 MARKER_END="# shared-agents:shell-end"
-RC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SA_UI_PY="${SA_UI_PY:-$RC_DIR/sa_ui.py}"
 
 _sa_out() {

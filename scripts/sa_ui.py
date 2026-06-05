@@ -7,6 +7,8 @@ import re
 import sys
 from collections.abc import Callable
 
+from sa_config import default_shell_rc
+
 _PATH_RE = re.compile(r"(/[^\s]+|~[^\s]+)")
 
 # figlet "Shared Agents" — font: standard (readable Latin letters)
@@ -570,7 +572,7 @@ if __name__ == "__main__":
     elif arg == "--install-footer":
         print_install_footer(
             home=home,
-            shell_rc=os.environ.get("SHELL_RC", os.path.expanduser("~/.bashrc")),
+            shell_rc=os.environ.get("SHELL_RC") or str(default_shell_rc()),
         )
     elif arg == "--sync-ok":
         print_sync_ok()
@@ -578,7 +580,7 @@ if __name__ == "__main__":
         keep = os.environ.get("SA_KEEP_REPO", "0") == "1"
         print_uninstall_intro(
             home=home,
-            shell_rc=os.environ.get("SHELL_RC", os.path.expanduser("~/.bashrc")),
+            shell_rc=os.environ.get("SHELL_RC") or str(default_shell_rc()),
             keep_repo=keep,
         )
     elif arg == "--uninstall-step" and len(sys.argv) >= 3:
