@@ -1,4 +1,4 @@
-# shared-agents shell — sourced from ~/.bashrc (see configure-shell-rc.sh)
+# shared-agents shell — sourced from shell rc (see configure-shell-rc.sh)
 : "${SHARED_AGENTS_HOME:=$HOME/.shared-agents}"
 
 # Drop legacy sa-* wrappers from older installs

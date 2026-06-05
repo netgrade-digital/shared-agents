@@ -10,8 +10,9 @@ _sa_on_cancel() {
 trap _sa_on_cancel INT
 
 VERSION="0.1.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
-SHELL_RC="${SHELL_RC:-$HOME/.bashrc}"
+SHELL_RC="${SHELL_RC:-$("$SCRIPT_DIR/detect-shell-rc.sh")}"
 DRY_RUN=0
 YES=0
 KEEP_REPO=0
@@ -28,7 +29,7 @@ Removes IDE/CLI adapters, shell CLI (sa), and optionally deletes the local insta
 
 Options:
   --home DIR       SHARED_AGENTS_HOME (default: ~/.shared-agents)
-  --shell-rc FILE  Shell rc to clean (default: ~/.bashrc)
+  --shell-rc FILE  Shell rc to clean (default: auto-detect)
   --keep-repo      Remove adapters only — keep ~/.shared-agents checkout
   --dry-run        Show what would be removed
   -y, --yes        Bestätigung überspringen (non-interactive)
