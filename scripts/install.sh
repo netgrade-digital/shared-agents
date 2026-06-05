@@ -13,7 +13,7 @@ trap _sa_on_cancel INT
 VERSION="0.1.0"
 REPO_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
-SHELL_RC="${SHELL_RC:-$HOME/.bashrc}"
+SHELL_RC="${SHELL_RC:-$("$REPO_SOURCE/scripts/detect-shell-rc.sh")}"
 MODE="install"
 DRY_RUN=0
 CHECK_JSON=0
@@ -37,7 +37,7 @@ Usage:
 Options:
   --source DIR    Repo to install from (default: parent of scripts/)
   --home DIR      Install path (default: ~/.shared-agents)
-  --shell-rc FILE Shell rc for SHARED_AGENTS_HOME (default: ~/.bashrc)
+  --shell-rc FILE Shell rc for SHARED_AGENTS_HOME (default: auto-detect)
   --tools IDS     Comma-separated tool ids (e.g. cursor,claude-code)
   -h, --help      Show this help
 

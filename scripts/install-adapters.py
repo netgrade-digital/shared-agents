@@ -24,6 +24,7 @@ from pathlib import Path
 from shutil import which
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sa_config import default_shell_rc  # noqa: E402
 from sa_ui import (
     TAGLINE,
     bold,
@@ -947,7 +948,7 @@ def run_wizard_plain(
 
     print(bold(cyan("Step 4/5 — Shell environment")))
     add_shell = True
-    shell_rc_path = shell_rc or expand("~/.bashrc")
+    shell_rc_path = shell_rc or default_shell_rc()
     rc_text = shell_rc_path.read_text() if shell_rc_path.is_file() else ""
     has_home = "SHARED_AGENTS_HOME=" in rc_text
     has_cli = "shell-aliases.sh" in rc_text
@@ -1053,7 +1054,7 @@ def gather_wizard_choices(
         for tool in installable_tools(manifest)
     ]
 
-    shell_rc_path = shell_rc or expand("~/.bashrc")
+    shell_rc_path = shell_rc or default_shell_rc()
     shell_rc_str = str(shell_rc_path)
 
     try:
@@ -1140,7 +1141,7 @@ def apply_wizard_choices(
 ) -> int:
     home = os.path.expanduser(os.path.expandvars(choices.home))
     os.environ["SHARED_AGENTS_HOME"] = home
-    shell_rc_path = shell_rc or expand("~/.bashrc")
+    shell_rc_path = shell_rc or default_shell_rc()
     selected = set(choices.selected_tools)
 
     if not skip_team_setup and not dry_run:

@@ -15,6 +15,19 @@ def expand(path: str | Path) -> Path:
     return Path(os.path.expandvars(os.path.expanduser(str(path))))
 
 
+def default_shell_rc() -> Path:
+    """Default shell rc for the login shell (~/.zshrc, ~/.bashrc, or ~/.profile)."""
+    if os.environ.get("SHELL_RC"):
+        return expand(os.environ["SHELL_RC"])
+    shell = Path(os.environ.get("SHELL", "/bin/bash")).name
+    home = Path.home()
+    if shell == "zsh":
+        return home / ".zshrc"
+    if shell == "bash":
+        return home / ".bashrc"
+    return home / ".profile"
+
+
 def core_home() -> Path:
     return expand(os.environ.get("SHARED_AGENTS_HOME", "~/shared-agents"))
 

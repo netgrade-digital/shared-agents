@@ -18,13 +18,29 @@ trap _sa_on_cancel INT
 
 DEFAULT_CORE_REMOTE="${SHARED_AGENTS_CORE_REMOTE:-${SHARED_AGENTS_GIT_REMOTE:-git@github.com:netgrade-digital/shared-agents.git}}"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
-SHELL_RC="${SHELL_RC:-$HOME/.bashrc}"
 
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 else
   SCRIPT_DIR=""
 fi
+
+_sa_detect_shell_rc() {
+  local script="${1:-}"
+  if [[ -n "${SHELL_RC:-}" ]]; then
+    printf '%s\n' "$SHELL_RC"
+    return
+  fi
+  if [[ -n "$script" && -f "$script" ]]; then
+    bash "$script"
+    return
+  fi
+  case "$(basename "${SHELL:-/bin/bash}")" in
+    zsh)  printf '%s\n' "$HOME/.zshrc" ;;
+    bash) printf '%s\n' "$HOME/.bashrc" ;;
+    *)    printf '%s\n' "$HOME/.profile" ;;
+  esac
+}
 
 _sa_ui() {
   local py="${SCRIPT_DIR}/sa_ui.py"
@@ -60,6 +76,8 @@ if [[ -z "$SCRIPT_DIR" || ! -f "$SCRIPT_DIR/bootstrap_wizard.py" ]]; then
   SCRIPT_DIR="$SHARED_AGENTS_HOME/scripts"
 fi
 
+SHELL_RC="$(_sa_detect_shell_rc "$SCRIPT_DIR/detect-shell-rc.sh")"
+
 export SHARED_AGENTS_HOME
 export SHARED_AGENTS_CORE_REMOTE="${SHARED_AGENTS_CORE_REMOTE:-$DEFAULT_CORE_REMOTE}"
 
@@ -88,6 +106,6 @@ exec python3 "$SCRIPT_DIR/bootstrap_wizard.py" \
   --home "$SHARED_AGENTS_HOME" \
   --shell-rc "$SHELL_RC" \
   --core-remote "$SHARED_AGENTS_CORE_REMOTE" \
-  "${BOOTSTRAP_EXTRA[@]}" \
+  "${BOOTSTRAP_EXTRA[@]+"${BOOTSTRAP_EXTRA[@]}"}" \
   "$@" \
   <"$WIZARD_IN" >"$WIZARD_OUT"
