@@ -36,7 +36,7 @@ read:
 Or run:
 
 ```bash
-aider --read "$SHARED_AGENTS_HOME/adapters/generic/instructions.md"
+aider --read "$SHARED_AGENTS_HOME/adapters/generic/instructions.local.md"
 ```
 
 ## Sync

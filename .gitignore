@@ -26,6 +26,7 @@ mcps.local.yaml
 # Local install config + private team data (nested git — never commit to core)
 config.local.yaml
 **/config.local.yaml
+adapters/generic/instructions.local.md
 team/
 .gitmodules
 

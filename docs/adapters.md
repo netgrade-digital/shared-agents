@@ -75,7 +75,7 @@ See [Contributing](/docs/contributing).
 
 ## Generic fallback
 
-If your CLI is not in the manifest, copy [adapters/generic/instructions.md](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/generic/instructions.md) into your global agent config and set `$SHARED_AGENTS_HOME`.
+If your CLI is not in the manifest, copy [adapters/generic/instructions.md](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/generic/instructions.md) into your global agent config and set `$SHARED_AGENTS_HOME`. After `sa install`, `adapters/generic/instructions.local.md` holds the same block with the absolute paths of your machine already filled in.
 
 ---
 
