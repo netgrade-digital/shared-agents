@@ -7,10 +7,13 @@ For tools not yet in [`manifest.json`](../manifest.json).
 Every **`sa install`** run refreshes:
 
 ```
-adapters/generic/instructions.md
+adapters/generic/instructions.local.md
 ```
 
-Copy that block into your tool's global config file.
+Copy that block into your tool's global config file. It carries the absolute paths of
+your machine and is git-ignored. [`instructions.md`](instructions.md) next to it is the
+tracked template with `$SHARED_AGENTS_HOME` placeholders, for reading on GitHub before
+a local install.
 
 ## Common global paths (ecosystem convention)
 

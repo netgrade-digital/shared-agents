@@ -274,7 +274,7 @@ def check_tool(tool: dict, home: str, repo_home: Path | None = None) -> ToolRepo
             bins_found=bins_found,
             config_paths=config_paths,
             docs=docs,
-            message="Use adapters/generic/instructions.md for unsupported CLIs",
+            message="Use adapters/generic/instructions.local.md for unsupported CLIs",
         )
 
     if tid == "openclaw":
@@ -672,7 +672,9 @@ def run_install(
         messages.extend(install_tool(repo_home, home, tool, dry_run))
         configured.append(tool["name"])
 
-    generic = repo_home / "adapters" / "generic" / "instructions.md"
+    # Machine-specific output: absolute paths of THIS machine. Never the tracked
+    # template (adapters/generic/instructions.md), or every install dirties the repo.
+    generic = repo_home / "adapters" / "generic" / "instructions.local.md"
     if not dry_run:
         generic.parent.mkdir(parents=True, exist_ok=True)
         generic.write_text(
