@@ -44,13 +44,15 @@ No secrets. Agent never writes `approved/`.
 
 ## Team skills
 
-`$SHARED_AGENTS_HOME/skills/` — symlinked to `~/.agents/skills/`.
+Core skills live in `$SHARED_AGENTS_HOME/skills/` (`capture-learning`, `sa-cli`, `shared-agents-knowledge`).
+Team skills live in `$SHARED_AGENTS_HOME/team/skills/`.
+`sa sync` links each skill into `~/.agents/skills/<name>` (one symlink per skill, not one symlink for the whole directory).
 
 ## Team rules
 
 Core: `$SHARED_AGENTS_HOME/rules/` · Team: `$SHARED_AGENTS_HOME/team/rules/` (flat, like skills).
 
-- **Cursor:** symlinks on **`sa install`**
-- **Zed / Codex / Claude Code / …:** marker block in `AGENTS.md` or `CLAUDE.md`
+- **Cursor:** symlinks only in `~/.cursor/rules` (`sa install` / `sa sync`). Do not copy them into a project `.cursor/rules`, and do not put the team-rules marker into `~/projects/AGENTS.md` or `~/projects/CLAUDE.md`. Cursor loads user rules, project rules, and parent `AGENTS.md` together, so a second copy injects the same text again.
+- **Zed / Codex / Claude Code / …:** marker block in that tool's own `AGENTS.md` or `CLAUDE.md` (tool home, not `~/projects`).
 
 Edit in team repo → **`sa sync`**. No pending/review workflow for rules. First-time adapter setup: **`sa install`**.
