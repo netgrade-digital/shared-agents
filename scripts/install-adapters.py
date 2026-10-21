@@ -706,7 +706,7 @@ def run_sync_links(
     quiet: bool = False,
     dry_run: bool = False,
 ) -> int:
-    """After sa sync pull: refresh skill symlinks, rule symlinks, and AGENTS.md team-rules blocks."""
+    """After sa sync pull: refresh skill symlinks, rule symlinks, and AGENTS.md knowledge + team-rules blocks."""
     from rules_install import agents_md_paths, install_team_rules_to_path, symlink_rules
 
     os.environ["SHARED_AGENTS_HOME"] = home
@@ -731,10 +731,18 @@ def run_sync_links(
             continue
         if not (tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules")):
             continue
+        block = agents_block(home, tool.get("note", ""))
         for path in agents_md_paths(tool, home):
             if path in seen_paths:
                 continue
             seen_paths.add(path)
+            current = path.read_text() if path.is_file() else ""
+            if block.strip() not in current:
+                if dry_run:
+                    messages.append(f"[dry-run] would merge block into {path}")
+                else:
+                    merge_agents_md(path, block)
+                    messages.append(f"{tool['name']}: merged block into {path}")
             extra = install_team_rules_to_path(
                 path, repo_home, tool["id"], dry_run=dry_run
             )
