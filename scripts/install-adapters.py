@@ -672,13 +672,6 @@ def run_install(
         messages.extend(install_tool(repo_home, home, tool, dry_run))
         configured.append(tool["name"])
 
-    generic = repo_home / "adapters" / "generic" / "instructions.md"
-    if not dry_run:
-        generic.parent.mkdir(parents=True, exist_ok=True)
-        generic.write_text(
-            agents_block(home, "Copy into your CLI global AGENTS.md / CLAUDE.md / GEMINI.md.")
-        )
-
     print(bold("Actions:"))
     for msg in messages:
         _print_action(msg)

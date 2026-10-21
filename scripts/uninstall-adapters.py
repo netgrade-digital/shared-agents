@@ -239,14 +239,6 @@ def run_uninstall(repo_home: Path, home: str, dry_run: bool) -> int:
             continue
         messages.extend(uninstall_tool(repo_home, home, tool, dry_run))
 
-    generic = repo_home / "adapters" / "generic" / "instructions.md"
-    if generic.is_file():
-        if dry_run:
-            messages.append(f"[dry-run] would remove {generic}")
-        else:
-            generic.unlink()
-            messages.append(f"Removed {generic}")
-
     if not messages:
         say_warn("Nothing to remove (no configured tools detected).")
         return 0
