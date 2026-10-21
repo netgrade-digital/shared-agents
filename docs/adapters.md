@@ -22,6 +22,7 @@ Configuration is driven by [`adapters/manifest.json`](https://github.com/netgrad
 | Cursor IDE | `cursor` | `~/.cursor/rules/` symlinks | [cursor/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/cursor/README.md) |
 | Claude Code | `claude-code` | `~/.claude/CLAUDE.md` marker | [claude-code/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/claude-code/README.md) |
 | Zed | `zed` | `~/.config/zed/AGENTS.md` | [zed/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/zed/README.md) |
+| Pi | `pi` | `~/.pi/agent/AGENTS.md` | [pi/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/pi/README.md) |
 | OpenAI Codex CLI | `codex` | `~/.codex/AGENTS.md` | [codex/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/codex/README.md) |
 | OpenCode | `opencode` | `~/.config/opencode/AGENTS.md` | [opencode/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/opencode/README.md) |
 | Gemini CLI | `gemini` | `~/.gemini/GEMINI.md` | [gemini/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/gemini/README.md) |
@@ -58,7 +59,7 @@ Session hooks (where configured) run **`sa sync`** quietly at session start.
 - Base block: `<!-- shared-agents:begin -->` (sync + learnings hints)
 - Team rules block: `<!-- shared-agents:team-rules:begin/end -->`
 
-Zed has no session hook — agents should run sync as an early step when needed.
+Zed and Pi have no session hook — agents should run sync as an early step when needed. Pi already discovers `~/.agents/skills`, so sync does not add a second skill directory.
 
 ---
 

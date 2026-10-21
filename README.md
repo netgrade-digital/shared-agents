@@ -92,7 +92,7 @@ After pulling Core + team (ff-only):
 
 1. **Skill symlinks** — `skills/` + `team/skills/` → `~/.agents/skills`, `~/.claude/skills`, …
 2. **Rule symlinks** — Cursor: `rules/` + `team/rules/` → `~/.cursor/rules/`
-3. **Team-rules blocks** — Zed, Codex, Claude Code, Gemini, Windsurf, …: `<!-- shared-agents:team-rules:begin/end -->` in each tool's `AGENTS.md` / `CLAUDE.md`
+3. **Team-rules blocks** — Zed, Pi, Codex, Claude Code, Gemini, Windsurf, …: `<!-- shared-agents:team-rules:begin/end -->` in each tool's `AGENTS.md` / `CLAUDE.md`
 
 Also runs quietly via IDE session hooks where configured. **`sa install`** is still required once per tool (hooks, base `<!-- shared-agents:begin -->` block).
 
