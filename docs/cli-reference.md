@@ -158,7 +158,7 @@ Passed through to `install.sh`:
 |------|---------|
 | `--home DIR` | Target path |
 | `--source DIR` | Source repo (dev checkout) |
-| `--shell-rc FILE` | bashrc for `sa` |
+| `--shell-rc FILE` | One shell rc for `sa` (default: login shell, plus fish when installed) |
 | `--tools IDS` | Comma-separated adapter IDs |
 | `--check` | Status only |
 | `--dry-run` | Preview, no writes |

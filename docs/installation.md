@@ -13,12 +13,14 @@ The wizard:
 1. Clones or updates Core into your home directory
 2. Optionally configures your **private team** Git remote
 3. Runs **`sa install`** for detected AI tools
-4. Adds the **`sa`** shell command to `~/.bashrc`
+4. Adds the **`sa`** shell command to your login shell (`~/.bashrc`, `~/.zshrc`, or fish `~/.config/fish/config.fish`). When fish is installed as well, that config is updated too.
 
-Then:
+Then open a new terminal, or source the file that was updated:
 
 ```bash
-source ~/.bashrc
+source ~/.bashrc                        # bash
+source ~/.zshrc                         # zsh
+source ~/.config/fish/config.fish       # fish
 sa check
 sa team verify    # recommended after team setup
 ```
@@ -37,7 +39,7 @@ SA_BOOTSTRAP_NON_INTERACTIVE=1 curl -fsSL https://raw.githubusercontent.com/netg
 git clone git@github.com:netgrade-digital/shared-agents.git ~/.shared-agents
 cd ~/.shared-agents
 sa install
-source ~/.bashrc
+source ~/.bashrc   # fish: source ~/.config/fish/config.fish
 ```
 
 **From a dev checkout** (repo on disk, install into home):
@@ -46,7 +48,7 @@ source ~/.bashrc
 git clone git@github.com:netgrade-digital/shared-agents.git ~/Development/shared-agents
 cd ~/Development/shared-agents
 ./sa install --home "$HOME/.shared-agents"
-source ~/.bashrc
+source ~/.bashrc   # fish: source ~/.config/fish/config.fish
 ```
 
 ## Install wizard (`sa install`)
@@ -62,7 +64,7 @@ sa install
 | Install path | Default `~/.shared-agents` or custom |
 | Tools | Which adapters to configure (↑↓, Space, `a` all, `d` detected) |
 | Team repo URL | Optional private remote for learnings/skills/rules |
-| Shell CLI | Add `sa` to bashrc |
+| Shell CLI | Add `sa` to bash, zsh, and fish |
 
 Quick / CI:
 
@@ -93,7 +95,7 @@ Run **`sa install`** again — it only configures tools detected as installed.
 git clone git@github.com:netgrade-digital/shared-agents.git
 cd shared-agents
 ./sa install --home "$HOME/.shared-agents"
-source ~/.bashrc
+source ~/.bashrc   # fish: source ~/.config/fish/config.fish
 sa install --dry-run
 sa check
 ```
@@ -108,7 +110,7 @@ sa uninstall -y
 sa uninstall --keep-repo  # remove adapters only; keep ~/.shared-agents
 ```
 
-Then `source ~/.bashrc`. Fresh setup: **`sa bootstrap`**.
+Then open a new terminal (`source ~/.bashrc`, `source ~/.zshrc`, or `source ~/.config/fish/config.fish`). Fresh setup: **`sa bootstrap`**.
 
 ## Troubleshooting
 

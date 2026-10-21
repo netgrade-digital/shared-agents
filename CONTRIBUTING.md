@@ -30,7 +30,7 @@ Clone and install into your home directory (or use an existing bootstrap):
 git clone git@github.com:netgrade-digital/shared-agents.git
 cd shared-agents
 ./sa install --home "$HOME/.shared-agents"
-source ~/.bashrc
+source ~/.bashrc    # or ~/.zshrc / ~/.config/fish/config.fish
 ```
 
 Work on the clone, then test changes:

@@ -234,7 +234,19 @@ def _cmd_after(name: str, desc: str) -> None:
     print(f"  {green(f'{name:<22}')}{plain(desc)}")
 
 
-def print_install_footer(*, home: str, shell_rc: str) -> None:
+def print_install_footer(*, home: str, shell_rc: str, shell_rcs: list[str] | None = None) -> None:
+    if shell_rcs:
+        paths = shell_rcs
+    else:
+        from pathlib import Path
+
+        from sa_config import shell_rc_targets
+
+        explicit = os.environ.get("SA_SHELL_RC_EXPLICIT") == "1"
+        paths = [
+            str(path)
+            for path in shell_rc_targets(Path(shell_rc), include_fish=not explicit)
+        ]
     print()
     print(green(bold("Install OK.")))
     print()
@@ -245,7 +257,8 @@ def print_install_footer(*, home: str, shell_rc: str) -> None:
     )
     print()
     print(bold("Reload your shell:"))
-    print(f"  {cyan(f'source {shell_rc}')}")
+    for path in paths:
+        print(f"  {cyan(f'source {path}')}")
     print()
     print(bold("Next commands:"))
     _cmd_after("sa sync", "Pull Core + team; refresh skill/rule links")
@@ -570,9 +583,12 @@ if __name__ == "__main__":
     elif arg == "--error":
         print_error(*sys.argv[2:])
     elif arg == "--install-footer":
+        raw_rcs = os.environ.get("SHELL_RCS", "")
+        listed = [line.strip() for line in raw_rcs.splitlines() if line.strip()]
         print_install_footer(
             home=home,
             shell_rc=os.environ.get("SHELL_RC") or str(default_shell_rc()),
+            shell_rcs=listed or None,
         )
     elif arg == "--sync-ok":
         print_sync_ok()

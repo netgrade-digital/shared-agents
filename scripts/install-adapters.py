@@ -24,7 +24,12 @@ from pathlib import Path
 from shutil import which
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sa_config import default_shell_rc  # noqa: E402
+from sa_config import (  # noqa: E402
+    default_shell_rc,
+    shell_rc_is_configured,
+    shell_rc_state,
+    shell_rc_targets,
+)
 from sa_ui import (
     TAGLINE,
     bold,
@@ -950,20 +955,32 @@ def run_wizard_plain(
     print(bold(cyan("Step 4/5 — Shell environment")))
     add_shell = True
     shell_rc_path = shell_rc or default_shell_rc()
-    rc_text = shell_rc_path.read_text() if shell_rc_path.is_file() else ""
-    has_home = "SHARED_AGENTS_HOME=" in rc_text
-    has_cli = "shell-aliases.sh" in rc_text
-    if has_home and has_cli:
+    state = shell_rc_state(shell_rc_path)
+    extras = [
+        path
+        for path in shell_rc_targets(shell_rc_path, include_fish=True)
+        if path != shell_rc_path and not shell_rc_is_configured(path)
+    ]
+    extra_note = ""
+    if extras:
+        extra_note = "  Also: " + ", ".join(str(path) for path in extras)
+    if state == "configured":
         print(f"  ✓ {shell_rc_path} already configured (SHARED_AGENTS_HOME + CLI)")
+        if extra_note:
+            print(extra_note)
         add_shell = False
-    elif has_home and not has_cli:
+    elif state == "needs_cli":
         print(f"  → {shell_rc_path} has SHARED_AGENTS_HOME — will add CLI (sa)")
+        if extra_note:
+            print(extra_note)
         add_shell = True
     elif stdin_interactive():
-        add_shell = confirm(
-            f"  Add SHARED_AGENTS_HOME + sa CLI to {shell_rc_path}?",
-            True,
-        )
+        question = f"  Add SHARED_AGENTS_HOME + sa CLI to {shell_rc_path}?"
+        if extra_note:
+            print(extra_note)
+        add_shell = confirm(question, True)
+    elif extra_note:
+        print(extra_note)
     print()
 
     print(bold("Step 5/5 — Summary"))
@@ -1159,10 +1176,30 @@ def apply_wizard_choices(
                 print(f"  ! {exc}", file=sys.stderr)
                 return 1
 
+    explicit = os.environ.get("SA_SHELL_RC_EXPLICIT") == "1"
+    targets = (
+        [shell_rc_path]
+        if explicit
+        else shell_rc_targets(shell_rc_path, include_fish=True)
+    )
     if choices.add_shell:
-        if not configure_shell_rc(shell_rc_path, home, dry_run, repo_home=repo_home):
-            print("Warning: shell CLI was not configured.", file=sys.stderr)
-            return 1
+        to_configure = targets
+    elif shell_rc_is_configured(shell_rc_path):
+        # Login shell is already done. Still install fish when it is present
+        # and not configured yet.
+        to_configure = [
+            path
+            for path in targets
+            if path != shell_rc_path and not shell_rc_is_configured(path)
+        ]
+    else:
+        to_configure = []
+
+    if to_configure:
+        for path in to_configure:
+            if not configure_shell_rc(path, home, dry_run, repo_home=repo_home):
+                print("Warning: shell CLI was not configured.", file=sys.stderr)
+                return 1
 
     print()
     run_install(repo_home, home, dry_run, tool_ids=selected)
@@ -1170,8 +1207,10 @@ def apply_wizard_choices(
         print()
         run_check(repo_home, home, as_json=False)
         print()
-        print(f"Shell CLI:  source {shell_rc_path}")
-        print("            (or open a new terminal)")
+        print("Shell CLI:")
+        for path in targets:
+            print(f"  source {path}")
+        print("  (or open a new terminal)")
     return 0
 
 

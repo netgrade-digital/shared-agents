@@ -39,7 +39,7 @@ curl -fsSL https://raw.githubusercontent.com/netgrade-digital/shared-agents/refs
 # Piped curl uses /dev/tty for the wizard when possible (TUI or text prompts).
 # Force auto-install only: SA_BOOTSTRAP_NON_INTERACTIVE=1 curl … | bash
 # or after clone: ./scripts/bootstrap.sh  ·  sa bootstrap
-source ~/.bashrc
+source ~/.bashrc   # fish: source ~/.config/fish/config.fish
 sa check
 sa team verify    # optional but useful after bootstrap
 ```
@@ -50,7 +50,7 @@ sa team verify    # optional but useful after bootstrap
 git clone git@bitbucket.org:netgrade/shared-agents.git ~/.shared-agents
 cd ~/.shared-agents
 ./sa install
-source ~/.bashrc
+source ~/.bashrc   # fish: source ~/.config/fish/config.fish
 ```
 
 **From dev checkout without `~/.shared-agents` yet:** `./sa install` — wizard runs **before** clone; cancel leaves no `~/.shared-agents`.
@@ -174,7 +174,7 @@ sa install --dry-run --wizard
 |------|---------|
 | `--home DIR` | Target path (default: `~/.shared-agents`) |
 | `--source DIR` | Source repo (dev checkout) |
-| `--shell-rc FILE` | bashrc for `SHARED_AGENTS_HOME` + `sa` |
+| `--shell-rc FILE` | One shell rc for `sa` (default: login shell, plus fish when installed) |
 | `--tools IDS` | Comma-separated adapter IDs only |
 | `--check` | Status instead of install (`sa check`) |
 | `--check --json` | JSON for CI |
@@ -333,7 +333,7 @@ sa uninstall --dry-run
 
 Removes hooks and skill symlinks (Core **and** team skills). Without `--keep-repo`: deletes `$SHARED_AGENTS_HOME` including `team/` and `config.local.yaml`.
 
-Then: **`source ~/.bashrc`** or new terminal. Fresh setup: **`sa bootstrap`**.
+Then open a new terminal, or `source` the updated rc (`~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`). Fresh setup: **`sa bootstrap`**.
 
 ---
 
@@ -368,7 +368,7 @@ See `$SHARED_AGENTS_HOME/docs/migration-team-data.md`.
 
 | Problem | Fix |
 |---------|-----|
-| `sa: command not found` | `source ~/.bashrc` or `"$SHARED_AGENTS_HOME/scripts/sa" help` |
+| `sa: command not found` | `source` the shell rc (`~/.bashrc`, `~/.zshrc`, fish `~/.config/fish/config.fish`) or `"$SHARED_AGENTS_HOME/scripts/sa" help` |
 | shared-agents not installed | `sa bootstrap` or `sa install` / `./sa install` |
 | Tool `not_configured` | `sa install` |
 | Stale learnings | `sa sync` · check hooks / `sa check` |

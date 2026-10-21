@@ -189,13 +189,18 @@ skip_aliases = False
 for line in lines:
     if "shared-agents" in line.lower() and line.strip().startswith("#"):
         continue
-    if line.strip().startswith("export SHARED_AGENTS_HOME="):
+    stripped_line = line.strip()
+    if stripped_line.startswith("export SHARED_AGENTS_HOME="):
         continue
-    if "shell-aliases.sh" in line:
+    if stripped_line.startswith("set -gx SHARED_AGENTS_HOME") or stripped_line.startswith(
+        "set --export SHARED_AGENTS_HOME"
+    ):
+        continue
+    if "shell-aliases.sh" in line or "shell-aliases.fish" in line:
         skip_aliases = True
         continue
     if skip_aliases:
-        if line.strip() == "fi":
+        if stripped_line in {"fi", "end"}:
             skip_aliases = False
         continue
     out.append(line)

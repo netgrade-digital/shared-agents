@@ -16,7 +16,7 @@ During **`sa bootstrap`** or **`sa install`**, enter your private team remote UR
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/netgrade-digital/shared-agents/refs/heads/main/scripts/bootstrap.sh | bash
-source ~/.bashrc
+source ~/.bashrc    # or ~/.zshrc / ~/.config/fish/config.fish
 sa team verify
 ```
 

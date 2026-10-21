@@ -26,4 +26,6 @@ Wizards commit/push by default (`--no-git` to skip). Teammates run **`sa sync`**
 
 ## Skills
 
-Symlinked to `~/.config/opencode/skills/` when detected at install time.
+Symlinked to `~/.config/opencode/skills/<name>/SKILL.md` when detected at install time.
+
+OpenCode 2 reads the global file `~/.config/opencode/AGENTS.md` and discovers those skill directories (symlinks included). It also loads `~/.agents/skills` and `~/.claude/skills`; the same skill id in `~/.config/opencode/skills` wins. Confirm with `opencode api skill.list` — shared-agents skills show up with that path.

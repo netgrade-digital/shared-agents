@@ -12,7 +12,12 @@ trap _sa_on_cancel INT
 VERSION="0.1.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
-SHELL_RC="${SHELL_RC:-$("$SCRIPT_DIR/detect-shell-rc.sh")}"
+SHELL_RC_FROM_ENV=0
+if [[ -n "${SHELL_RC:-}" ]]; then
+  SHELL_RC_FROM_ENV=1
+fi
+SHELL_RC="${SHELL_RC:-}"
+SHELL_RC_EXPLICIT=0
 DRY_RUN=0
 YES=0
 KEEP_REPO=0
@@ -29,7 +34,7 @@ Removes IDE/CLI adapters, shell CLI (sa), and optionally deletes the local insta
 
 Options:
   --home DIR       SHARED_AGENTS_HOME (default: ~/.shared-agents)
-  --shell-rc FILE  Shell rc to clean (default: auto-detect)
+  --shell-rc FILE  Shell rc to clean (default: bash, zsh, profile, and fish)
   --keep-repo      Remove adapters only — keep ~/.shared-agents checkout
   --dry-run        Show what would be removed
   -y, --yes        Bestätigung überspringen (non-interactive)
@@ -46,7 +51,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --home) SHARED_AGENTS_HOME="$2"; shift 2 ;;
-    --shell-rc) SHELL_RC="$2"; shift 2 ;;
+    --shell-rc) SHELL_RC="$2"; SHELL_RC_EXPLICIT=1; shift 2 ;;
     --keep-repo) KEEP_REPO=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -y|--yes) YES=1; shift ;;
@@ -56,6 +61,24 @@ while [[ $# -gt 0 ]]; do
 done
 
 export SHARED_AGENTS_HOME
+
+SHELL_RCS=()
+if [[ $SHELL_RC_EXPLICIT -eq 1 || $SHELL_RC_FROM_ENV -eq 1 ]]; then
+  SHELL_RCS=("$SHELL_RC")
+else
+  while IFS= read -r _sa_rc; do
+    [[ -n "$_sa_rc" ]] && SHELL_RCS+=("$_sa_rc")
+  done < <(env -u SHELL_RC "$SCRIPT_DIR/detect-shell-rc.sh" --known)
+fi
+if [[ ${#SHELL_RCS[@]} -eq 0 ]]; then
+  SHELL_RC="${SHELL_RC:-$HOME/.bashrc}"
+  SHELL_RCS=("$SHELL_RC")
+else
+  SHELL_RC="$(printf '%s, ' "${SHELL_RCS[@]}")"
+  SHELL_RC="${SHELL_RC%, }"
+fi
+export SHELL_RC
+unset _sa_rc
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SA_UI_PY="$SCRIPT_DIR/sa_ui.py"
@@ -115,7 +138,9 @@ _remove_rc="$SCRIPT_DIR/remove-shell-rc.sh"
 [[ -f "$_remove_rc" ]] || _remove_rc="$SHARED_AGENTS_HOME/scripts/remove-shell-rc.sh"
 if [[ -f "$_remove_rc" ]]; then
   export SA_UI_PY
-  run bash "$_remove_rc" "$SHELL_RC"
+  for rc in "${SHELL_RCS[@]}"; do
+    run bash "$_remove_rc" "$rc"
+  done
 else
   _sa --out warn "  ! remove-shell-rc.sh missing — skip" || true
 fi

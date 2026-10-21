@@ -13,7 +13,13 @@ trap _sa_on_cancel INT
 VERSION="0.1.0"
 REPO_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SHARED_AGENTS_HOME="${SHARED_AGENTS_HOME:-$HOME/.shared-agents}"
-SHELL_RC="${SHELL_RC:-$("$REPO_SOURCE/scripts/detect-shell-rc.sh")}"
+SHELL_RC_FROM_ENV=0
+if [[ -n "${SHELL_RC:-}" ]]; then
+  SHELL_RC_FROM_ENV=1
+fi
+SHELL_RC="${SHELL_RC:-}"
+SHELL_RC_EXPLICIT=0
+SHELL_RCS=()
 MODE="install"
 DRY_RUN=0
 CHECK_JSON=0
@@ -37,7 +43,7 @@ Usage:
 Options:
   --source DIR    Repo to install from (default: parent of scripts/)
   --home DIR      Install path (default: ~/.shared-agents)
-  --shell-rc FILE Shell rc for SHARED_AGENTS_HOME (default: auto-detect)
+  --shell-rc FILE Shell rc for SHARED_AGENTS_HOME (default: login shell + fish)
   --tools IDS     Comma-separated tool ids (e.g. cursor,claude-code)
   -h, --help      Show this help
 
@@ -57,13 +63,43 @@ while [[ $# -gt 0 ]]; do
     --tools) TOOLS="$2"; shift 2 ;;
     --source) REPO_SOURCE="$2"; shift 2 ;;
     --home) SHARED_AGENTS_HOME="$2"; shift 2 ;;
-    --shell-rc) SHELL_RC="$2"; shift 2 ;;
+    --shell-rc) SHELL_RC="$2"; SHELL_RC_EXPLICIT=1; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
   esac
 done
 
 export SHARED_AGENTS_HOME
+
+if [[ $SHELL_RC_EXPLICIT -eq 1 || $SHELL_RC_FROM_ENV -eq 1 ]]; then
+  export SA_SHELL_RC_EXPLICIT=1
+  SHELL_RCS=("$SHELL_RC")
+else
+  unset SA_SHELL_RC_EXPLICIT
+  while IFS= read -r _sa_rc; do
+    [[ -n "$_sa_rc" ]] && SHELL_RCS+=("$_sa_rc")
+  done < <(env -u SHELL_RC "$REPO_SOURCE/scripts/detect-shell-rc.sh" --all)
+  SHELL_RC="${SHELL_RCS[0]:-$HOME/.bashrc}"
+fi
+if [[ ${#SHELL_RCS[@]} -eq 0 ]]; then
+  SHELL_RCS=("$HOME/.bashrc")
+  SHELL_RC="$HOME/.bashrc"
+fi
+export SHELL_RC
+SHELL_RCS_EXPORT=""
+for _sa_rc in "${SHELL_RCS[@]}"; do
+  SHELL_RCS_EXPORT+="${_sa_rc}"$'\n'
+done
+export SHELL_RCS="$SHELL_RCS_EXPORT"
+unset _sa_rc
+
+_configure_shells() {
+  local rc dry="${1:-$DRY_RUN}"
+  for rc in "${SHELL_RCS[@]}"; do
+    DRY_RUN="$dry" bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
+      "$SHARED_AGENTS_HOME" "$rc"
+  done
+}
 
 on_interrupt() {
   echo ""
@@ -268,11 +304,9 @@ if [[ $use_wizard -eq 1 ]]; then
   fi
 else
   if [[ $DRY_RUN -eq 0 ]]; then
-    DRY_RUN="$DRY_RUN" bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
-      "$SHARED_AGENTS_HOME" "$SHELL_RC"
+    _configure_shells 0
   else
-    DRY_RUN=1 bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
-      "$SHARED_AGENTS_HOME" "$SHELL_RC"
+    _configure_shells 1
   fi
 
   INSTALL_ARGS=(install "$SHARED_AGENTS_HOME")
@@ -285,10 +319,12 @@ else
   if [[ $DRY_RUN -eq 0 ]]; then
     echo ""
     run_check
-    if ! grep -qF "shared-agents:shell-end" "$SHELL_RC" 2>/dev/null; then
-      DRY_RUN=0 bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
-        "$SHARED_AGENTS_HOME" "$SHELL_RC" || true
-    fi
+    for rc in "${SHELL_RCS[@]}"; do
+      if ! grep -qF "shared-agents:shell-end" "$rc" 2>/dev/null; then
+        DRY_RUN=0 bash "$SHARED_AGENTS_HOME/scripts/configure-shell-rc.sh" \
+          "$SHARED_AGENTS_HOME" "$rc" || true
+      fi
+    done
   fi
 fi
 

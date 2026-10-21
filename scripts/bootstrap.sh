@@ -38,6 +38,13 @@ _sa_detect_shell_rc() {
   case "$(basename "${SHELL:-/bin/bash}")" in
     zsh)  printf '%s\n' "$HOME/.zshrc" ;;
     bash) printf '%s\n' "$HOME/.bashrc" ;;
+    fish)
+      if [[ -n "${XDG_CONFIG_HOME:-}" ]]; then
+        printf '%s\n' "$XDG_CONFIG_HOME/fish/config.fish"
+      else
+        printf '%s\n' "$HOME/.config/fish/config.fish"
+      fi
+      ;;
     *)    printf '%s\n' "$HOME/.profile" ;;
   esac
 }
