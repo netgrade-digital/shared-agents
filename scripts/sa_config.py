@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -15,8 +16,26 @@ def expand(path: str | Path) -> Path:
     return Path(os.path.expandvars(os.path.expanduser(str(path))))
 
 
+def fish_config_path() -> Path:
+    """Fish config file ($XDG_CONFIG_HOME/fish/config.fish or ~/.config/fish/config.fish)."""
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    base = Path(xdg) if xdg else Path.home() / ".config"
+    return base / "fish" / "config.fish"
+
+
+def is_fish_rc(path: str | Path) -> bool:
+    candidate = Path(path)
+    return candidate.name == "config.fish" or candidate.suffix == ".fish"
+
+
+def fish_installed() -> bool:
+    if shutil.which("fish"):
+        return True
+    return fish_config_path().is_file()
+
+
 def default_shell_rc() -> Path:
-    """Default shell rc for the login shell (~/.zshrc, ~/.bashrc, or ~/.profile)."""
+    """Default shell rc for the login shell (bash, zsh, fish, or ~/.profile)."""
     if os.environ.get("SHELL_RC"):
         return expand(os.environ["SHELL_RC"])
     shell = Path(os.environ.get("SHELL", "/bin/bash")).name
@@ -25,7 +44,65 @@ def default_shell_rc() -> Path:
         return home / ".zshrc"
     if shell == "bash":
         return home / ".bashrc"
+    if shell == "fish":
+        return fish_config_path()
     return home / ".profile"
+
+
+def shell_rc_targets(primary: Path | None = None, *, include_fish: bool = True) -> list[Path]:
+    """Login-shell rc, plus fish config when fish is installed and not already the target."""
+    chosen = primary if primary is not None else default_shell_rc()
+    targets = [chosen]
+    if include_fish and fish_installed() and not is_fish_rc(chosen):
+        fish = fish_config_path()
+        if fish not in targets:
+            targets.append(fish)
+    return targets
+
+
+def known_shell_rcs() -> list[Path]:
+    """Rc files uninstall should scan. Existing files only."""
+    home = Path.home()
+    candidates = [
+        home / ".bashrc",
+        home / ".zshrc",
+        home / ".profile",
+        fish_config_path(),
+    ]
+    seen: set[Path] = set()
+    found: list[Path] = []
+    for path in candidates:
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        found.append(path)
+    return found
+
+
+def shell_rc_state(path: str | Path) -> str:
+    """configured | needs_cli | ask — shared by the install wizard."""
+    candidate = Path(path)
+    if not candidate.is_file():
+        return "ask"
+    try:
+        text = candidate.read_text(encoding="utf-8")
+    except OSError:
+        return "ask"
+    has_home = (
+        "SHARED_AGENTS_HOME=" in text
+        or "set -gx SHARED_AGENTS_HOME" in text
+        or "set --export SHARED_AGENTS_HOME" in text
+    )
+    has_cli = "shell-aliases.sh" in text or "shell-aliases.fish" in text
+    if has_home and has_cli:
+        return "configured"
+    if has_home:
+        return "needs_cli"
+    return "ask"
+
+
+def shell_rc_is_configured(path: str | Path) -> bool:
+    return shell_rc_state(path) == "configured"
 
 
 def core_home() -> Path:

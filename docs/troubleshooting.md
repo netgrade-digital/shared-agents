@@ -7,12 +7,14 @@ Common issues and fixes when using Shared Agents.
 ## `sa: command not found`
 
 ```bash
-source ~/.bashrc
+source ~/.bashrc                        # bash
+source ~/.zshrc                         # zsh
+source ~/.config/fish/config.fish       # fish
 # or
 "${SHARED_AGENTS_HOME:-$HOME/.shared-agents}/scripts/sa" help
 ```
 
-Re-run **`sa install`** if bashrc was not updated.
+Re-run **`sa install`** if the shell rc was not updated. Fish does not read `~/.bashrc` or a bash block in `~/.profile`.
 
 ---
 

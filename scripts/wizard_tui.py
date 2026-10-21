@@ -574,17 +574,11 @@ def run_wizard_tui(
 
 
 def detect_shell_rc_state(shell_rc_path: str) -> ShellRcState:
-    path = os.path.expanduser(shell_rc_path)
-    if not os.path.isfile(path):
-        return ShellRcState.ASK
-    try:
-        text = open(path, encoding="utf-8").read()
-    except OSError:
-        return ShellRcState.ASK
-    has_home = "SHARED_AGENTS_HOME=" in text
-    has_cli = "shell-aliases.sh" in text
-    if has_home and has_cli:
+    from sa_config import shell_rc_state
+
+    state = shell_rc_state(os.path.expanduser(shell_rc_path))
+    if state == "configured":
         return ShellRcState.CONFIGURED
-    if has_home:
+    if state == "needs_cli":
         return ShellRcState.NEEDS_CLI
     return ShellRcState.ASK
