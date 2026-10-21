@@ -5,7 +5,7 @@
     "marker_begin": "<!-- shared-agents:begin -->",
     "marker_end": "<!-- shared-agents:end -->",
     "skill_dirs": [
-      { "path": "~/.agents/skills", "note": "Cursor, Zed, skills MCP" },
+      { "path": "~/.agents/skills", "note": "Cursor, Zed, Pi, skills MCP" },
       { "path": "~/.claude/skills", "note": "Claude Code" },
       { "path": "~/.codex/skills", "note": "Codex CLI" },
       { "path": "~/.config/opencode/skills", "note": "OpenCode" },
@@ -55,6 +55,16 @@
       "docs": "adapters/zed/README.md",
       "agents_md": "~/.config/zed/AGENTS.md",
       "note": "No session hook. Agent runs sync as first shell command."
+    },
+    {
+      "id": "pi",
+      "name": "Pi",
+      "detect": "~/.pi",
+      "detect_bins": ["pi"],
+      "docs": "adapters/pi/README.md",
+      "agents_md": "~/.pi/agent/AGENTS.md",
+      "env_home": "PI_CODING_AGENT_DIR",
+      "note": "No session hook. Agent runs sync as first shell command. Pi loads skills from ~/.agents/skills."
     },
     {
       "id": "codex",

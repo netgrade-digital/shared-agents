@@ -52,7 +52,7 @@ RULES_README = """# Team rules
 Flat directory — like `team/skills/`. Add `.mdc` files here; teammates get them after `sa sync` (links rules automatically).
 
 - Cursor → symlinks in `~/.cursor/rules/`
-- Zed, Codex, Claude Code (`CLAUDE.md`), Gemini, Windsurf, … → marker block in each tool's agents file
+- Zed, Pi, Codex, Claude Code (`CLAUDE.md`), Gemini, Windsurf, … → marker block in each tool's agents file
 
 Optional frontmatter: `targets: [zed, claude-code, cursor]` (default: all). Never commit secrets.
 

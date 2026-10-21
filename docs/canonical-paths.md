@@ -98,7 +98,7 @@ On **`sa sync`** (daily) or **`sa install`** (first setup):
 | Adapter type | Installation |
 |--------------|--------------|
 | **Cursor** | Symlinks → `~/.cursor/rules/*.mdc` |
-| **AGENTS.md / CLAUDE.md** (Zed, Codex, Claude Code, Gemini, Windsurf, …) | Marker block `<!-- shared-agents:team-rules:begin/end -->` |
+| **AGENTS.md / CLAUDE.md** (Zed, Pi, Codex, Claude Code, Gemini, Windsurf, …) | Marker block `<!-- shared-agents:team-rules:begin/end -->` |
 | **Dedicated target file** (no symlink, Cursor) | **Not overwritten** |
 
 Sources: `$SHARED_AGENTS_HOME/rules/` (Core) + `$SHARED_AGENTS_HOME/team/rules/` (team).

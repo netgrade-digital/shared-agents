@@ -7,6 +7,7 @@ Per-tool wiring is defined in [`manifest.json`](manifest.json). **`sa install`**
 | [Cursor](cursor/README.md) | Hooks + `.mdc` symlinks | `~/.cursor/rules/` |
 | [Claude Code](claude-code/README.md) | Session hook + `CLAUDE.md` | Marker block |
 | [Zed](zed/README.md) | `~/.config/zed/AGENTS.md` | Marker block |
+| [Pi](pi/README.md) | `~/.pi/agent/AGENTS.md` | Marker block |
 | [Codex CLI](codex/README.md) | `~/.codex/AGENTS.md` | Marker block |
 | [OpenCode](opencode/README.md) | `~/.config/opencode/AGENTS.md` | Marker block |
 | [Gemini CLI](gemini/README.md) | `~/.gemini/GEMINI.md` | Marker block |

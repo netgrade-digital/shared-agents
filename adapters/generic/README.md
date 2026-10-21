@@ -19,6 +19,7 @@ Many agents follow the **AGENTS.md pattern**:
 | Tool family | Typical global path |
 |-------------|---------------------|
 | Zed | `~/.config/zed/AGENTS.md` |
+| Pi | `~/.pi/agent/AGENTS.md` (`PI_CODING_AGENT_DIR` when set) |
 | Codex CLI | `~/.codex/AGENTS.md` or `$CODEX_HOME/AGENTS.md` |
 | OpenCode | `~/.config/opencode/AGENTS.md` |
 | Claude Code | `~/.claude/CLAUDE.md` or project `CLAUDE.md` |
