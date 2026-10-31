@@ -149,6 +149,23 @@ def is_git_repo(home: Path) -> bool:
     return (repo_home(home) / ".git").is_dir()
 
 
+def ensure_gitignore(home: Path) -> bool:
+    """Keep the machine-written local buffer out of the team repo (retroactive
+    for existing teams; new teams get it from the scaffold)."""
+    if not is_git_repo(home):
+        return False
+    gi = repo_home(home) / ".gitignore"
+    entry = ".usage-local.yaml"
+    try:
+        text = gi.read_text(encoding="utf-8") if gi.is_file() else ""
+    except OSError:
+        return False
+    if any(line.strip() == entry for line in text.splitlines()):
+        return False
+    gi.write_text((text + "\n" if text and not text.endswith("\n") else text) + entry + "\n", encoding="utf-8")
+    return True
+
+
 # ------------------------------------------------------------- index.yaml
 
 def index_entries(home: Path) -> list[tuple[str, str]]:
@@ -444,6 +461,8 @@ def cmd_push(args: argparse.Namespace) -> int:
     exit_code = 0
     if is_git_repo(home) and not args.no_git:
         repo = repo_home(home)
+        if ensure_gitignore(home):
+            changed.append(repo / ".gitignore")
         for p in changed:
             run_git(repo, ["add", str(p)], check=False)
         staged = run_git(repo, ["diff", "--cached", "--quiet"], check=False)
@@ -790,6 +809,8 @@ def cmd_migrate(args: argparse.Namespace) -> int:
 
     if is_git_repo(home) and moved and not args.dry_run and not args.no_git:
         repo = repo_home(home)
+        if ensure_gitignore(home):
+            run_git(repo, ["add", str(repo / ".gitignore")], check=False)
         try:
             rel_prefix = lr_root(home).relative_to(repo).as_posix()
         except ValueError:
