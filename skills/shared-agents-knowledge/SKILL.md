@@ -33,6 +33,26 @@ IDE hooks also pull on session start (Cursor `sessionStart`, Claude `SessionStar
 3. Grep `team/learnings/approved/` for task keywords.
 4. Prefer learnings whose `versions` match the project's stack (exact patch or same MAJOR.MINOR.PATCH line); treat `experimental` confidence as hints.
 5. Summarize briefly — do not dump the whole repo.
+6. Record usage events (see below) when you open or apply a learning.
+
+## Usage events (machine tracking, no review)
+
+Each approved learning lives in a folder: `learning.md` (human-gated) + `usage.yaml` (machine-written). **Never edit `learning.md` for this — events only.**
+
+Record events via `sa learning report` (buffered locally, flushed by `sa sync` / `sa learning push`):
+
+| When | Event | Example |
+|------|-------|---------|
+| You open a learning file | `opened` (max 1 per task) | `sa learning report --id <id> --event opened --project <p> --task <slug> --agent <tool>` |
+| Learning actively applied, outcome depended on it | `used` | `… --event used …` |
+| Opened but no fit / no value for this case | `not_used` | `… --event not_used …` |
+| Content stale / wrong / contradicts reality | `outdated` (note required) | `… --event outdated --note "what is stale"` |
+
+- Exactly **one** of `used` / `not_used` / `outdated` per learning per task, at task end.
+- Add `--agent pi|cursor|…` (machine identity).
+- No secrets in `--note` / `--task` (same rule as learnings).
+- Reviewer view: `sa learning status` (knowledge metrics vs agent telemetry, rule candidates, orphans).
+- Pending learnings are never tracked. Events for removed learnings are quarantined automatically.
 
 ## Capture (after non-trivial tasks — ask first)
 

@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import usage  # noqa: E402  (same dir: per-learning usage.yaml init)
 from sa_ui import (
     cyan,
     git_committed,
@@ -300,8 +301,11 @@ def promote(
 ) -> tuple[Path, dict[str, str | list[str]]]:
     text = pending_path.read_text()
     frontmatter = parse_frontmatter(text)
+    learning_id = str(frontmatter.get("id") or pending_path.stem).strip()
+    # Folder per learning: <id>/learning.md + <id>/usage.yaml (machine-writable)
     entry = build_index_entry(
-        frontmatter, f"approved/by-domain/{domain}/{pending_path.name}"
+        frontmatter,
+        f"approved/by-domain/{domain}/{learning_id}/learning.md",
     )
 
     from sa_config import approved_dir, index_path as sa_index_path
@@ -310,16 +314,17 @@ def promote(
     if index_has_id(index_path, str(entry["id"])):
         raise SystemExit(f"ID already in index.yaml: {entry['id']}")
 
-    dest_dir = approved_dir(home) / "by-domain" / domain
-    dest = dest_dir / pending_path.name
-    if dest.exists():
-        raise SystemExit(f"Destination already exists: {dest}")
+    dest_dir = approved_dir(home) / "by-domain" / domain / learning_id
+    dest = dest_dir / "learning.md"
+    if dest.exists() or dest_dir.exists():
+        raise SystemExit(f"Destination already exists: {dest_dir}")
 
     if dry_run:
         return dest, entry
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     shutil.move(str(pending_path), str(dest))
+    usage.init_usage_file(dest_dir, str(entry["id"]))
     append_index(index_path, entry)
     return dest, entry
 
@@ -515,7 +520,10 @@ def main() -> int:
 
     from sa_config import approved_dir
 
-    rel_target = approved_dir(home) / "by-domain" / domain / pending_path.name
+    _preview_id = str(frontmatter.get("id") or pending_path.stem).strip()
+    rel_target = (
+        approved_dir(home) / "by-domain" / domain / _preview_id / "learning.md"
+    )
     preview_header(
         f"Review: {pending_path.name}",
         Target=str(rel_target.relative_to(git_home(home))),

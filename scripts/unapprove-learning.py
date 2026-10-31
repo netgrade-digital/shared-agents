@@ -319,28 +319,38 @@ def unapprove(
     dry_run: bool = False,
 ) -> Path | None:
     index_path = learnings_base(home) / "index.yaml"
+    # Folder layout: <id>/learning.md + <id>/usage.yaml — the folder is the unit.
+    folder = approved_file.parent if approved_file.name == "learning.md" else None
     pending_dest: Path | None = None
 
     if to_pending:
-        pending_dest = learnings_base(home) / "pending" / approved_file.name
+        name = folder.name if folder else approved_file.name
+        pending_dest = learnings_base(home) / "pending" / name
         if pending_dest.exists() and not dry_run:
             raise SystemExit(f"Pending file already exists: {pending_dest}")
 
     if dry_run:
         action = f"move to {pending_dest}" if to_pending else "delete"
         say_warn(f"[dry-run] Would remove index entry: {entry_id}")
-        say_warn(f"[dry-run] Would {action}: {approved_file}")
+        say_warn(f"[dry-run] Would {action}: {folder or approved_file}")
         return pending_dest
 
     if not remove_index_entry(index_path, entry_id):
         say_warn_stderr(f"id not in index.yaml: {entry_id}")
 
     if to_pending:
+        if pending_dest is None:
+            return None
         pending_dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(approved_file), str(pending_dest))
+        if folder is not None and not any(folder.iterdir()):
+            folder.rmdir()
         return pending_dest
 
-    approved_file.unlink()
+    if folder is not None and (folder / "usage.yaml").is_file():
+        shutil.rmtree(folder)
+    else:
+        approved_file.unlink()
     return None
 
 

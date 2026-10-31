@@ -43,6 +43,7 @@ LEARNINGS_README = """# Team learnings
 
 - `pending/` — agent drafts (after you said yes)
 - `approved/` — human-reviewed team knowledge (`sa review`)
+- Each approved learning is a folder: `learning.md` (human-gated) + `usage.yaml` (machine-written usage events, no review)
 
 Agents read `approved/` + `index.yaml`. Never commit secrets.
 """
@@ -138,6 +139,10 @@ def scaffold_team_tree(root: Path) -> None:
     learnings = root / "learnings"
     _ensure_dir_gitkeep(learnings / "pending")
     _ensure_dir_gitkeep(learnings / "approved")
+
+    gitignore = root / ".gitignore"
+    if not gitignore.is_file():
+        gitignore.write_text(".usage-local.yaml\n", encoding="utf-8")
     (root / "skills").mkdir(parents=True, exist_ok=True)
 
     rules = root / "rules"

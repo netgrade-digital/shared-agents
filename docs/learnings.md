@@ -83,6 +83,7 @@ Agents should read the index and search `approved/` before non-trivial tasks (af
 3. Always use **`sa pending path`** or explicit `$SHARED_AGENTS_HOME/team/learnings/pending/…`
 4. Ask the user before creating a draft; use skill **`capture-learning`**
 5. Only **approved** learnings count as team knowledge
+6. Record usage events when opening/applying approved learnings: `sa learning report --id <id> --event opened|used|not_used|outdated …` (machine tracking, no review; reviewer view via `sa learning status`)
 
 See [Canonical paths](/docs/canonical-paths).
 

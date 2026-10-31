@@ -269,6 +269,36 @@ dispatch() {
           ;;
       esac
       ;;
+    learning)
+      _sa_require_home
+      local sub="${1:-status}"
+      shift || true
+      case "$sub" in
+        report|append)
+          exec python3 "$(_sa_script usage.py)" report "$@"
+          ;;
+        push|publish)
+          exec python3 "$(_sa_script usage.py)" push "$@"
+          ;;
+        status)
+          exec python3 "$(_sa_script usage.py)" status "$@"
+          ;;
+        events|list)
+          exec python3 "$(_sa_script usage.py)" events "$@"
+          ;;
+        migrate)
+          exec python3 "$(_sa_script usage.py)" migrate "$@"
+          ;;
+        compact)
+          exec python3 "$(_sa_script usage.py)" compact "$@"
+          ;;
+        *)
+          echo "Usage: sa learning report|push|status|events|migrate|compact [opts]" >&2
+          echo "Try: sa learning <sub> --help" >&2
+          exit 1
+          ;;
+      esac
+      ;;
     rule)
       _sa_require_home
       local sub="${1:-new}"
