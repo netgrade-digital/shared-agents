@@ -48,6 +48,8 @@ Record events via `sa learning report` (buffered locally, flushed by `sa sync` /
 | Opened but no fit / no value for this case | `not_used` | `… --event not_used …` |
 | Content stale / wrong / contradicts reality | `outdated` (note required) | `… --event outdated --note "what is stale"` |
 
+- If you find a learning **partially or fully stale**: report an `outdated` event **in addition to** your verdict (e.g. `used` + `outdated`). Do not bury stale findings in prose — the `outdated` count drives the reviewer view.
+
 - Exactly **one** of `used` / `not_used` / `outdated` per learning per task, at task end.
 - Add `--agent pi|cursor|…` (machine identity).
 - No secrets in `--note` / `--task` (same rule as learnings).
