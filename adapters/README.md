@@ -15,6 +15,7 @@ Per-tool wiring is defined in [`manifest.json`](manifest.json). **`sa install`**
 | [Continue](continue/README.md) | `~/.continue/AGENTS.md` | Marker block |
 | [Copilot](copilot/README.md) | `~/.copilot/AGENTS.md` | Marker block |
 | [Aider](aider/README.md) | `~/.aider/AGENTS.md` | Marker block |
+| [Grok Build](grok/README.md) | `~/.grok/AGENTS.md` + SessionStart hook | Marker block. Skills via `~/.agents/skills` |
 | [OpenClaw](openclaw/README.md) | Entrypoint wrapper (headless) | Read paths under `$SHARED_AGENTS_HOME` |
 | [Generic](generic/README.md) | Copy-paste instructions | Manual |
 

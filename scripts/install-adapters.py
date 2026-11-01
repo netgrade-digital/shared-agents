@@ -323,6 +323,12 @@ def check_tool(tool: dict, home: str, repo_home: Path | None = None) -> ToolRepo
             md_ok, md_msg = check_agents_md_configured(tool, home)
             if not md_ok:
                 configured, msg = md_ok, md_msg
+    elif tid == "grok":
+        configured, msg = check_grok_configured(tool, home)
+        if configured and (tool.get("agents_md") or tool.get("alt_agents_md")):
+            md_ok, md_msg = check_agents_md_configured(tool, home)
+            if not md_ok:
+                configured, msg = md_ok, md_msg
     elif tool.get("agents_md") or tool.get("alt_agents_md"):
         configured, msg = check_agents_md_configured(tool, home)
     else:
@@ -482,17 +488,28 @@ def _print_action(msg: str) -> None:
 # --- install (unchanged logic, refactored) ---
 
 
+def _join_marked(prefix: str, block: str, suffix: str) -> str:
+    """Join a marker block without a blank line when the file starts with it."""
+    parts: list[str] = []
+    if prefix.strip():
+        parts.append(prefix.rstrip())
+    parts.append(block.strip("\n"))
+    if suffix.strip():
+        parts.append(suffix.lstrip())
+    return "\n\n".join(parts) + "\n"
+
+
 def merge_agents_md(target: Path, block: str, dry_run: bool = False) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     existing = target.read_text() if target.is_file() else ""
     if MARKER_BEGIN in existing and MARKER_END in existing:
         start = existing.index(MARKER_BEGIN)
         end = existing.index(MARKER_END) + len(MARKER_END)
-        updated = existing[:start].rstrip() + "\n\n" + block + "\n" + existing[end:].lstrip()
+        updated = _join_marked(existing[:start], block, existing[end:])
     elif existing.strip():
-        updated = existing.rstrip() + "\n\n" + block + "\n"
+        updated = _join_marked(existing, block, "")
     else:
-        updated = block + "\n"
+        updated = block.strip("\n") + "\n"
     if not dry_run:
         target.write_text(updated)
 
@@ -563,6 +580,114 @@ def install_cursor(repo_home: Path, tool: dict, dry_run: bool) -> list[str]:
     ]
 
 
+GROK_COMPAT_BEGIN = "# shared-agents:grok-compat:begin"
+GROK_COMPAT_END = "# shared-agents:grok-compat:end"
+GROK_COMPAT_LINE = "agents = false  # shared-agents:grok-compat"
+
+
+def grok_home_dir() -> Path:
+    return expand(os.environ.get("GROK_HOME", "~/.grok"))
+
+
+def grok_hooks_path() -> Path:
+    return grok_home_dir() / "hooks" / "shared-agents.json"
+
+
+def grok_config_path() -> Path:
+    return grok_home_dir() / "config.toml"
+
+
+def clear_owned_grok_compat(dry_run: bool) -> str | None:
+    """Drop a compat block this adapter wrote earlier. Do not touch other Grok settings."""
+    path = grok_config_path()
+    if not path.is_file():
+        return None
+    text = path.read_text(encoding="utf-8")
+    original = text
+    if GROK_COMPAT_BEGIN in text and GROK_COMPAT_END in text:
+        start = text.index(GROK_COMPAT_BEGIN)
+        end = text.index(GROK_COMPAT_END) + len(GROK_COMPAT_END)
+        text = text[:start] + text[end:]
+    kept: list[str] = []
+    for line in text.splitlines(keepends=True):
+        if GROK_COMPAT_LINE in line:
+            continue
+        kept.append(line)
+    text = "".join(kept).replace("\n\n\n", "\n\n")
+    if text == original:
+        return None
+    if dry_run:
+        return f"[dry-run] would remove shared-agents compat block from {path}"
+    if text.strip():
+        path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+    else:
+        path.unlink(missing_ok=True)
+    return f"Grok Build: removed shared-agents compat block from {path}"
+
+
+def install_grok_hook(home: str, tool: dict, dry_run: bool) -> list[str]:
+    sync = tool["sync"]
+    hooks_path = grok_hooks_path()
+    hook_cmd = sync["hook_command"].replace("$SHARED_AGENTS_HOME", home)
+    timeout = int(sync.get("timeout") or 60)
+    if dry_run:
+        return [f"[dry-run] would register Grok SessionStart hook in {hooks_path} (timeout {timeout}s)"]
+    data: dict = {"hooks": {}}
+    if hooks_path.is_file():
+        data = json.loads(hooks_path.read_text(encoding="utf-8"))
+    session = data.setdefault("hooks", {}).setdefault("SessionStart", [])
+    session[:] = normalize_claude_session_hooks(session)
+    updated = False
+    for entry in session:
+        if claude_session_hook_command(entry) != hook_cmd:
+            continue
+        updated = True
+        if isinstance(entry, dict):
+            for hook in entry.get("hooks", []):
+                if hook.get("command") == hook_cmd:
+                    hook["timeout"] = timeout
+    if not updated:
+        entry = claude_session_hook(hook_cmd)
+        entry["hooks"][0]["timeout"] = timeout
+        session.insert(0, entry)
+    hooks_path.parent.mkdir(parents=True, exist_ok=True)
+    hooks_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return [f"Grok Build: SessionStart hook in {hooks_path} (timeout {timeout}s)"]
+
+
+def install_grok(home: str, tool: dict, dry_run: bool) -> list[str]:
+    messages = install_grok_hook(home, tool, dry_run)
+    extra = clear_owned_grok_compat(dry_run)
+    if extra:
+        messages.append(extra)
+    return messages
+
+
+def check_grok_configured(tool: dict, home: str) -> tuple[bool, str]:
+    sync = tool["sync"]
+    hooks_path = grok_hooks_path()
+    hook_cmd = sync["hook_command"].replace("$SHARED_AGENTS_HOME", home)
+    if not hooks_path.is_file():
+        return False, f"{hooks_path} missing"
+    try:
+        data = json.loads(hooks_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False, f"{hooks_path} is not valid JSON"
+    session = data.get("hooks", {}).get("SessionStart", [])
+    if not claude_session_has_hook(session, hook_cmd):
+        return False, "SessionStart hook not registered"
+    timeout = None
+    for entry in session:
+        if not isinstance(entry, dict):
+            continue
+        for hook in entry.get("hooks", []):
+            if hook.get("command") == hook_cmd:
+                timeout = hook.get("timeout")
+    if not isinstance(timeout, (int, float)) or timeout < 30:
+        return False, "SessionStart hook timeout missing or under 30s (Grok default is 5s)"
+    return True, "ok"
+
+
 def install_claude(home: str, tool: dict, dry_run: bool) -> list[str]:
     if dry_run:
         return ["[dry-run] would configure Claude Code SessionStart hook"]
@@ -618,6 +743,11 @@ def install_tool(repo_home: Path, home: str, tool: dict, dry_run: bool) -> list[
         return install_cursor(repo_home, tool, dry_run)
     if tid == "claude-code":
         messages = install_claude(home, tool, dry_run)
+        if tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules"):
+            messages.extend(install_agents_md_tool(repo_home, home, tool, dry_run))
+        return messages
+    if tid == "grok":
+        messages = install_grok(home, tool, dry_run)
         if tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules"):
             messages.extend(install_agents_md_tool(repo_home, home, tool, dry_run))
         return messages

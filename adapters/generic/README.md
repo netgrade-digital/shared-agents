@@ -24,6 +24,7 @@ Many agents follow the **AGENTS.md pattern**:
 | OpenCode | `~/.config/opencode/AGENTS.md` |
 | Claude Code | `~/.claude/CLAUDE.md` or project `CLAUDE.md` |
 | Gemini CLI | `~/.gemini/GEMINI.md` |
+| Grok Build | `~/.grok/AGENTS.md` (`$GROK_HOME` when set) |
 | Project-level | `./AGENTS.md`, `./CLAUDE.md`, `.cursorrules` |
 
 ## Add first-class support

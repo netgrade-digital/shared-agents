@@ -15,6 +15,8 @@ Re-run **`sa sync`** after team changes (skills + rules) · First-time: **`sa in
 
 Hook runs `adapters/claude-code/session-sync.sh` → `sync.sh pull` (Core + Team + skill/rule links) on every session start.
 
+Grok Build imports this hook through Claude compat and would kill it at 5s. If `~/.grok/hooks/shared-agents.json` exists, the script exits immediately under Grok. The Grok adapter hook does the pull. Claude Code is unchanged.
+
 Your own content in `CLAUDE.md` **outside** the marker blocks is never overwritten.
 
 ## Rules vs Cursor

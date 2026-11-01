@@ -30,6 +30,7 @@ Configuration is driven by [`adapters/manifest.json`](https://github.com/netgrad
 | Continue.dev | `continue` | `~/.continue/AGENTS.md` | [continue/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/continue/README.md) |
 | GitHub Copilot | `copilot` | Copilot `AGENTS.md` paths | [copilot/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/copilot/README.md) |
 | Aider | `aider` | `~/.aider/AGENTS.md` | [aider/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/aider/README.md) |
+| Grok Build | `grok` | `~/.grok/AGENTS.md` | [grok/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/grok/README.md) |
 | OpenClaw / headless | `openclaw` | Reads `$SHARED_AGENTS_HOME` | [openclaw/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/openclaw/README.md) |
 | Generic / manual | `generic` | Copy-paste instructions | [generic/README](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/generic/README.md) |
 
@@ -60,6 +61,17 @@ Session hooks (where configured) run **`sa sync`** quietly at session start.
 - Team rules block: `<!-- shared-agents:team-rules:begin/end -->`
 
 Zed and Pi have no session hook — agents should run sync as an early step when needed. Pi already discovers `~/.agents/skills`, so sync does not add a second skill directory.
+
+---
+
+## Grok Build
+
+- Hook: `~/.grok/hooks/shared-agents.json` → `SessionStart` (timeout 60s, because Grok's default is 5s)
+- Rules: merged into `~/.grok/AGENTS.md`
+- Skills: `~/.agents/skills` (Grok reads that directory; no `~/.grok/skills` copy)
+- Does not change `[compat.claude]`. Grok keeps reading `~/.claude/CLAUDE.md` and `<repo>/.claude/CLAUDE.md`. `sa install` also writes the same team-rules block into `~/.grok/AGENTS.md`, so that block can show up twice.
+
+Details: [adapters/grok/README.md](https://github.com/netgrade-digital/shared-agents/blob/main/adapters/grok/README.md).
 
 ---
 
