@@ -173,7 +173,7 @@ def print_help(*, version: str, home: str) -> None:
     print()
 
     print(f"  {magenta('Learnings')}")
-    _cmd("review", " [file]        Review pending → approved (+ commit/push)")
+    _cmd("review", " [file]        y approve · r reject (delete+push) · n cancel")
     _cmd("review list", "          List pending")
     _cmd("review dry", " [file]    Dry-run review")
     _cmd("pending push", " [file]    Commit + push pending (team review)")
@@ -227,6 +227,7 @@ def print_help(*, version: str, home: str) -> None:
     _cmd("-y, --yes", "            Skip prompts")
     _cmd("--no-git", "             No commit/push")
     _cmd("--domain DOMAIN", "      Target domain folder (review)")
+    _cmd("--reject", "             Delete pending + push (review)")
     print()
 
     print(
