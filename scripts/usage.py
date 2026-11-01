@@ -540,19 +540,23 @@ def _push_with_rebase(repo: Path) -> bool:
     """Push the branch to its upstream; on rejection rebase
     (union-resolve append-only conflicts) and retry."""
     remote, local, rbranch = _repo_upstream(repo)
-    if not remote or local == "HEAD":
+    if not remote or local == "HEAD" or not rbranch:
         return False
-    push = run_git(repo, ["push", remote, local], check=False)
+    # Explicit refspec: publish to the tracking branch, even when the local
+    # branch has a different name (plain `git push <remote> <local>` would
+    # create a same-named remote branch instead).
+    refspec = f"{local}:{rbranch}"
+    push = run_git(repo, ["push", remote, refspec], check=False)
     if push.returncode == 0:
         return True
     rebase = run_git(repo, ["pull", "--rebase", remote, rbranch], check=False)
     if rebase.returncode == 0:
-        return run_git(repo, ["push", remote, local], check=False).returncode == 0
+        return run_git(repo, ["push", remote, refspec], check=False).returncode == 0
     if _auto_resolve_usage_conflicts(repo) and run_git(
         repo, ["rebase", "--continue"], check=False, env={"GIT_EDITOR": "true"}
     ).returncode == 0:
         # Append-only conflict: union-resolved (eid dedup), continue.
-        return run_git(repo, ["push", remote, local], check=False).returncode == 0
+        return run_git(repo, ["push", remote, refspec], check=False).returncode == 0
     run_git(repo, ["rebase", "--abort"], check=False)
     return False
 
