@@ -148,6 +148,16 @@ STACK_DOMAINS = {
 }
 
 
+def is_pending_learning(path: Path, pending: Path) -> bool:
+    """True only for a markdown file directly in pending/."""
+    resolved = path.resolve()
+    return (
+        resolved.is_file()
+        and resolved.parent == pending.resolve()
+        and resolved.suffix == ".md"
+    )
+
+
 def resolve_pending(path_arg: str | None, home: Path) -> Path | None:
     pending = pending_dir(home)
     if path_arg:
@@ -157,10 +167,17 @@ def resolve_pending(path_arg: str | None, home: Path) -> Path | None:
             pending / path_arg,
             pending / Path(path_arg).name,
         ]
+        outside = False
         for candidate in candidates:
-            if candidate.is_file():
+            if not candidate.is_file():
+                continue
+            if is_pending_learning(candidate, pending):
                 return candidate.resolve()
-        say_warn_stderr(f"File not found: {path_arg}")
+            outside = True
+        if outside:
+            say_warn_stderr(f"Not a pending learning: {path_arg}")
+        else:
+            say_warn_stderr(f"File not found: {path_arg}")
         return None
 
     files = sorted(pending.glob("*.md"))
@@ -541,6 +558,11 @@ def reject_pending(
     dry_run: bool = False,
     no_git: bool = False,
 ) -> int:
+    pending = pending_dir(home)
+    if not is_pending_learning(pending_path, pending):
+        say_warn_stderr(f"Not a pending learning: {pending_path}")
+        return 1
+
     learning_id = learning_id_of(pending_path)
     repo = git_home(home)
     rel = pending_path.resolve().relative_to(repo.resolve()).as_posix()
