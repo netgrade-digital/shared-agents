@@ -47,14 +47,18 @@ sa sync                    # teammates pull approved content
 sa review                  # interactive file picker
 sa review 2026-06-02-my-slug.md
 sa review dry <file>       # preview only
+sa review --reject <file>  # delete pending + push, no prompt
 ```
+
+Prompt: `[y]` approve · `[r]` reject (delete pending + push) · `[n]` cancel (file stays pending).
 
 | Flag | Meaning |
 |------|---------|
 | `--domain DOMAIN` | Target under `approved/by-domain/` |
 | `--dry-run` | Show actions only |
 | `--no-git` | No commit/push |
-| `-y` / `--yes` | Skip confirmation |
+| `-y` / `--yes` | Approve without confirmation |
+| `--reject` | Delete pending file, commit + push |
 
 ### Unapprove or fix mistakes
 

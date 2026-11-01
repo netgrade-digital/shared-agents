@@ -28,12 +28,12 @@ from sa_ui import (
     list_pick_item,
     list_section,
     list_tsv_row,
+    menu_option,
     plain,
     preview_body,
     preview_header,
     UserCancelled,
     prompt_line,
-    prompt_yes_no,
     run_cli_main,
     say_cancelled,
     say_info,
@@ -148,6 +148,16 @@ STACK_DOMAINS = {
 }
 
 
+def is_pending_learning(path: Path, pending: Path) -> bool:
+    """True only for a markdown file directly in pending/."""
+    resolved = path.resolve()
+    return (
+        resolved.is_file()
+        and resolved.parent == pending.resolve()
+        and resolved.suffix == ".md"
+    )
+
+
 def resolve_pending(path_arg: str | None, home: Path) -> Path | None:
     pending = pending_dir(home)
     if path_arg:
@@ -157,10 +167,17 @@ def resolve_pending(path_arg: str | None, home: Path) -> Path | None:
             pending / path_arg,
             pending / Path(path_arg).name,
         ]
+        outside = False
         for candidate in candidates:
-            if candidate.is_file():
+            if not candidate.is_file():
+                continue
+            if is_pending_learning(candidate, pending):
                 return candidate.resolve()
-        say_warn_stderr(f"File not found: {path_arg}")
+            outside = True
+        if outside:
+            say_warn_stderr(f"Not a pending learning: {path_arg}")
+        else:
+            say_warn_stderr(f"File not found: {path_arg}")
         return None
 
     files = sorted(pending.glob("*.md"))
@@ -458,9 +475,120 @@ def git_publish(
     return 1
 
 
+def ask_review_action() -> str | None:
+    """Return 'approve', 'reject', or None (cancel, file stays pending)."""
+    print()
+    print(heading("Review"))
+    menu_option("[y]", "Approve and promote")
+    menu_option("[r]", "Reject (delete pending + push)")
+    menu_option("[n]", "Cancel (keep pending)")
+    while True:
+        choice = prompt_line(f"{cyan('> ')}").strip().lower()
+        if choice in {"y", "yes", "j", "ja"}:
+            return "approve"
+        if choice in {"r", "reject", "ablehnen", "d", "delete"}:
+            return "reject"
+        if choice in {"n", "no", "nein", "q", "quit", "a", "abbrechen", ""}:
+            return None
+        say_warn("Please answer y, r, or n.")
+
+
+def learning_id_of(path: Path) -> str:
+    return parse_frontmatter(path.read_text()).get("id", "").strip() or path.stem
+
+
+def git_reject(
+    home: Path,
+    rel: str,
+    learning_id: str,
+    *,
+    dry_run: bool = False,
+    no_git: bool = False,
+) -> int:
+    repo = git_home(home)
+    commit_msg = f"docs(learnings): reject {learning_id}"
+
+    if no_git:
+        git_skip_no_git()
+        return 0
+    if not (repo / ".git").is_dir():
+        git_skip_not_repo()
+        return 0
+
+    if dry_run:
+        git_dry_run(
+            [
+                f"git -C {repo} add -u -- {rel}",
+                f'git -C {repo} commit -m "{commit_msg}"',
+                f"git -C {repo} push",
+            ]
+        )
+        return 0
+
+    fixed = ensure_git_remote(repo)
+    if fixed:
+        git_note(fixed)
+
+    run_git(repo, ["add", "-u", "--", rel], check=True)
+    staged = run_git(repo, ["diff", "--cached", "--quiet"], check=False)
+    if staged.returncode == 0:
+        git_nothing_staged("Nothing staged — skipped commit/push.")
+        return 0
+
+    run_git(repo, ["commit", "-m", commit_msg], check=True)
+    git_committed(commit_msg)
+
+    push = run_git(repo, ["push"], check=False)
+    if push.returncode == 0:
+        out = (push.stdout or push.stderr or "").strip()
+        if out:
+            say_info(out)
+        git_pushed()
+        return 0
+
+    err = (push.stderr or push.stdout or "push failed").strip()
+    git_push_failed(err, hints=[f"Retry: cd {repo} && git push"])
+    return 1
+
+
+def reject_pending(
+    pending_path: Path,
+    home: Path,
+    *,
+    dry_run: bool = False,
+    no_git: bool = False,
+) -> int:
+    pending = pending_dir(home)
+    if not is_pending_learning(pending_path, pending):
+        say_warn_stderr(f"Not a pending learning: {pending_path}")
+        return 1
+
+    learning_id = learning_id_of(pending_path)
+    repo = git_home(home)
+    rel = pending_path.resolve().relative_to(repo.resolve()).as_posix()
+    tracked = (
+        run_git(repo, ["ls-files", "--error-unmatch", "--", rel], check=False).returncode
+        == 0
+    )
+
+    if dry_run:
+        say_warn(f"[dry-run] Would delete: {pending_path}")
+        if not tracked:
+            say_warn("[dry-run] Not in git — no commit/push.")
+            return 0
+        return git_reject(home, rel, learning_id, dry_run=True, no_git=no_git)
+
+    pending_path.unlink()
+    say_success(f"Deleted: {pending_path}")
+    if not tracked:
+        say_warn("Not in git — nothing to commit or push.")
+        return 0
+    return git_reject(home, rel, learning_id, dry_run=False, no_git=no_git)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Review a pending learning and promote it to approved/."
+        description="Review a pending learning: approve into approved/ or reject (delete)."
     )
     parser.add_argument(
         "file",
@@ -476,6 +604,11 @@ def main() -> int:
         help="Approve without confirmation",
     )
     parser.add_argument(
+        "--reject",
+        action="store_true",
+        help="Delete the pending file and push (no prompt)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show actions without moving files or editing index.yaml",
@@ -486,6 +619,10 @@ def main() -> int:
         help="Skip automatic git commit and push after promote",
     )
     args = parser.parse_args()
+
+    if args.reject and args.yes:
+        say_warn_stderr("Cannot use --reject and --yes together.")
+        return 1
 
     home = shared_home()
     pending = pending_dir(home)
@@ -530,10 +667,22 @@ def main() -> int:
     )
     preview_body(text)
 
-    if not args.yes and not args.dry_run:
-        if not prompt_yes_no("Approve and promote?", default=False):
+    action = "approve"
+    if args.reject:
+        action = "reject"
+    elif not args.yes and not args.dry_run:
+        action = ask_review_action()
+        if action is None:
             say_cancelled()
             return 0
+
+    if action == "reject":
+        return reject_pending(
+            pending_path,
+            home,
+            dry_run=args.dry_run,
+            no_git=args.no_git,
+        )
 
     dest, entry = promote(
         pending_path,

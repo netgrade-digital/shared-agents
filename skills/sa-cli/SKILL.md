@@ -298,9 +298,10 @@ sa review 2026-06-02-my-slug.md
 | `--domain DOMAIN` | Target under `approved/by-domain/` |
 | `--dry-run` | Show only |
 | `--no-git` | No commit/push |
-| `-y` / `--yes` | Skip confirmation |
+| `-y` / `--yes` | Approve without confirmation |
+| `--reject` | Delete pending file, commit + push (no prompt) |
 
-Moves to `team/learnings/approved/`, updates `index.yaml`, commit + push (team repo only in team mode).
+Prompt: **`[y]`** approve (move to `approved/`, update `index.yaml`, commit + push) · **`[r]`** reject (delete pending file, commit + push) · **`[n]`** cancel (file stays in `pending/`). Team repo only when team mode is active. `-y` still means approve.
 
 ### Resolve path — `sa pending path`
 

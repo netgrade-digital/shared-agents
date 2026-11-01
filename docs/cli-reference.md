@@ -124,7 +124,7 @@ sa unapprove list
 sa unapprove <id>
 ```
 
-Review flags: `--domain`, `--dry-run`, `--no-git`, `-y`
+Review: `[y]` approve · `[r]` reject (delete + push) · `[n]` cancel. Flags: `--domain`, `--dry-run`, `--no-git`, `-y`, `--reject`
 
 Unapprove: `--to-pending`, `--delete`, `--dry-run`, `-y`
 
