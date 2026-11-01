@@ -324,7 +324,8 @@ def unapprove(
     pending_dest: Path | None = None
 
     if to_pending:
-        name = folder.name if folder else approved_file.name
+        # Pending files are always <name>.md — the review listing picks *.md only.
+        name = f"{folder.name}.md" if folder else approved_file.name
         pending_dest = learnings_base(home) / "pending" / name
         if pending_dest.exists() and not dry_run:
             raise SystemExit(f"Pending file already exists: {pending_dest}")
@@ -343,8 +344,10 @@ def unapprove(
             return None
         pending_dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(approved_file), str(pending_dest))
-        if folder is not None and not any(folder.iterdir()):
-            folder.rmdir()
+        if folder is not None:
+            # Remove the whole folder (usage.yaml included) so a later
+            # `sa review` can re-promote without "destination exists" errors.
+            shutil.rmtree(folder)
         return pending_dest
 
     if folder is not None and (folder / "usage.yaml").is_file():

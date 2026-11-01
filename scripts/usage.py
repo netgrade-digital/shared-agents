@@ -188,13 +188,27 @@ def index_entries(home: Path) -> list[tuple[str, str]]:
 
 
 def find_usage_path(home: Path, learning_id: str) -> Path | None:
-    """usage.yaml path for a learning id (None when unknown/unmigrated)."""
+    """usage.yaml path for a learning id (None when unknown or unmigrated).
+    Only the folder layout (<id>/learning.md) is resolvable; flat legacy
+    files have no per-learning folder, so their events are quarantined
+    until `sa learning migrate` runs."""
     for entry_id, rel in index_entries(home):
         if entry_id == learning_id:
+            if not rel.endswith("/learning.md"):
+                return None
             learning_md = lr_root(home) / rel
             if learning_md.is_file():
                 return learning_md.parent / "usage.yaml"
     return None
+
+
+def unmigrated_count(home: Path) -> int:
+    """Approved index entries still on the flat legacy layout."""
+    n = 0
+    for _id, rel in index_entries(home):
+        if not rel.endswith("/learning.md"):
+            n += 1
+    return n
 
 
 # -------------------------------------------------------------- usage files
@@ -224,27 +238,61 @@ def read_events(path: Path) -> list[dict]:
     return events
 
 
-def read_summary(path: Path) -> dict[str, dict[str, int]]:
-    """Month -> {event: n} from the `summary:` block."""
-    summary: dict[str, dict[str, int]] = {}
+def _parse_summary_block(lines: list[str]) -> dict[str, dict]:
+    """Parse a `summary:` block (JSON bucket lines, legacy plain-kv fallback)."""
+    summary: dict[str, dict] = {}
     in_summary = False
-    for line in _usage_file(path):
+    for line in lines:
         if re.match(r"^summary:\s*$", line):
             in_summary = True
             continue
         if in_summary:
-            m = re.match(r'^\s+"(\d{4}-\d{2})":\s*\{(.*)\}\s*$', line)
+            m = re.match(r'^\s*"(\d{4}-\d{2})":\s*(\{.*\})\s*$', line)
             if m:
                 month, body = m.groups()
-                counts = {}
-                for part in body.split(","):
-                    if ":" in part:
-                        k, v = part.split(":", 1)
-                        counts[k.strip()] = int(v.strip())
-                summary[month] = counts
+                try:
+                    summary[month] = json.loads(body)
+                except json.JSONDecodeError:
+                    counts = {}
+                    for part in body.strip("{}").split(","):
+                        if ":" in part:
+                            k, v = part.split(":", 1)
+                            try:
+                                counts[k.strip()] = int(v.strip())
+                            except ValueError:
+                                pass
+                    summary[month] = counts
             elif line.strip() and not line.startswith("  "):
                 in_summary = False
     return summary
+
+
+def read_summary(path: Path) -> dict[str, dict]:
+    """Month -> bucket {event: n, last_used?, machines?} from `summary:`."""
+    return _parse_summary_block(_usage_file(path))
+
+
+def _summary_from_text(text: str) -> dict[str, dict]:
+    return _parse_summary_block(text.splitlines())
+
+
+def _merge_summary_buckets(a: dict[str, dict], b: dict[str, dict]) -> dict[str, dict]:
+    """Union of two summary blocks: sum counts, max last_used, union machines."""
+    out: dict[str, dict] = {}
+    for month in set(a) | set(b):
+        ba, bb = a.get(month, {}), b.get(month, {})
+        bucket: dict = {k: int(ba.get(k, 0) or 0) + int(bb.get(k, 0) or 0) for k in EVENTS}
+        last_used = max(str(ba.get("last_used") or ""), str(bb.get("last_used") or ""))
+        if last_used:
+            bucket["last_used"] = last_used
+        machines = sorted(
+            {str(x) for x in (ba.get("machines") or [])}
+            | {str(x) for x in (bb.get("machines") or [])}
+        )
+        if machines:
+            bucket["machines"] = machines
+        out[month] = bucket
+    return out
 
 
 def write_usage_file(path: Path, *, learning_id: str, events: list[dict],
@@ -259,9 +307,7 @@ def write_usage_file(path: Path, *, learning_id: str, events: list[dict],
     if summary:
         lines.append("summary:")
         for month in sorted(summary):
-            counts = summary[month]
-            body = ", ".join(f"{k}: {counts.get(k, 0)}" for k in EVENTS)
-            lines.append(f'  "{month}": {{{body}}}')
+            lines.append(f'  "{month}": {json.dumps(summary[month], ensure_ascii=False)}')
     lines.append("events:")
     for event in events:
         lines.append(f"  - {json.dumps(event, ensure_ascii=False)}")
@@ -333,13 +379,17 @@ def cmd_report(args: argparse.Namespace) -> int:
         )
         return 1
 
-    # opened: max 1 per (learning, task) — skip when task unknown
+    # opened: max 1 per (learning, task) — skip when task unknown.
+    # Stored per-learning events carry no `learning` field (push strips it),
+    # so dedupe against the learning's own file by task, and the buffer by id.
     if event == "opened" and args.task:
-        existing = read_events(buffer_path(home))
-        existing += read_events(
-            find_usage_path(home, learning_id) or Path("/dev/null/nonexistent")
-        )
-        for old in existing:
+        target = find_usage_path(home, learning_id)
+        if target is not None:
+            for old in read_events(target):
+                if old.get("event") == "opened" and old.get("task") == args.task:
+                    say_info(f"opened already recorded for task '{args.task}' — skipped")
+                    return 0
+        for old in read_events(buffer_path(home)):
             if (
                 old.get("learning") == learning_id
                 and old.get("event") == "opened"
@@ -378,11 +428,26 @@ def compact_usage(path: Path, *, quiet: bool = False) -> bool:
     old = [e for e in events if event_month(str(e.get("ts", ""))) != month]
     if not old:
         return False
-    for e in old:
-        m = event_month(str(e.get("ts", "")))
-        bucket = summary.setdefault(m, {})
-        name = str(e.get("event", ""))
-        bucket[name] = bucket.get(name, 0) + 1
+    new_buckets: dict[str, dict] = {}
+    for e_month in {event_month(str(e.get("ts", ""))) for e in old}:
+        month_events = [
+            e for e in old if event_month(str(e.get("ts", ""))) == e_month
+        ]
+        bucket: dict = {k: 0 for k in EVENTS}
+        for e in month_events:
+            name = str(e.get("event", ""))
+            if name in bucket:
+                bucket[name] += 1
+        used_ts = sorted(
+            str(e.get("ts", "")) for e in month_events if e.get("event") == "used"
+        )
+        if used_ts:
+            bucket["last_used"] = used_ts[-1]
+        machines = sorted({str(e.get("machine", "?")) for e in month_events})
+        if machines:
+            bucket["machines"] = machines
+        new_buckets[e_month] = bucket
+    summary = _merge_summary_buckets(summary, new_buckets)
     keep = [e for e in events if e not in old]
     write_usage_file(
         path,
@@ -401,13 +466,59 @@ def _all_usage_files(home: Path) -> list[Path]:
     return sorted((approved_dir(home) / "by-domain").glob("*/*/usage.yaml"))
 
 
+def _repo_remote(repo: Path) -> bool:
+    remote = run_git(repo, ["remote", "get-url", "origin"], check=False)
+    return remote.returncode == 0 and bool(remote.stdout.strip())
+
+
+def _repo_ahead(repo: Path) -> int:
+    """Local commits not yet on origin/<branch> (0 when no upstream)."""
+    branch = run_git(repo, ["rev-parse", "--abbrev-ref", "HEAD"], check=False)
+    name = branch.stdout.strip() if branch.returncode == 0 else ""
+    if not name or name == "HEAD":
+        return 0
+    rev = run_git(repo, ["rev-list", "--count", f"origin/{name}..HEAD"], check=False)
+    if rev.returncode != 0:
+        return 0
+    return int(rev.stdout.strip() or 0)
+
+
+def _push_with_rebase(repo: Path) -> bool:
+    """Push; on rejection rebase (union-resolve append-only conflicts) and retry."""
+    push = run_git(repo, ["push"], check=False)
+    if push.returncode == 0:
+        return True
+    rebase = run_git(repo, ["pull", "--rebase"], check=False)
+    if rebase.returncode == 0:
+        return run_git(repo, ["push"], check=False).returncode == 0
+    if _auto_resolve_usage_conflicts(repo) and run_git(
+        repo, ["rebase", "--continue"], check=False, env={"GIT_EDITOR": "true"}
+    ).returncode == 0:
+        # Append-only conflict: union-resolved (eid dedup), continue.
+        return run_git(repo, ["push"], check=False).returncode == 0
+    run_git(repo, ["rebase", "--abort"], check=False)
+    return False
+
+
 def cmd_push(args: argparse.Namespace) -> int:
     home = Path(args.home) if args.home else core_home()
     quiet = args.quiet
     buf = buffer_path(home)
     pending = _buffer_events(buf)
+
+    repo = repo_home(home) if is_git_repo(home) and not args.no_git else None
+    has_remote = bool(repo) and _repo_remote(repo)
+
     if not pending:
-        if not quiet:
+        # Publish leftover local usage commits (previous push failed).
+        if repo and has_remote and _repo_ahead(repo) > 0:
+            if _push_with_rebase(repo):
+                if not quiet:
+                    say_success("usage: published leftover local commit(s)")
+            else:
+                say_warn_stderr("usage: leftover local commit, push failed — retry sa learning push")
+                return 1
+        elif not quiet:
             say_info("usage: nothing to push (buffer empty)")
         return 0
 
@@ -453,14 +564,22 @@ def cmd_push(args: argparse.Namespace) -> int:
         changed.append(path)
 
     if not changed:
+        # Events already in local files; still publish a leftover commit.
+        if repo and has_remote and _repo_ahead(repo) > 0:
+            if _push_with_rebase(repo):
+                _write_buffer(buf, [])
+                if not quiet:
+                    say_success("usage: all events already on remote (eid dedup); leftover commit pushed")
+                return 0
+            say_warn_stderr("usage: push failed — events stay in buffer, retry sa learning push")
+            return 1
+        _write_buffer(buf, [])
         if not quiet:
             say_info("usage: all events already on remote (eid dedup)")
-        _write_buffer(buf, [])
         return 0
 
     exit_code = 0
-    if is_git_repo(home) and not args.no_git:
-        repo = repo_home(home)
+    if repo:
         if ensure_gitignore(home):
             changed.append(repo / ".gitignore")
         for p in changed:
@@ -469,40 +588,19 @@ def cmd_push(args: argparse.Namespace) -> int:
         if staged.returncode != 0:
             msg = f"chore(learnings): usage events ({len(pending)} buffered)"
             run_git(repo, ["commit", "-m", msg], check=False)
-            remote = run_git(repo, ["remote", "get-url", "origin"], check=False)
-            if remote.returncode == 0 and remote.stdout.strip():
-                push = run_git(repo, ["push"], check=False)
-                if push.returncode != 0:
-                    rebase = run_git(repo, ["pull", "--rebase"], check=False)
-                    if rebase.returncode == 0:
-                        push = run_git(repo, ["push"], check=False)
-                        if push.returncode != 0:
-                            say_warn_stderr(
-                                "usage: committed locally, push failed — retry sa learning push"
-                            )
-                            exit_code = 1
-                    elif _auto_resolve_usage_conflicts(repo) and run_git(
-                        repo, ["rebase", "--continue"], check=False, env={"GIT_EDITOR": "true"}
-                    ).returncode == 0:
-                        # Append-only conflict: union-resolved (eid dedup), continue.
-                        push = run_git(repo, ["push"], check=False)
-                        if push.returncode != 0:
-                            say_warn_stderr(
-                                "usage: rebase resolved, push failed — retry sa learning push"
-                            )
-                            exit_code = 1
-                    else:
-                        run_git(repo, ["rebase", "--abort"], check=False)
-                        say_warn_stderr(
-                            "usage: remote diverged, auto-resolve failed — events are in the local commit, retry sa learning push"
-                        )
-                        exit_code = 1
+            if has_remote:
+                if not _push_with_rebase(repo):
+                    say_warn_stderr(
+                        "usage: committed locally, remote not updated — events stay in buffer, retry sa learning push"
+                    )
+                    exit_code = 1
             else:
                 if not quiet:
                     say_info("usage: no git remote — committed locally only")
-    # Events are persisted in the on-disk files (source of truth); the buffer
-    # has served its purpose. eid dedup makes a re-push idempotent.
-    _write_buffer(buf, [])
+    # Keep the buffer until the events are published, so a failed push is
+    # retried on the next sa sync / sa learning push (eid dedup is idempotent).
+    if exit_code == 0 or not has_remote:
+        _write_buffer(buf, [])
     if not quiet:
         if exit_code == 0:
             say_success(f"usage: pushed {len(pending)} event(s) to {len(changed)} file(s)")
@@ -530,25 +628,10 @@ def _events_from_text(text: str) -> list[dict]:
     return events
 
 
-def _summary_lines_from_text(text: str) -> list[str]:
-    """Raw `summary:` block lines (month -> counts), preserved verbatim."""
-    out: list[str] = []
-    in_summary = False
-    for line in text.splitlines():
-        if re.match(r"^summary:\s*$", line):
-            in_summary = True
-            out.append("summary:")
-            continue
-        if in_summary:
-            if line.strip() and not line.startswith("  "):
-                break
-            out.append(line)
-    return out
-
-
 def _auto_resolve_usage_conflicts(repo: Path) -> bool:
     """Rebase conflict on append-only usage files: keep the union of events
-    (dedup by eid) so two machines appending to the same file never lose data."""
+    (dedup by eid) and merge both summary blocks, so two machines appending
+    to the same file never lose data."""
     res = run_git(repo, ["diff", "--name-only", "--diff-filter=U"], check=False)
     if res.returncode != 0:
         return False
@@ -574,21 +657,21 @@ def _auto_resolve_usage_conflicts(repo: Path) -> bool:
             if key:
                 seen.add(key)
             unique.append(e)
-        header = re.search(r"^id:\s*(\S+)", ours_text or theirs_text, re.MULTILINE)
+        base = ours_text or theirs_text
+        header = re.search(r"^id:\s*(\S+)", base, re.MULTILINE)
         learning_id = header.group(1) if header else "(orphan)"
-        tracking = re.search(r"^tracking_since:\s*(\S+)", ours_text or theirs_text, re.MULTILINE)
-        path = repo / rel
-        lines = [f"version: {USAGE_VERSION}", f"id: {learning_id}"]
-        if tracking:
-            lines.append(f"tracking_since: {tracking.group(1)}")
-        summary_lines = _summary_lines_from_text(ours_text) or _summary_lines_from_text(theirs_text)
-        lines.extend(summary_lines)
-        lines.append("events:")
-        for e in unique:
-            lines.append(f"  - {json.dumps(e, ensure_ascii=False)}")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        run_git(repo, ["add", str(path)], check=False)
+        tracking = re.search(r"^tracking_since:\s*(\S+)", base, re.MULTILINE)
+        summary = _merge_summary_buckets(
+            _summary_from_text(ours_text), _summary_from_text(theirs_text)
+        )
+        write_usage_file(
+            repo / rel,
+            learning_id=learning_id,
+            events=unique,
+            summary=summary,
+            tracking_since=tracking.group(1) if tracking else None,
+        )
+        run_git(repo, ["add", str(repo / rel)], check=False)
     return True
 
 
@@ -624,6 +707,10 @@ def _learning_counts(path: Path) -> dict:
     for bucket in summary.values():
         for name in EVENTS:
             counts[name] += int(bucket.get(name, 0) or 0)
+        bucket_last = str(bucket.get("last_used") or "")
+        if bucket_last and bucket_last > (last_used or ""):
+            last_used = bucket_last
+        machines.update(str(x) for x in (bucket.get("machines") or []))
     unresolved = sorted(set(opened_tasks) - verdict_tasks)
     # Age unresolved: only count entries newer than UNRESOLVED_DAYS
     cutoff = (datetime.now(timezone.utc).timestamp() - UNRESOLVED_DAYS * 86400)
@@ -742,7 +829,10 @@ def cmd_status(args: argparse.Namespace) -> int:
     if buf:
         say_warn(f"usage buffer: {len(buf)} event(s) not pushed → sa learning push")
     if orphans:
-        say_warn(f"orphan events: {len(orphans)} (learning removed/moved) → {orphan_path(home).name}")
+        say_warn(f"orphan events: {len(orphans)} (learning removed/moved or unmigrated) → {orphan_path(home).name}")
+    unmigrated = unmigrated_count(home)
+    if unmigrated:
+        say_warn(f"{unmigrated} learning(s) still on flat legacy layout → sa learning migrate")
     return 0
 
 
