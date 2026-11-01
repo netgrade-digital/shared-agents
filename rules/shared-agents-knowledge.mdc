@@ -28,6 +28,8 @@ Cursor also runs `sessionStart` hook — still run sync once at session start if
 
 After sync, search `$SHARED_AGENTS_HOME/team/learnings/approved/` and `$SHARED_AGENTS_HOME/team/learnings/index.yaml` for matching project/domain. Use skill `shared-agents-knowledge`.
 
+When you open or apply an approved learning, record usage events (machine tracking, no review): `sa learning report --id <id> --event opened|used|not_used|outdated [--project p] [--task t] [--agent tool]`. Exactly one of `used`/`not_used`/`outdated` per learning per task, at task end. Details + `sa learning status`: skill `shared-agents-knowledge`.
+
 ## After tasks (mandatory for non-trivial work)
 
 After a **non-trivial** task (feature, bugfix, refactor, multi-file change, non-obvious fix):

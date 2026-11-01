@@ -96,6 +96,22 @@ sync_team_data() {
   fi
 }
 
+_usage_py() {
+  if [[ -f "$SYNC_DIR/usage.py" ]]; then
+    echo "$SYNC_DIR/usage.py"
+  else
+    echo "$SHARED_AGENTS_HOME/scripts/usage.py"
+  fi
+}
+
+flush_usage() {
+  # Flush buffered learning-usage events (machine-writable, no review).
+  local py
+  py="$(_usage_py)"
+  [[ -f "$py" ]] || return 0
+  python3 "$py" push --quiet 2>/dev/null || true
+}
+
 refresh_skill_rule_links() {
   local py
   py="$(_install_adapters_py)"
@@ -114,6 +130,7 @@ case "$ACTION" in
   pull)
     pull_ff
     sync_team_data
+    flush_usage
     refresh_skill_rule_links
     if [[ "$QUIET" -eq 0 ]]; then
       python3 "$(_sa_ui_py)" --sync-ok 2>/dev/null || echo "Core + team data synced; skills + rules updated."

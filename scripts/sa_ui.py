@@ -182,6 +182,14 @@ def print_help(*, version: str, home: str) -> None:
     _cmd("unapprove list", "       List approved")
     print()
 
+    print(f"  {cyan('Learning usage (machine tracking)')}")
+    _cmd("learning report", " [opts]   Buffer event: opened|used|not_used|outdated|read")
+    _cmd("learning push", "          Flush buffer → usage.yaml (+ commit/push)")
+    _cmd("learning status", "        Aggregates + flags (rule candidates, orphans)")
+    _cmd("learning events", " [id]    Raw events for one learning")
+    _cmd("learning migrate", "       One-time: flat approved/*.md → <id>/ + usage.yaml")
+    print()
+
     print(f"  {yellow('Info')}")
     _cmd("help", "                 This help")
     _cmd("version", "              Show version")
@@ -206,6 +214,8 @@ def print_help(*, version: str, home: str) -> None:
     _example("sa review list")
     _example("sa pending push 2026-06-02-my-slug.md")
     _example("sa review 2026-06-02-my-slug.md")
+    _example("sa learning report --id <id> --event used --task t4821 --agent pi")
+    _example("sa learning status", "                     Usage metrics + flags")
     print()
 
     print(

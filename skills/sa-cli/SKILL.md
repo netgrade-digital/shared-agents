@@ -2,7 +2,7 @@
 name: sa-cli
 description: >-
   Complete guide to the shared-agents shell CLI (sa). Use when the user asks
-  how to run sa, sa help, install, sync, review, pending, unapprove, check,
+  how to run sa, sa help, install, sync, review, pending, unapprove, learning, check,
   uninstall, status, or any shared-agents terminal command. Also use when explaining
   setup, wizard, or troubleshooting the CLI after sa install.
 ---
@@ -84,6 +84,11 @@ source ~/.bashrc   # fish: source ~/.config/fish/config.fish
 | Learnings | `sa pending path [slug]` | Canonical pending path |
 | Learnings | `sa unapprove [id\|file]` | Remove from approved |
 | Learnings | `sa unapprove list` | Approved list |
+| Learnings | `sa learning report --id <id> --event <e>` | Buffer usage event (no git, no review) |
+| Learnings | `sa learning push` | Flush buffer → `usage.yaml` (+ commit/push; also `sa sync`) |
+| Learnings | `sa learning status [--json]` | Usage metrics + flags (rule candidates, orphans, unresolved) |
+| Learnings | `sa learning events <id>` | Raw events for one learning |
+| Learnings | `sa learning migrate` | One-time: flat `approved/*.md` → `<id>/learning.md` + `usage.yaml` |
 | Team content | `sa skill new` | Wizard: `team/skills/<name>/SKILL.md` |
 | Team content | `sa skill rm [name]` | Remove team skill |
 | Team content | `sa skill list` | List team skills |
@@ -319,6 +324,23 @@ sa unapprove fantasy-2026-06-dragon-cache
 | `--dry-run` · `--no-git` · `-y` | same as review |
 
 Alias: **`sa unapprove`** = **`sa rm`** (remove learning, not uninstall repo)
+
+### Learning usage — `sa learning` (machine tracking, no review)
+
+Each approved learning is a folder: `learning.md` (human-gated) + `usage.yaml` (machine-written events). Two report domains: `opened`/`used`/`not_used`/`outdated` = knowledge quality · `read` = agent telemetry (never mixed).
+
+```bash
+sa learning report --id crm-2026-07-ci-pre-commit-checks --event used --project crm-system --task t4821 --agent pi
+sa learning report --id <id> --event outdated --note "ddev 1.23 changed behavior"
+# events buffer in learnings/.usage-local.yaml; flushed by sa sync / sa learning push
+sa learning status          # metrics + flags: OUTDATED · LOW-FIT · RULE-CANDIDATE · UNRESOLVED
+sa learning events <id>     # raw events (remote + buffered)
+sa learning migrate         # one-time folder migration (idempotent)
+```
+
+- `outdated` requires `--note`. Secrets in `--note`/`--task` are blocked.
+- `opened` dedupes per (learning, task). Conflicts auto-resolve (union + eid dedup).
+- Events for removed learnings → `usage-orphan.yaml` (quarantine, shown in `sa learning status`).
 
 ---
 

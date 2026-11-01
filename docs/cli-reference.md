@@ -128,6 +128,20 @@ Review flags: `--domain`, `--dry-run`, `--no-git`, `-y`
 
 Unapprove: `--to-pending`, `--delete`, `--dry-run`, `-y`
 
+### Learning usage (machine tracking)
+
+```bash
+sa learning report --id <id> --event opened|used|not_used|outdated [--project p] [--task t] [--agent tool] [--note "…"]
+sa learning push          # flush local buffer (also done by sa sync)
+sa learning status        # aggregates + flags (rule candidates, orphans, unresolved)
+sa learning events <id>   # raw events for one learning
+sa learning migrate       # one-time: flat approved/*.md → <id>/learning.md + usage.yaml
+```
+
+- Events are buffered in `learnings/.usage-local.yaml` (gitignored), pushed in one commit by `sa sync` / `sa learning push` — no review workflow.
+- Two report domains: `opened`/`used`/`not_used`/`outdated` = knowledge quality · `read` = agent telemetry (never mixed).
+- `outdated` requires `--note`. Secrets in `--note`/`--task` are blocked.
+
 Details: [Learnings](/docs/learnings)
 
 ---
