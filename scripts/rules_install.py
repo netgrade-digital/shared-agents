@@ -168,6 +168,16 @@ def file_has_marker(path: Path, begin: str) -> bool:
     return path.is_file() and begin in path.read_text(encoding="utf-8")
 
 
+def _join_marked(prefix: str, block: str, suffix: str) -> str:
+    parts: list[str] = []
+    if prefix.strip():
+        parts.append(prefix.rstrip())
+    parts.append(block.strip("\n"))
+    if suffix.strip():
+        parts.append(suffix.lstrip())
+    return "\n\n".join(parts) + "\n"
+
+
 def merge_marker_block(
     target: Path,
     begin: str,
@@ -181,11 +191,11 @@ def merge_marker_block(
     if begin in existing and end in existing:
         start = existing.index(begin)
         stop = existing.index(end) + len(end)
-        updated = existing[:start].rstrip() + "\n\n" + block + "\n" + existing[stop:].lstrip()
+        updated = _join_marked(existing[:start], block, existing[stop:])
     elif existing.strip():
-        updated = existing.rstrip() + "\n\n" + block + "\n"
+        updated = _join_marked(existing, block, "")
     else:
-        updated = block + "\n"
+        updated = block.strip("\n") + "\n"
     if not dry_run:
         target.write_text(updated, encoding="utf-8")
 

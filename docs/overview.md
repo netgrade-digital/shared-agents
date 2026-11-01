@@ -50,7 +50,7 @@ See [Learnings](/docs/learnings).
         └────────── sa sync ───────────┘
                         │
                         ▼
-              ~/.shared-agents  ──►  Cursor · Claude Code · Zed · …
+              ~/.shared-agents  ──►  Cursor · Claude Code · Grok Build · Zed · …
 ```
 
 ## Repository layout

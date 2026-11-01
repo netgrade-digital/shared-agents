@@ -173,6 +173,71 @@ def claude_session_hook_command(entry: object) -> str | None:
     return None
 
 
+GROK_COMPAT_BEGIN = "# shared-agents:grok-compat:begin"
+GROK_COMPAT_END = "# shared-agents:grok-compat:end"
+GROK_COMPAT_LINE = "agents = false  # shared-agents:grok-compat"
+
+
+def grok_home_dir() -> Path:
+    return expand(os.environ.get("GROK_HOME", "~/.grok"))
+
+
+def remove_grok_compat(dry_run: bool) -> str | None:
+    path = grok_home_dir() / "config.toml"
+    if not path.is_file():
+        return None
+    text = path.read_text(encoding="utf-8")
+    original = text
+    if GROK_COMPAT_BEGIN in text and GROK_COMPAT_END in text:
+        start = text.index(GROK_COMPAT_BEGIN)
+        end = text.index(GROK_COMPAT_END) + len(GROK_COMPAT_END)
+        text = text[:start] + text[end:]
+    kept: list[str] = []
+    for line in text.splitlines(keepends=True):
+        if GROK_COMPAT_LINE in line:
+            continue
+        kept.append(line)
+    text = "".join(kept)
+    text = text.replace("\n\n\n", "\n\n")
+    if text == original:
+        return None
+    if dry_run:
+        return f"[dry-run] would remove Grok compat.claude block from {path}"
+    if text.strip():
+        path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+    else:
+        path.unlink(missing_ok=True)
+    return f"Removed Grok compat.claude block from {path}"
+
+
+def uninstall_grok(home: str, tool: dict, dry_run: bool) -> list[str]:
+    messages: list[str] = []
+    sync = tool.get("sync") or {}
+    hooks_path = grok_home_dir() / "hooks" / "shared-agents.json"
+    hook_cmd = str(sync.get("hook_command", "")).replace("$SHARED_AGENTS_HOME", home)
+    if hooks_path.is_file() and hook_cmd:
+        data = json.loads(hooks_path.read_text(encoding="utf-8"))
+        session = data.get("hooks", {}).get("SessionStart", [])
+        new_session = [e for e in session if claude_session_hook_command(e) != hook_cmd]
+        if len(new_session) != len(session):
+            data.setdefault("hooks", {})["SessionStart"] = new_session
+            empty = not any(data.get("hooks", {}).get(event) for event in data.get("hooks", {}))
+            if dry_run:
+                messages.append(f"[dry-run] would remove SessionStart hook from {hooks_path}")
+            elif empty or not new_session and list(data.get("hooks", {})) == ["SessionStart"]:
+                hooks_path.unlink()
+                messages.append(f"Removed {hooks_path}")
+            else:
+                if not new_session:
+                    data["hooks"].pop("SessionStart", None)
+                hooks_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+                messages.append(f"Removed SessionStart hook from {hooks_path}")
+    extra = remove_grok_compat(dry_run)
+    if extra:
+        messages.append(extra)
+    return messages
+
+
 def uninstall_claude(home: str, tool: dict, dry_run: bool) -> list[str]:
     messages: list[str] = []
     sync = tool["sync"]
@@ -217,6 +282,11 @@ def uninstall_tool(repo_home: Path, home: str, tool: dict, dry_run: bool) -> lis
         return uninstall_cursor(repo_home, tool, dry_run)
     if tid == "claude-code":
         messages = uninstall_claude(home, tool, dry_run)
+        if tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules"):
+            messages.extend(uninstall_agents_md_tool(repo_home, tool, dry_run))
+        return messages
+    if tid == "grok":
+        messages = uninstall_grok(home, tool, dry_run)
         if tool.get("agents_md") or tool.get("alt_agents_md") or tool.get("alt_rules"):
             messages.extend(uninstall_agents_md_tool(repo_home, tool, dry_run))
         return messages
