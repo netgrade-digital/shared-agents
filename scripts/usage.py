@@ -277,11 +277,35 @@ def _summary_from_text(text: str) -> dict[str, dict]:
 
 
 def _merge_summary_buckets(a: dict[str, dict], b: dict[str, dict]) -> dict[str, dict]:
-    """Union of two summary blocks: sum counts, max last_used, union machines."""
+    """Union of two summary blocks.
+
+    Buckets carry an optional `eids` map ({event: [eids]}). When both sides
+    compacted the same month, shared events must not be counted twice: the
+    eid union is the source of truth and counts are derived from it. Types
+    without eid info fall back to additive counts (legacy buckets; their raw
+    events were removed from the file after compaction, so the sides are
+    disjoint in practice).
+    """
     out: dict[str, dict] = {}
     for month in set(a) | set(b):
         ba, bb = a.get(month, {}), b.get(month, {})
-        bucket: dict = {k: int(ba.get(k, 0) or 0) + int(bb.get(k, 0) or 0) for k in EVENTS}
+        eids_a: dict = ba.get("eids") or {}
+        eids_b: dict = bb.get("eids") or {}
+        merged_eids: dict[str, list[str]] = {}
+        for kk in set(eids_a) | set(eids_b):
+            if kk not in EVENTS:
+                continue
+            union = sorted({str(x) for x in (eids_a.get(kk) or []) + (eids_b.get(kk) or [])})
+            if union:
+                merged_eids[kk] = union
+        bucket: dict = {}
+        for k in EVENTS:
+            if k in merged_eids:
+                bucket[k] = len(merged_eids[k])
+            else:
+                bucket[k] = int(ba.get(k, 0) or 0) + int(bb.get(k, 0) or 0)
+        if merged_eids:
+            bucket["eids"] = merged_eids
         last_used = max(str(ba.get("last_used") or ""), str(bb.get("last_used") or ""))
         if last_used:
             bucket["last_used"] = last_used
@@ -434,10 +458,16 @@ def compact_usage(path: Path, *, quiet: bool = False) -> bool:
             e for e in old if event_month(str(e.get("ts", ""))) == e_month
         ]
         bucket: dict = {k: 0 for k in EVENTS}
+        eids: dict[str, list[str]] = {}
         for e in month_events:
             name = str(e.get("event", ""))
             if name in bucket:
                 bucket[name] += 1
+            eid = str(e.get("eid", ""))
+            if eid:
+                eids.setdefault(name, []).append(eid)
+        if eids:
+            bucket["eids"] = {k: sorted(v) for k, v in eids.items()}
         used_ts = sorted(
             str(e.get("ts", "")) for e in month_events if e.get("event") == "used"
         )
@@ -466,36 +496,63 @@ def _all_usage_files(home: Path) -> list[Path]:
     return sorted((approved_dir(home) / "by-domain").glob("*/*/usage.yaml"))
 
 
-def _repo_remote(repo: Path) -> bool:
-    remote = run_git(repo, ["remote", "get-url", "origin"], check=False)
-    return remote.returncode == 0 and bool(remote.stdout.strip())
+def _repo_upstream(repo: Path) -> tuple[str, str, str]:
+    """(remote, local_branch, remote_branch) from @{u}.
+
+    Falls back to origin/<branch> when no tracking upstream is set. Returns
+    ("", "HEAD", "") when nothing usable is configured.
+    """
+    branch = run_git(repo, ["rev-parse", "--abbrev-ref", "HEAD"], check=False)
+    local = branch.stdout.strip() if branch.returncode == 0 else "HEAD"
+    up = run_git(
+        repo, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], check=False
+    )
+    if up.returncode == 0 and up.stdout.strip():
+        remote, _, rbranch = up.stdout.strip().partition("/")
+        return remote, local, rbranch
+    if local != "HEAD":
+        return "origin", local, local
+    return "", "HEAD", ""
+
+
+def _repo_has_remote(repo: Path) -> bool:
+    remote, _, _ = _repo_upstream(repo)
+    if not remote:
+        return False
+    return run_git(repo, ["remote", "get-url", remote], check=False).returncode == 0
 
 
 def _repo_ahead(repo: Path) -> int:
-    """Local commits not yet on origin/<branch> (0 when no upstream)."""
-    branch = run_git(repo, ["rev-parse", "--abbrev-ref", "HEAD"], check=False)
-    name = branch.stdout.strip() if branch.returncode == 0 else ""
-    if not name or name == "HEAD":
+    """Local commits not yet on the upstream ref (0 when unknown)."""
+    remote, _, rbranch = _repo_upstream(repo)
+    if not remote or not rbranch:
         return 0
-    rev = run_git(repo, ["rev-list", "--count", f"origin/{name}..HEAD"], check=False)
+    ref = f"{remote}/{rbranch}"
+    if run_git(repo, ["rev-parse", "--verify", ref], check=False).returncode != 0:
+        return 0
+    rev = run_git(repo, ["rev-list", "--count", f"{ref}..HEAD"], check=False)
     if rev.returncode != 0:
         return 0
     return int(rev.stdout.strip() or 0)
 
 
 def _push_with_rebase(repo: Path) -> bool:
-    """Push; on rejection rebase (union-resolve append-only conflicts) and retry."""
-    push = run_git(repo, ["push"], check=False)
+    """Push the branch to its upstream; on rejection rebase
+    (union-resolve append-only conflicts) and retry."""
+    remote, local, rbranch = _repo_upstream(repo)
+    if not remote or local == "HEAD":
+        return False
+    push = run_git(repo, ["push", remote, local], check=False)
     if push.returncode == 0:
         return True
-    rebase = run_git(repo, ["pull", "--rebase"], check=False)
+    rebase = run_git(repo, ["pull", "--rebase", remote, rbranch], check=False)
     if rebase.returncode == 0:
-        return run_git(repo, ["push"], check=False).returncode == 0
+        return run_git(repo, ["push", remote, local], check=False).returncode == 0
     if _auto_resolve_usage_conflicts(repo) and run_git(
         repo, ["rebase", "--continue"], check=False, env={"GIT_EDITOR": "true"}
     ).returncode == 0:
         # Append-only conflict: union-resolved (eid dedup), continue.
-        return run_git(repo, ["push"], check=False).returncode == 0
+        return run_git(repo, ["push", remote, local], check=False).returncode == 0
     run_git(repo, ["rebase", "--abort"], check=False)
     return False
 
@@ -507,7 +564,7 @@ def cmd_push(args: argparse.Namespace) -> int:
     pending = _buffer_events(buf)
 
     repo = repo_home(home) if is_git_repo(home) and not args.no_git else None
-    has_remote = bool(repo) and _repo_remote(repo)
+    has_remote = _repo_has_remote(repo) if repo else False
 
     if not pending:
         # Publish leftover local usage commits (previous push failed).
@@ -705,8 +762,12 @@ def _learning_counts(path: Path) -> dict:
         if name == "opened" and task:
             opened_tasks[str(task)] = ts
     for bucket in summary.values():
+        bucket_eids = bucket.get("eids") or {}
         for name in EVENTS:
-            counts[name] += int(bucket.get(name, 0) or 0)
+            if name in bucket_eids:
+                counts[name] += len(bucket_eids[name])
+            else:
+                counts[name] += int(bucket.get(name, 0) or 0)
         bucket_last = str(bucket.get("last_used") or "")
         if bucket_last and bucket_last > (last_used or ""):
             last_used = bucket_last
